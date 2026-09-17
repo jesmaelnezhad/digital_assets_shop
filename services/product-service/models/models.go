@@ -101,13 +101,14 @@ type CreateProductRequest struct {
 }
 
 type ProductTier struct {
-	ID              int     `json:"id"`
-	ProductID       int     `json:"product_id"`
-	TierName        string  `json:"tier_name"`
-	PriceUSD        float64 `json:"price_usd"`
-	DownloadCount   int     `json:"download_count"`
-	DownloadLimit   int     `json:"download_limit"`
-	IsActive        bool    `json:"is_active"`
+	ID              int       `json:"id"`
+	ProductID       int       `json:"product_id"`
+	TierName        string    `json:"tier_name"`
+	PriceUSD        float64   `json:"price_usd"`
+	FilePath        string    `json:"file_path"`
+	DownloadCount   int       `json:"download_count"`
+	DownloadLimit   int       `json:"download_limit"`
+	IsActive        bool      `json:"is_active"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }

@@ -33,6 +33,8 @@ func (h *Handlers) ListProducts(c *gin.Context) {
 	category := c.Query("category")
 	priceMin, _ := strconv.ParseFloat(c.Query("price_min"), 64)
 	priceMax, _ := strconv.ParseFloat(c.Query("price_max"), 64)
+	fileType := c.Query("file_type")
+	ratingFilter, _ := strconv.Atoi(c.Query("rating"))
 
 	// Build query dynamically
 	baseQuery := "SELECT id, title, slug, description, price_usd, status, category_id, image_url, stock_count, pinned, sort_order, views, downloads, purchase_count, is_pinned, stock_quantity, max_downloads_per_user, preview_images, download_window_hours, free_download, created_at, updated_at FROM products WHERE status='active'"
@@ -81,6 +83,24 @@ func (h *Handlers) ListProducts(c *gin.Context) {
 		baseQuery += fmt.Sprintf(" AND price_usd <= $%d", ac)
 		countQuery += fmt.Sprintf(" AND price_usd <= $%d", ac)
 		args = append(args, priceMax)
+		countArgs = countArgs[:0]
+		countArgs = append(countArgs, args...)
+	}
+
+	if fileType != "" {
+		ac++
+		baseQuery += fmt.Sprintf(" AND digital_formats ILIKE $%d", ac)
+		countQuery += fmt.Sprintf(" AND digital_formats ILIKE $%d", ac)
+		args = append(args, "%"+fileType+"%")
+		countArgs = countArgs[:0]
+		countArgs = append(countArgs, args...)
+	}
+
+	if ratingFilter > 0 {
+		ac++
+		baseQuery += fmt.Sprintf(" AND COALESCE(average_rating, 0) >= $%d", ac)
+		countQuery += fmt.Sprintf(" AND COALESCE(average_rating, 0) >= $%d", ac)
+		args = append(args, ratingFilter)
 		countArgs = countArgs[:0]
 		countArgs = append(countArgs, args...)
 	}
@@ -159,17 +179,32 @@ func (h *Handlers) GetProduct(c *gin.Context) {
 	if catID.Valid { p.CategoryID = int(catID.Int64) }
 	if pinnedAt.Valid { t := pinnedAt.Time; p.PinnedAt = &t }
 
-	imgRows, _ := h.db.Query("SELECT id,url,alt_text,is_primary,image_type,width,height,file_size_bytes,mime_type,storage_path,created_at FROM product_images WHERE product_id=$1 ORDER BY is_primary DESC, id ASC", p.ID)
+	imgRows, _ := h.db.Query("SELECT id,product_id,url,alt_text,is_primary,image_type,width,height,file_size_bytes,mime_type,storage_path,created_at FROM product_images WHERE product_id=$1 ORDER BY is_primary DESC, id ASC", p.ID)
 	defer imgRows.Close()
 	images := []models.ProductImage{}
 	for imgRows.Next() {
 		var img models.ProductImage
-		if imgRows.Scan(&img.ID, &img.URL, &img.AltText, &img.IsPrimary, &img.ImageType,
+		if imgRows.Scan(&img.ID, &img.ProductID, &img.URL, &img.AltText, &img.IsPrimary, &img.ImageType,
 			&img.Width, &img.Height, &img.FileSizeBytes, &img.MimeType, &img.StoragePath, &img.CreatedAt) == nil {
 			images = append(images, img)
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{"product": p, "images": images})
+
+	// Fetch tiers
+	tierRows, _ := h.db.Query("SELECT id,product_id,tier_name,price_usd,file_path,download_count,download_limit,is_active,created_at,updated_at FROM product_tiers WHERE product_id=$1 AND is_active=true ORDER BY price_usd ASC", p.ID)
+	defer tierRows.Close()
+	tiers := []models.ProductTier{}
+	for tierRows.Next() {
+		var t models.ProductTier
+		if tierRows.Scan(&t.ID, &t.ProductID, &t.TierName, &t.PriceUSD, &t.FilePath, &t.DownloadCount, &t.DownloadLimit, &t.IsActive, &t.CreatedAt, &t.UpdatedAt) == nil {
+			tiers = append(tiers, t)
+		}
+	}
+	if tiers == nil {
+		tiers = []models.ProductTier{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"product": p, "images": images, "tiers": tiers})
 }
 
 func (h *Handlers) SearchProducts(c *gin.Context) {
@@ -336,7 +371,42 @@ func (h *Handlers) GetBundle(c *gin.Context) {
 }
 
 func (h *Handlers) GetRecommendations(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"products": []models.Product{}})
+	pid, err := strconv.Atoi(c.Param("productId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	// Check product exists
+	var exists bool
+	h.db.QueryRow("SELECT EXISTS(SELECT 1 FROM products WHERE id=$1)", pid).Scan(&exists)
+	if !exists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "product not found"})
+		return
+	}
+
+	var catID sql.NullInt64
+	h.db.QueryRow("SELECT category_id FROM products WHERE id=$1", pid).Scan(&catID)
+	if !catID.Valid {
+		c.JSON(http.StatusOK, gin.H{"products": []models.Product{}})
+		return
+	}
+
+	rows, _ := h.db.Query("SELECT id,title,slug,description,price_usd,status,created_at,updated_at,category_id,image_url,stock_count,pinned,sort_order,digital_formats,tags,is_pwyw,pwyw_min_price,pinned_at FROM products WHERE category_id=$1 AND id!=$2 AND status='active' ORDER BY pinned DESC, sort_order ASC LIMIT 6", catID.Int64, pid)
+	defer rows.Close()
+	products := []models.Product{}
+	for rows.Next() {
+		var p models.Product
+		var cid sql.NullInt64
+		if rows.Scan(&p.ID, &p.Title, &p.Slug, &p.Description, &p.PriceUSD, &p.Status,
+			&p.CreatedAt, &p.UpdatedAt, &cid, &p.ImageURL, &p.StockCount, &p.Pinned, &p.SortOrder,
+			&p.DigitalFormats, &p.Tags, &p.IsPwyw, &p.PwywMinPrice, &p.PinnedAt) == nil {
+			if cid.Valid { p.CategoryID = int(cid.Int64) }
+			products = append(products, p)
+		}
+	}
+	if products == nil { products = []models.Product{} }
+	c.JSON(http.StatusOK, gin.H{"products": products})
 }
 
 // ====== Admin: Products ======
