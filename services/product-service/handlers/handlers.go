@@ -23,13 +23,91 @@ func (h *Handlers) Health(c *gin.Context) {
 func (h *Handlers) ListProducts(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "20"))
+	search := c.Query("search")
 	if page < 1 { page = 1 }
 	if perPage < 1 || perPage > 100 { perPage = 20 }
 	offset := (page - 1) * perPage
 
-	rows, err := h.db.Query(
-		"SELECT id, title, slug, description, price_usd, status, category_id, image_url, stock_count, pinned, sort_order, views, downloads, purchase_count, is_pinned, stock_quantity, max_downloads_per_user, preview_images, download_window_hours, free_download, created_at, updated_at FROM products WHERE status='active' ORDER BY pinned DESC, sort_order ASC, created_at DESC LIMIT $1 OFFSET $2",
-		perPage, offset)
+	sort := c.Query("sort")
+
+	category := c.Query("category")
+	priceMin, _ := strconv.ParseFloat(c.Query("price_min"), 64)
+	priceMax, _ := strconv.ParseFloat(c.Query("price_max"), 64)
+
+	// Build query dynamically
+	baseQuery := "SELECT id, title, slug, description, price_usd, status, category_id, image_url, stock_count, pinned, sort_order, views, downloads, purchase_count, is_pinned, stock_quantity, max_downloads_per_user, preview_images, download_window_hours, free_download, created_at, updated_at FROM products WHERE status='active'"
+	countQuery := "SELECT count(*) FROM products WHERE status='active'"
+	var args []interface{}
+	var countArgs []interface{}
+	ac := 0
+
+	if search != "" {
+		ac++
+		baseQuery += fmt.Sprintf(" AND (title ILIKE $%d OR description ILIKE $%d)", ac, ac)
+		countQuery += fmt.Sprintf(" AND (title ILIKE $%d OR description ILIKE $%d)", ac, ac)
+		args = append(args, "%"+search+"%")
+		countArgs = countArgs[:0]
+		countArgs = append(countArgs, args...)
+	}
+
+	if category != "" {
+		// Look up category ID from slug
+		var catID int
+		err := h.db.QueryRow("SELECT id FROM categories WHERE slug=$1", category).Scan(&catID)
+		if err == nil && catID > 0 {
+			ac++
+			baseQuery += fmt.Sprintf(" AND category_id = $%d", ac)
+			countQuery += fmt.Sprintf(" AND category_id = $%d", ac)
+			args = append(args, catID)
+			countArgs = countArgs[:0]
+			countArgs = append(countArgs, args...)
+		} else {
+			// Category not found, return empty results
+			c.JSON(http.StatusOK, gin.H{"products": []models.Product{}, "total": 0, "page": page, "per_page": perPage})
+			return
+		}
+	}
+
+	if priceMin > 0 {
+		ac++
+		baseQuery += fmt.Sprintf(" AND price_usd >= $%d", ac)
+		countQuery += fmt.Sprintf(" AND price_usd >= $%d", ac)
+		args = append(args, priceMin)
+		countArgs = countArgs[:0]
+		countArgs = append(countArgs, args...)
+	}
+	if priceMax > 0 {
+		ac++
+		baseQuery += fmt.Sprintf(" AND price_usd <= $%d", ac)
+		countQuery += fmt.Sprintf(" AND price_usd <= $%d", ac)
+		args = append(args, priceMax)
+		countArgs = countArgs[:0]
+		countArgs = append(countArgs, args...)
+	}
+
+	// Build ORDER BY clause
+	orderClause := "pinned DESC"
+	switch sort {
+	case "price_asc":
+		orderClause += ", price_usd ASC"
+	case "price_desc":
+		orderClause += ", price_usd DESC"
+	case "newest":
+		orderClause += ", created_at DESC"
+	case "popular":
+		orderClause += ", purchase_count DESC"
+	default:
+		orderClause += ", sort_order ASC, created_at DESC"
+	}
+
+	ac++
+	baseQuery += fmt.Sprintf(" ORDER BY %s LIMIT $%d", orderClause, ac)
+	args = append(args, perPage)
+	ac++
+	baseQuery += fmt.Sprintf(" OFFSET $%d", ac)
+	args = append(args, offset)
+
+	rows, err := h.db.Query(baseQuery, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -55,7 +133,7 @@ func (h *Handlers) ListProducts(c *gin.Context) {
 	}
 
 	var total int
-	h.db.QueryRow("SELECT count(*) FROM products WHERE status='active'").Scan(&total)
+	h.db.QueryRow(countQuery, countArgs...).Scan(&total)
 
 	c.JSON(http.StatusOK, gin.H{"products": products, "total": total, "page": page, "per_page": perPage})
 }

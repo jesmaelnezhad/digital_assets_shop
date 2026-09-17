@@ -28,48 +28,6 @@ HTTP 200 on HTML pages is not proof that an item is done.
 
 ---
 
-### FIX-001 — Product list honors `search`
-
-- **Surface:** product-service
-- **Spec:** §4.3 `GET /api/v1/products` searches title + description
-- **Expected:** `search` matching one product’s unique title returns that product (and not unrelated rows). `search=zzzznonexistentzzz` returns `products: []` and `total: 0`.
-- **Observed (staging 2026-09-17):** query ignored; `total` stayed 300 for a nonsense search.
-
-### FIX-002 — Product list honors `sort=price_asc` and `price_desc`
-
-- **Surface:** product-service
-- **Spec:** §4.3 sort by price low-high / high-low
-- **Expected:** `sort=price_asc` returns non-decreasing `price_usd`. `sort=price_desc` returns non-increasing `price_usd`. The two first pages are not identical when prices differ.
-- **Observed:** both sorts returned the same price sequence.
-
-### FIX-003 — Product list honors `sort=newest`
-
-- **Surface:** product-service
-- **Spec:** §4.3 sort newest
-- **Expected:** `sort=newest` orders by `created_at` descending (after pinned rules in FIX-008).
-- **Observed:** list uses `sort_order` / insert order; `sort` query unused.
-
-### FIX-004 — Product list honors `sort=popular`
-
-- **Surface:** product-service
-- **Spec:** §4.3 sort popular
-- **Expected:** `sort=popular` orders by a documented popularity field (purchase_count or equivalent) descending after pinned rules.
-- **Observed:** `sort` ignored.
-
-### FIX-005 — Product list honors category filter
-
-- **Surface:** product-service
-- **Spec:** §4.3 filter by category
-- **Expected:** `category=<slug>` or `category_id=<id>` returns only products in that category. A slug with no products returns empty + `total: 0`.
-- **Observed:** `category=icons` returned the same first page as unfiltered list.
-
-### FIX-006 — Product list honors price range
-
-- **Surface:** product-service
-- **Spec:** §4.3 filter `price_min` / `price_max`
-- **Expected:** every returned `price_usd` is within the requested inclusive range; `total` counts only matches.
-- **Observed:** list handler does not read those query params.
-
 ### FIX-007 — Product list honors `file_type` filter
 
 - **Surface:** product-service
