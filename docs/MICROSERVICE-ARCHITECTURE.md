@@ -1,9 +1,13 @@
 # Pawradise — Microservice & Microfrontend Architecture
 
-> Architecture v1.0 — 2026-09-06
-> Defines the target decomposition for the Pawradise digital asset marketplace.
-> This document is the source of truth for service boundaries, data ownership,
-> API contracts, and microfrontend composition.
+> Architecture v1.1 — 2026-09-17
+> Target decomposition for the Pawradise digital asset marketplace: service
+> boundaries, data ownership, and MFE composition.
+>
+> Live services expose public `/api/v1/*` (the `/internal/v1` names below were
+> never implemented). There is no Shell MFE — seven Alpine HTML apps duplicate
+> chrome. Admin currently copies other services’ tables; events in
+> `services/shared/events` are not published from handlers.
 
 ---
 
@@ -23,13 +27,14 @@ technical layer. Each service:
 
 ### 1.2 Microfrontend Strategy
 
-Microfrontends are composed **by user journey area**, not by page. Each MFE:
+Target: compose MFEs **by user journey area** behind a Shell. **This repo does
+not ship a Shell** — each Alpine MFE duplicates header/nav.
+
+Each MFE:
 
 - **Owns its HTML/JS/CSS** — no shared frontend framework or build
 - **Is served independently** — each is a static asset set served by its own
   nginx container
-- **Communicates via the Shell** — shared state (auth, cart count) through the
-  host application
 - **Can be developed independently** — each has its own build and deploy
 
 ### 1.3 Communication Pattern
@@ -58,6 +63,10 @@ Client (Browser)
 
 ## 2. Microservices (Backend)
 
+Live services already expose **`/api/v1/...`** (same paths as `PRODUCT-SPEC.md` §4).
+The `/internal/v1` tables below were a planned internal rename that **was never
+implemented**. Do not add a rewrite layer; keep `/api/v1` on each service.
+
 ### 2.1 Service Inventory
 
 | # | Service | Domain | Port | Database |
@@ -83,7 +92,7 @@ Client (Browser)
 - Referral link generation and tracking
 - Commission recording
 
-**API Routes (internal):**
+**API routes (planned internal names — implement as `/api/v1` public paths instead):**
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -122,7 +131,7 @@ Client (Browser)
 - Product search and filtering
 - Related product recommendations
 
-**API Routes (internal):**
+**API routes (planned internal names — implement as `/api/v1` public paths instead):**
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -170,7 +179,7 @@ Client (Browser)
 - Product comparison list
 - Discount calculation
 
-**API Routes (internal):**
+**API routes (planned internal names — implement as `/api/v1` public paths instead):**
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -219,7 +228,7 @@ Client (Browser)
 - User follow/unfollow
 - Public user profile aggregation
 
-**API Routes (internal):**
+**API routes (planned internal names — implement as `/api/v1` public paths instead):**
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -249,7 +258,7 @@ Client (Browser)
 - Rating aggregation (average, count, distribution)
 - Rating listing per product
 
-**API Routes (internal):**
+**API routes (planned internal names — implement as `/api/v1` public paths instead):**
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -268,7 +277,7 @@ Client (Browser)
 - Exchange rate management (CRUD)
 - Crypto payment verification (future)
 
-**API Routes (internal):**
+**API routes (planned internal names — implement as `/api/v1` public paths instead):**
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -294,7 +303,7 @@ Client (Browser)
 - Settings management
 - Acts as **gateway/aggregator** for admin operations across services
 
-**API Routes (internal):**
+**API routes (planned internal names — implement as `/api/v1` public paths instead):**
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -324,7 +333,7 @@ Client (Browser)
 - Image preview generation (watermarked, thumbnail)
 - Asset storage management on PersistentVolume
 
-**API Routes (internal):**
+**API routes (planned internal names — implement as `/api/v1` public paths instead):**
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -343,14 +352,16 @@ Client (Browser)
 
 ### 3.1 MFE Inventory
 
+Target composition (Shell host). **This repo ships 7 standalone Alpine MFEs and no Shell.** Cart/wishlist live on account-mfe, not checkout. Admin directory is `frontend/admin-app`.
+
 | # | MFE | Route Prefix | nginx Port | nginx Internal Port |
 |---|-----|-------------|------------|---------------------|
 | 1 | Shell | / | 30080 | 80 |
 | 2 | Shop | / (composed) | — | — |
 | 3 | Product Detail | /product/:slug | — | — |
 | 4 | Community | /community, /post/:id | — | — |
-| 5 | Account | /account, /referrals | — | — |
-| 6 | Checkout | /checkout, /cart, /wishlist | — | — |
+| 5 | Account | /account, /cart, /wishlist, /referrals | — | — |
+| 6 | Checkout | /checkout | — | — |
 | 7 | Auth | /login, /register | — | — |
 | 8 | Admin | /admin | — | — |
 
@@ -457,32 +468,31 @@ microservices and:
 
 ### 4.2 Routing Table
 
-| External Path | Internal Service | Internal Path |
-|---------------|-----------------|---------------|
-| /api/v1/identity/* | Identity Service | /internal/v1/* |
-| /api/v1/products/* | Product Service | /internal/v1/* |
-| /api/v1/categories/* | Product Service | /internal/v1/* |
-| /api/v1/bundles/* | Product Service | /internal/v1/* |
-| /api/v1/orders/* | Commerce Service | /internal/v1/* |
-| /api/v1/cart/* | Commerce Service | /internal/v1/* |
-| /api/v1/wishlist/* | Commerce Service | /internal/v1/* |
-| /api/v1/coupons/* | Commerce Service | /internal/v1/* |
-| /api/v1/guest-orders/* | Commerce Service | /internal/v1/* |
-| /api/v1/community/* | Community Service | /internal/v1/* |
-| /api/v1/reviews/* | Review Service | /internal/v1/* |
-| /api/v1/ratings/* | Review Service | /internal/v1/* |
-| /api/v1/payments/* | Payment Service | /internal/v1/* |
-| /api/v1/exchange-rates/* | Payment Service | /internal/v1/* |
-| /api/v1/admin/* | Admin Service | /internal/v1/* |
-| /api/v1/media/* | Media Service | /internal/v1/* |
+Ingress is **path prefix → service**. Services keep the `/api/v1` prefix (no rewrite to `/internal/v1`).
+
+| External Path | Service |
+|---------------|---------|
+| /api/v1/products, /api/v1/categories, /api/v1/bundles, /api/v1/recommendations | Product |
+| /api/v1/orders, /api/v1/cart, /api/v1/wishlist, /api/v1/coupons, /api/v1/guest-orders, /api/v1/compare, /api/v1/recently-viewed | Commerce |
+| /api/v1/community | Community |
+| /api/v1/reviews | Review |
+| /api/v1/payments, /api/v1/exchange-rates, /api/v1/settings (public key) | Payment (or documented owner) |
+| /api/v1/admin | Admin (fan-out to owners; do not copy tables) |
+| /api/v1/media | Media |
+| /api/v1/auth, /api/v1/register, /api/v1/login, /api/v1/logout, /api/v1/me, /api/v1/profile, /api/v1/referrals | Identity |
+| /api/v1/health | Any backend JSON health |
 
 ### 4.3 Staging vs Production
 
-Both environments use identical gateway configs, differing only in:
+Both environments use the same `/api/v1` paths. They differ only by:
 
-- Namespace (staging vs production)
-- Database logical name (appdb_staging vs appdb_production)
-- External URL path prefix (/staging/ for staging)
+- Hostname (staging domain vs `pawradise.ir`)
+- Namespace (`staging` vs `production`)
+- Logical DB names (`appdb_<service>_staging` vs `appdb_<service>_production`)
+
+There is **no** `/staging/` URL prefix (that routing was retired). Do not add `rewrite-target` for environment separation.
+
+Prefixes missing from ingress fall through to shop-mfe HTML (including `/api/v1/health` and `/api/v1/recommendations/:id`).
 
 ---
 
@@ -518,6 +528,8 @@ via a lightweight message bus (Redis pub/sub or PostgreSQL NOTIFY/LISTEN):
 
 ### 6.1 k3s Deployment Topology (Production)
 
+Sketch. Live traffic is host-nginx → ingress-nginx (see `DEPLOYMENT-ARCHITECTURE.md`), not a separate `api-gateway` pod. There is no Shell MFE in the running cluster.
+
 ```
 production namespace
 ├── api-gateway (deployment, NodePort 8080:30080)
@@ -541,9 +553,7 @@ production namespace
 
 ### 6.2 Resource Constraints
 
-Total services: 16 deployments (8 backend + 8 frontend)
-RAM per service: ~64-128Mi
-Total estimated: ~1.5-2GB RAM on RED (within 2GB constraint)
+Total backend: 8 services × 2 namespaces. Frontend: **7** MFE deployments per namespace (no Shell). `k8s/shell-mfe-deployment.yaml` is leftover — do not treat it as a running app.
 
 ---
 
@@ -552,12 +562,12 @@ Total estimated: ~1.5-2GB RAM on RED (within 2GB constraint)
 ### 7.1 Test Pyramid
 
 ```
-        /  E2E Tests  \         ← Full user journey (existing)
-       /───────────────\        ← 104 tests, Node.js
-      / Integration Tests\      ← Cross-service flows
-     /───────────────────\      ← Go + test containers
-    /    Unit Tests       \    ← Per-service business logic
-   /───────────────────────\   ← Go testing, sqlmock
+        /  E2E Tests  \         ← Playwright + tests/e2e-suite.js
+       /───────────────\        ← assert behavior, not status-only
+      / Integration Tests\
+     /───────────────────\
+    /    Unit Tests       \
+   /───────────────────────\
 ```
 
 ### 7.2 Test File Layout
@@ -603,14 +613,12 @@ tests/
       download_test.go
       image_processing_test.go
   integration/
-    product-order-flow_test.go
-    coupon-discount-flow_test.go
-    referral-commission-flow_test.go
-    payment-verification-flow_test.go
-    user-deletion-cascade_test.go
-  e2e/
-    e2e-suite.js  (existing)
+    cross-service-flows_test.go
+  e2e-suite.js
+  frontend/*.spec.cjs
 ```
+
+Existing unit files are often one `*_test.go` per service, not the full list above.
 
 ### 7.3 Unit Test Standards
 
@@ -629,27 +637,11 @@ tests/
 
 ---
 
-## 8. Migration Path
+## 8. Migration status
 
-### 8.1 From Monolith to Microservices
-
-The current monolithic Go backend will be **strangled** into microservices:
-
-1. **Phase 1:** Define service boundaries and API contracts (this document)
-2. **Phase 2:** Build microservices alongside existing monolith
-3. **Phase 3:** Route new features to microservices, keep monolith for legacy
-4. **Phase 4:** Gradually extract features from monolith into services
-5. **Phase 5:** Decommission monolith when all features are extracted
-
-### 8.2 From Monolithic Frontend to Microfrontends
-
-1. **Phase 1:** Build Shell with SSI composition
-2. **Phase 2:** Extract Shop and Product Detail as separate MFEs
-3. **Phase 3:** Extract Community and Account as separate MFEs
-4. **Phase 4:** Extract Checkout and Auth as separate MFEs
-5. **Phase 5:** Extract Admin as separate MFE
+The monolith split already happened (8 services, 7 MFEs). MFEs are not composed via an SSI Shell.
 
 ---
 
-*Architecture version: 1.0 — 2026-09-06*
-*Status: Defining target architecture. Implementation to follow.*
+*Architecture version: 1.1 — 2026-09-17*
+*Status: Target architecture. Implementation follows this document.*

@@ -1,51 +1,49 @@
 # Digital Assets Shop (Pawradise)
 
-Multi-service Go backend + React microfrontend marketplace for digital assets.
+Single-seller digital asset marketplace: Go microservices + Alpine.js microfrontends.
 
 ## Structure
 
 ```
 digital_assets_shop/
-├── docs/              # Architecture, specs, testing guides
-├── e2e/               # End-to-end API tests
-├── frontend/          # Microfrontends (8 MFEs)
+├── docs/              # Spec, architecture, testing guides
+├── frontend/          # 7 MFEs (shop, product, community, account, checkout, auth, admin-app)
 ├── k8s/               # Kubernetes manifests
 ├── release-notes/     # Change history
-├── services/          # Go microservices (8 backends)
-├── shared/            # Shared libraries, themes, nginx configs
-└── tests/             # Frontend and API tests
+├── services/          # 8 Go microservices + shared library
+├── shared/            # Theme, api.js, chrome, nginx helpers
+└── tests/             # Go unit/integration, Node API suite, Playwright
 ```
 
 ## Environments
 
-- **Staging:** `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir`
-- **Production:** `pawradise.ir`
+| | Host | API |
+|---|---|---|
+| Staging | `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir` | `/api/v1` |
+| Production | `pawradise.ir` | `/api/v1` |
 
-## Quick Start
+Environments are split by hostname, not a `/staging` path prefix.
 
-```bash
-# Build and push all services
-cd services && make build-all
+## Frontend
 
-# Build and push all frontend MFEs
-cd frontend && bash build-all.sh
-
-# Deploy to staging
-kubectl apply -f k8s/staging/
-```
+Each MFE is static HTML + Alpine.js (not React, not a composed Shell). Shared client: `shared/lib/api.js`.
 
 ## Testing
 
 ```bash
-# API tests
-cd e2e && npm test
-
-# Frontend tests
+cd tests && node e2e-suite.js
+cd tests/unit && go test ./...
+cd tests/integration && go test ./...
 cd tests/frontend && npx playwright test
 ```
 
+Frontend tests should use a real browser against the staging domain (`docs/TESTING-GUIDE.md`, `docs/TESTING-RULE.md`).
+
 ## Documentation
 
-- `docs/TESTING-GUIDE.md` — Rules for frontend testing
-- `docs/MICROSERVICE-ARCHITECTURE.md` — Service decomposition
-- `docs/staging-routing.md` — Complete routing configuration
+- `docs/PRODUCT-SPEC.md` — product, flows, pages, API, schema
+- `docs/FEATURE-CANDIDATES.md` — feature in/out decisions
+- `docs/MICROSERVICE-ARCHITECTURE.md` — service and MFE boundaries
+- `docs/DEPLOYMENT-ARCHITECTURE.md` — BLUE/RED, ingress, build
+- `docs/API-INTERFACE.md` — environments and auth for frontend work
+- `docs/staging-routing.md` — staging ingress snapshot

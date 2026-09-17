@@ -1,35 +1,13 @@
 # Pawradise API Interface Reference
 
-> Complete backend API specification for frontend development.
-> Source of truth for all endpoints, request/response schemas, auth, and business rules.
-
----
-
-## Table of Contents
-
-1. [Architecture Overview](#architecture-overview)
-2. [Base URLs & Environments](#base-urls--environments)
-3. [Authentication & Authorization](#authentication--authorization)
-4. [Error Format](#error-format)
-5. [Pagination](#pagination)
-6. [API Endpoints](#api-endpoints)
-   - [Identity Service](#identity-service)
-   - [Product Service](#product-service)
-   - [Commerce Service](#commerce-service)
-   - [Community Service](#community-service)
-   - [Review Service](#review-service)
-   - [Payment Service](#payment-service)
-   - [Admin Service](#admin-service)
-   - [Media Service](#media-service)
-7. [Domain Models](#domain-models)
-8. [Business Rules](#business-rules)
-9. [Webhook/Event Patterns](#webhookevent-patterns)
+> Environment, gateway, and auth notes for frontend work.
+> Endpoint catalog and schemas: `docs/PRODUCT-SPEC.md` §4–§5.
 
 ---
 
 ## Architecture Overview
 
-Pawradise uses a microservice architecture with 8 backend services. Each service owns its domain and exposes a REST API under `/api/v1/`. All services are stateless and communicate via HTTP.
+Pawradise uses a microservice architecture with 8 backend services. Each service owns its domain and exposes a REST API under `/api/v1/` **on that service** (the architecture doc’s `/internal/v1` names were never used). All services are stateless and should communicate via HTTP or events, not shared tables.
 
 With domain-based routing (v2, 2026-09-10+), environments are separated by hostname:
 
@@ -73,10 +51,10 @@ Domain: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir
 API:    https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/api/v1
 ```
 
-#### Production (placeholder — real domain TBD)
+#### Production
 
 ```
-Domain: pawradise.ir (placeholder until real domain provided)
+Domain: pawradise.ir
 API:    https://pawradise.ir/api/v1
 ```
 

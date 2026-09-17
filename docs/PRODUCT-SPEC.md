@@ -3,8 +3,9 @@
 > This document describes what Pawradise IS and what it SHOULD HAVE, independent
 > of what is currently working or passing tests. It defines product specs, user
 > flows, pages, routes, modules, architecture, and services.
-> 
-> **Version: 1.1** — Updated with feature candidate decisions.
+>
+> **Version: 1.2** — Architecture sections aligned with the microservice/MFE
+> repo. Product behavior is unchanged from 1.1.
 
 ---
 
@@ -382,66 +383,47 @@ All API routes under /api/v1/. Both staging and production use identical paths �
 
 ### 5.1 Infrastructure
 
-**RED (194.5.206.106) — Serving Node:**
-- k3s cluster (single-node Kubernetes)
-- Namespaces: database, staging, production
-- PostgreSQL 16 in database namespace — single instance, logical databases:
-  appdb_staging, appdb_production
-- Backend deployment in staging and production namespaces (Go + Gin, port
-  8080, NodePort)
-- Frontend deployment in staging and production namespaces (nginx:alpine
-  serving static HTML/JS/CSS, port 80, NodePort)
-- **Host nginx on port 80/443** — domain-based routing:
-  - `pawradise.ir` → production backend + frontend
-  - `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir` → staging backend + frontend
-  - SSL termination via Let's Encrypt cert (staging domain)
+Details and IPs: `docs/DEPLOYMENT-ARCHITECTURE.md`. Summary:
 
-**BLUE (130.185.121.83) — Build/Dev/Admin Node:**
-- Go build environment
-- Docker for building images
-- Source code at /root/project/
-- SSH access to RED for deployment (default port 22, key auth)
+- **RED** — k3s serving node (ingress-nginx NodePort 30758). Host nginx on 80/443 terminates TLS and routes by Host header.
+  - `pawradise.ir` → production namespace
+  - `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir` → staging namespace
+- **BLUE** — build box (Go, Docker). Images push to RED’s registry.
+- PostgreSQL 16 in `database` namespace: **one logical database per service per environment** (`appdb_<service>_staging` / `_production`), not a single `appdb_staging`.
+- One Deployment per backend service and per MFE, per namespace.
 
-### 5.2 Backend Modules
+### 5.2 Backend services
 
-| Module | File | Responsibility |
-|--------|------|---------------|
-| Entry point | main.go | Gin router setup, route group registration, middleware wiring |
-| Auth | handlers/auth.go | Register, login, logout, get profile, update profile |
-| Products | handlers/products.go | Product CRUD, list with search/filter/sort, detail, categories, tiers, gallery, previews, pinning, PWYW |
-| Orders | handlers/orders.go + order_routes.go | Order create/list/detail/payment/status/download |
-| Coupons | handlers/coupons.go | Coupon validation (public), CRUD (admin) |
-| Bundles | handlers/bundles.go | Bundle CRUD (admin), list/detail (public) |
-| Referrals | handlers/referrals.go | Referral tracking, commission calculation, dashboard stats |
-| Community | handlers/community.go | Posts, likes, comments, follows, public profiles |
-| Features | handlers/features.go | Cart, wishlist, reviews, recently-viewed, compare, recommendations |
-| Admin features | handlers/admin_features.go | Admin product/order/user/community CRUD + bulk ops + stats + email export |
-| Exchange rates | handlers/exchange_rates.go | Exchange rate CRUD (admin), list/get (public) |
-| Settings | handlers/settings.go | Get setting by key (public), list/set settings (admin) |
-| Guest orders | handlers/admin_features.go (RegisterGuestOrderRoutes) | Guest order create/check |
-| Order status | handlers/admin_features.go (RegisterOrderStatusRoutes) | Admin order status transitions |
-| Community moderation | handlers/admin_features.go (RegisterCommunityModerationRoutes) | Admin post listing/deletion |
-| Image processing | handlers/image_processor.go | Generate watermarked previews/thumbnails for images and GIFs |
-| Middleware | handlers/middleware.go | JWT auth middleware, admin auth middleware |
-| Database | database/db.go | PostgreSQL connection |
-| Models | models/ | Data models |
+Public routes stay under `/api/v1/` as listed in §4. Each service is a Go/Gin process in `services/<name>/` with its own DB. Shared JWT/CORS live in `services/shared/`.
 
-### 5.3 Frontend Modules
+| Service | Port | Responsibility |
+|---------|------|----------------|
+| identity-service | 8081 | Register, login, logout, profile, referrals, commissions |
+| product-service | 8082 | Products, categories, bundles, tiers, images, pin, PWYW, recommendations |
+| commerce-service | 8083 | Orders, guest orders, cart, wishlist, coupons, recently-viewed, compare, downloads |
+| community-service | 8084 | Posts, likes, comments, follows, public community profiles |
+| review-service | 8085 | Verified-purchase ratings |
+| payment-service | 8086 | Payment details/status, exchange rates, public settings read |
+| admin-service | 8087 | Admin aggregation, stats, email export, settings write (must call other services — must not copy their tables) |
+| media-service | 8088 | Upload, download, watermarked previews |
 
-| Module | File | Responsibility |
-|--------|------|---------------|
-| Shop | frontend/public/index.html + JS | Product grid, search, filter, sort, pagination; pinned products |
-| Product detail | frontend/public/product.html + JS | Image gallery with lightbox, preview display, tier selector, PWYW input, buy button, related products, share buttons, rating display |
-| Bundle detail | frontend/public/bundle.html + JS | Bundle contents, savings display, buy button |
-| Community feed | frontend/public/community.html + JS | Post feed, create post, like, comment |
-| Post detail | frontend/public/post.html + JS | Single post + comments thread |
-| User profile (public) | frontend/public/profile.html + JS | Public profile view, follow/unfollow |
-| Account | frontend/public/account.html + JS | Profile edit, wallet address, purchase history, re-downloads |
-| Referrals | frontend/public/referrals.html + JS | Referral link display, earnings dashboard, referred users list |
-| Checkout | frontend/public/checkout.html + JS | Order review, coupon code input, pay button, confirmation popup, payment polling |
-| Login | frontend/public/login.html + JS | Login form (with referral code field) |
-| Register | frontend/public/register.html + JS | Registration form (with referral code field) |
-| Admin | frontend/public/admin.html + JS | Admin dashboard with tabs for all admin functions |
+Cross-service consistency is via HTTP or events (`services/shared/events`), not shared tables.
+
+### 5.3 Frontend modules (microfrontends)
+
+Static HTML + Alpine.js per MFE under `frontend/`. Shared chrome lives in `shared/chrome/` but each MFE currently inlines its own header. Target page URLs remain those in §3.
+
+| MFE | Directory | Routes (implemented prefix) |
+|-----|-----------|-------------------------------|
+| Shop | `frontend/shop-mfe` | `/`, `/category` |
+| Product | `frontend/product-mfe` | `/product/:slug`, bundle/request pages |
+| Community | `frontend/community-mfe` | `/community`, `/post/:id`, `/profile/:id` |
+| Account | `frontend/account-mfe` | `/account`, `/cart`, `/wishlist`, `/referrals` |
+| Checkout | `frontend/checkout-mfe` | `/checkout` |
+| Auth | `frontend/auth-mfe` | `/login`, `/register` |
+| Admin | `frontend/admin-app` | `/admin` |
+
+API client: `shared/lib/api.js`. Theme: `shared/theme/`.
 
 ### 5.4 Database Schema
 
@@ -659,5 +641,5 @@ When a product is created or its images are updated:
 
 ---
 
-*Spec version: 1.1 — 2026-09-06*
+*Spec version: 1.2 — 2026-09-17*
 *Status: Defining the target product. Implementation status tracked separately.*

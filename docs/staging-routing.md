@@ -1,10 +1,10 @@
-# Staging Routing — Complete Configuration Reference
+# Staging Routing — Configuration Snapshot
 
 > **Date:** 2026-09-13  
 > **Staging URL:** `https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir`  
 > **Host IP:** `130.185.123.156`
 
-This document contains the **actual running configuration** of every routing layer from the internet to the pod. Copy-paste ready for proofreading.
+Ingress/service/nginx layout captured for proofreading. Re-check live ingress before treating path lists as current (`/api/v1/health` and `/api/v1/recommendations/:id` have fallen through to shop HTML).
 
 ---
 

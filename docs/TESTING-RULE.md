@@ -41,12 +41,11 @@ The e2e-suite.js Node.js HTTP tests initially only checked response status codes
 - Not for frontend page validation
 
 ## Testing Infrastructure
-- Playwright tests: `/root/project/tests/frontend/spec-crawl-complete.spec.cjs`
-- Run: `cd /root/project/tests/frontend && BASE_URL=<staging-domain> ADMIN_TOKEN=<token> npx playwright test spec-crawl-complete.spec.cjs`
-- Tests use Chromium browser via Playwright
+- Playwright: `tests/frontend/*.spec.cjs` (config `tests/frontend/playwright.config.cjs`)
+- Run: `cd tests/frontend && BASE_URL=<staging-host> npx playwright test`
+- API suite: `tests/e2e-suite.js`
 - Tests verify rendered content, not just HTTP status
-- Tests cover: all public pages, auth pages, product pages, community pages, user pages, checkout, admin, API endpoints, user flows (register, login, post, cart, order, wishlist, follow), design (dark theme, header/footer)
 
 ## History
-- 2026-09-03: Identified curl-only approach misses nginx welcome pages and SPA rendering issues
-- 2026-09-11: Added testing rule to pawradise-backend-dev skill and this docs file
+- 2026-09-03: Curl-only frontend testing missed nginx welcome pages and SPA issues
+- 2026-09-11: Rule added to this file

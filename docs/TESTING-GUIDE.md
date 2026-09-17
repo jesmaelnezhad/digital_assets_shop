@@ -191,13 +191,12 @@ npx playwright test
 
 ```
 tests/frontend/
-├── 01-page-loads.spec.cjs      # All pages return 200, no nginx welcome
-├── 02-styling.spec.cjs          # Computed styles, fonts, layout
-├── 03-navigation.spec.cjs       # All links resolve, nav consistency
-├── 04-content-rendering.spec.cjs # JS-rendered content (products, posts)
-├── 05-forms.spec.cjs            # Form fields submit, validate
-├── 06-auth-flow.spec.cjs        # Register → Login → Protected
-└── 07-api-integration.spec.cjs  # Frontend JS calls API correctly
+├── playwright.config.cjs
+├── pawradise-tests.spec.cjs
+└── shop-products.spec.cjs
+tests/e2e-suite.js
+tests/unit/<service>/
+tests/integration/
 ```
 
 ---
@@ -224,19 +223,6 @@ tests/frontend/
 5. **Force pod restart** (don't trust rolling updates)
 6. **Verify test passes**
 7. **Run full suite** to check for regressions
-
----
-
-## Key Metrics
-
-| Metric | Before | After |
-|--------|--------|-------|
-| Pages returning 200 | 100% | 100% |
-| Pages with correct styling | ~20% | 100% |
-| Links resolving to 200 | ~85% | 100% |
-| Console errors | Unknown | 0 |
-| Test files | 10 (redundant) | 7 (organized) |
-| Test execution time | ~8 min | ~5 min |
 
 ---
 

@@ -1,7 +1,7 @@
 # Pawradise Microservices Architecture — Deployment Reference
 
-> **Date**: 2026-09-11 (updated for domain-based routing v2)
-> **Purpose**: Complete reference for the two-server (BLUE/RED) microservice deployment with host-based ingress routing to staging and production namespaces.
+> **Date**: 2026-09-17 (domain-based routing v2)
+> **Purpose**: Reference for the two-server (BLUE/RED) microservice deployment with host-based ingress routing to staging and production namespaces.
 
 ---
 
@@ -488,21 +488,16 @@ ssh root@130.185.123.156 "k3s kubectl logs -n production -l app=<service> --tail
 
 ## 12. File Locations
 
-### 12.1 On BLUE
+On BLUE the checkout of this repo may live at `/root/project/` or another path. In the repo itself:
 
 | Path | Purpose |
 |------|---------|
-| `/root/project/services/<service>/` | Go source for each microservice |
-| `/root/project/k8s/` | Kubernetes manifests |
-| `/root/project/k8s/api-gateway-staging.yaml` | Staging ingress (domain-based, no rewrite) |
-| `/root/project/k8s/frontend-ingress-staging.yaml` | Staging frontend ingress (domain-based) |
-| `/root/project/e2e/common.sh` | Bash e2e config (uses staging domain) |
-| `/root/project/e2e/customer-journeys.sh` | Customer journey e2e tests |
-| `/root/project/e2e/admin-ops.sh` | Admin ops e2e tests |
-| `/root/project/e2e/extra-e2e.sh` | Extra e2e tests |
-| `/root/project/tests/e2e-suite.js` | Node.js E2E test suite (1430 lines) |
-| `/root/project/tests/unit/` | Go unit tests |
-| `/root/project/tests/integration/` | Go integration tests |
+| `services/<service>/` | Go source |
+| `k8s/` | Manifests including `api-gateway-staging.yaml`, `frontend-ingress-staging.yaml` |
+| `tests/e2e-suite.js` | Node HTTP suite |
+| `tests/unit/` | Go unit tests |
+| `tests/integration/` | Go integration tests |
+| `tests/frontend/` | Playwright |
 
 ### 12.2 On RED
 
@@ -511,46 +506,21 @@ ssh root@130.185.123.156 "k3s kubectl logs -n production -l app=<service> --tail
 | `/etc/rancher/k3s/registries.yaml` | Registry mirror configuration |
 | `/etc/nginx/sites-available/pawradise-ssl` | Host nginx SSL config (domain routing + SSL) |
 | `/etc/nginx/sites-enabled/pawradise-ssl` | Symlink to above |
-| `/root/k8s/` | Synced copy of K8s manifests |
-| `/root/project/k8s/` | Project K8s manifests |
+| `/root/k8s/` | Synced copy of K8s manifests (if used) |
 | `/tmp/<service>-static` | Temporary binary copy location |
-| `/var/www/production/assets/` | Shared static assets (theme.css, alpine.js, etc.) |
+| `/var/www/production/assets/` | Host-nginx static assets (may be stale vs MFE pods) |
 
 ---
 
 ## 13. Testing from BLUE
 
-All e2e tests must run from BLUE using the real staging domain. Tests should NOT run from RED or via IP.
-
-### 13.1 Bash E2E Suites
+Run tests against the **staging hostname**, not the NodePort IP.
 
 ```bash
-cd /root/project/e2e
-export ENV_NAME=staging
-bash customer-journeys.sh staging   # Customer journey tests
-bash admin-ops.sh staging             # Admin operations tests
-bash extra-e2e.sh staging             # Extra e2e tests
-```
-
-### 13.2 Node.js E2E Suite
-
-```bash
-cd /root/project/tests
-node e2e-suite.js
-```
-
-### 13.3 Go Unit Tests
-
-```bash
-cd /root/project/tests/unit
-go test ./... -v
-```
-
-### 13.4 Go Integration Tests
-
-```bash
-cd /root/project/tests/integration
-go test ./... -v
+cd tests && node e2e-suite.js
+cd tests/unit && go test ./... -v
+cd tests/integration && go test ./... -v
+cd tests/frontend && npx playwright test
 ```
 
 ---
