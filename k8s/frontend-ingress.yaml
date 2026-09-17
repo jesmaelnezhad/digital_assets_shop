@@ -1,0 +1,62 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-ingress
+  namespace: production
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: pawradise.ir
+    http:
+      paths:
+      - backend:
+          service:
+            name: shop-mfe
+            port:
+              number: 80
+        path: /(/|$)(.*)
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: auth-mfe
+            port:
+              number: 80
+        path: /auth(/|$)(.*)
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: product-mfe
+            port:
+              number: 80
+        path: /product(/|$)(.*)
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: account-mfe
+            port:
+              number: 80
+        path: /account(/|$)(.*)
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: checkout-mfe
+            port:
+              number: 80
+        path: /checkout(/|$)(.*)
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: community-mfe
+            port:
+              number: 80
+        path: /community(/|$)(.*)
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: admin-app
+            port:
+              number: 80
+        path: /admin(/|$)(.*)
+        pathType: ImplementationSpecific

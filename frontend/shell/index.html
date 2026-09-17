@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAWRADISE — Digital Asset Shop</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0f;
+    --surface: #14141f;
+    --surface2: #1a1a2a;
+    --border: #2a2a3a;
+    --text: #e0e0e0;
+    --text2: #8888aa;
+    --cyan: #00d4ff;
+    --magenta: #ff0066;
+    --green: #00ff88;
+    --mono: Consolas, 'Courier New', monospace;
+    --sans: -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 0 20px rgba(0,212,255,0.05);
+  }
+  .logo {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--cyan);
+    letter-spacing: 2px;
+    text-decoration: none;
+    text-shadow: 0 0 10px rgba(0,212,255,0.5);
+  }
+  .logo span { color: var(--magenta); text-shadow: 0 0 10px rgba(255,0,102,0.5); }
+  .header nav { display: flex; gap: 24px; align-items: center; }
+  .header nav a {
+    color: var(--text2);
+    text-decoration: none;
+    font-size: 13px;
+    font-family: var(--mono);
+    transition: color 0.2s;
+    letter-spacing: 1px;
+  }
+  .header nav a:hover { color: var(--cyan); text-shadow: 0 0 8px rgba(0,212,255,0.5); }
+  .header nav a.active { color: var(--cyan); }
+  .env-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text2);
+    margin-left: 16px;
+    padding: 4px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    letter-spacing: 1px;
+  }
+  .auth-btn {
+    background: transparent;
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 12px;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .auth-btn:hover { background: var(--cyan); color: var(--bg); }
+  .terminal-line {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .terminal-line .prompt { color: var(--cyan); }
+  .main-content {
+    min-height: calc(100vh - 120px);
+  }
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 16px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text2);
+    font-family: var(--mono);
+  }
+  .loading-overlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .loading-overlay .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--cyan);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 10px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="terminal-line">
+  <span class="prompt">root@pawradise</span>:<span>~</span>$ ./shell --compose --mfes<span class="cursor"></span>
+</div>
+
+<header class="header">
+  <a href="/" class="logo">PAW<span>RADISE</span></a>
+  <nav id="mainNav">
+    <a href="/" data-mfe="shop" class="active">SHOP</a>
+    <a href="/community" data-mfe="community">COMMUNITY</a>
+    <a href="/account" data-mfe="account">ACCOUNT</a>
+    <a href="/checkout" data-mfe="checkout">CHECKOUT</a>
+  </nav>
+  <div style="display:flex;align-items:center;">
+    <button id="authBtn" class="auth-btn">LOGIN</button>
+    <span id="envBadge" class="env-badge"></span>
+  </div>
+</header>
+
+<div class="main-content" id="mfeContainer">
+  <div class="loading-overlay" id="loading">
+    <div class="spinner"></div>
+    <span>loading mfe...</span>
+  </div>
+</div>
+
+<div class="footer">
+  PAWRADISE &copy; 2026 — <span id="envText">production</span> environment
+</div>
+
+<script>
+(function() {
+  // Environment detection
+  const path = window.location.pathname;
+  const isStaging = path.startsWith('/staging');
+  const API_BASE = isStaging ? '/staging/api/v1' : '/api/v1';
+  const LINK_BASE = isStaging ? '/staging' : '/';
+
+  // Update env badges
+  document.getElementById('envBadge').textContent = isStaging ? 'ENV: staging' : 'ENV: production';
+  document.getElementById('envText').textContent = isStaging ? 'staging' : 'production';
+
+  // Auth state
+  const TOKEN_KEY = 'pawradise_token';
+  let currentToken = localStorage.getItem(TOKEN_KEY);
+
+  // Auth button
+  const authBtn = document.getElementById('authBtn');
+  function updateAuthBtn() {
+    if (currentToken) {
+      authBtn.textContent = 'LOGOUT';
+      authBtn.onclick = function() {
+        localStorage.removeItem(TOKEN_KEY);
+        currentToken = null;
+        updateAuthBtn();
+        window.location.href = LINK_BASE + '/';
+      };
+    } else {
+      authBtn.textContent = 'LOGIN';
+      authBtn.onclick = function() {
+        window.location.href = LINK_BASE + '/auth/';
+      };
+    }
+  }
+  updateAuthBtn();
+
+  // Navigation — load MFEs
+  const mfeContainer = document.getElementById('mfeContainer');
+  const navLinks = document.querySelectorAll('[data-mfe]');
+
+  function loadMFE(name) {
+    // Update nav active state
+    navLinks.forEach(a => a.classList.remove('active'));
+    const activeLink = document.querySelector('[data-mfe="' + name + '"]');
+    if (activeLink) activeLink.classList.add('active');
+
+    // Show loading
+    mfeContainer.innerHTML = '<div class="loading-overlay"><div class="spinner"></div><span>loading ' + name + '...</span></div>';
+
+    // Determine MFE URL
+    const mfePaths = {
+      'shop': '/shop/',
+      'community': '/community/',
+      'account': '/account/',
+      'checkout': '/checkout/',
+      'product-detail': '/product-detail/',
+      'auth': '/auth/',
+      'admin': '/admin/'
+    };
+
+    const mfeUrl = mfePaths[name] || '/' + name + '/';
+
+    // Fetch and inject MFE
+    fetch(LINK_BASE + mfeUrl)
+      .then(function(r) { return r.text(); })
+      .then(function(html) {
+        // Parse the HTML and extract body content
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+
+        // Extract styles from the loaded page
+        var styles = doc.querySelectorAll('style');
+        var existingStyles = mfeContainer.querySelector('.mfe-styles');
+        if (existingStyles) existingStyles.remove();
+
+        var styleEl = document.createElement('style');
+        styleEl.className = 'mfe-styles';
+        styles.forEach(function(s) {
+          styleEl.textContent += s.textContent + '\n';
+        });
+
+        // Get body children (skip scripts)
+        var bodyContent = doc.querySelector('body');
+        var fragment = document.createDocumentFragment();
+        Array.from(bodyContent.childNodes).forEach(function(node) {
+          if (node.nodeType === 1) { // Element nodes
+            // Skip header/footer from loaded MFE — shell provides those
+            if (node.id === 'header' || node.id === 'footer' ||
+                node.classList.contains('header') || node.classList.contains('footer')) {
+              return;
+            }
+            fragment.appendChild(node.cloneNode(true));
+          }
+        });
+
+        // Clear and insert
+        while (mfeContainer.firstChild) mfeContainer.removeChild(mfeContainer.firstChild);
+        mfeContainer.appendChild(styleEl);
+        mfeContainer.appendChild(fragment);
+
+        // Execute any inline scripts in the loaded content
+        var scripts = fragment.querySelectorAll('script');
+        scripts.forEach(function(script) {
+          var newScript = document.createElement('script');
+          if (script.src) {
+            newScript.src = script.src;
+          } else {
+            newScript.textContent = script.textContent;
+          }
+          if (script.id) newScript.id = script.id;
+          fragment.removeChild(script);
+          fragment.appendChild(newScript);
+        });
+      })
+      .catch(function(err) {
+        mfeContainer.innerHTML = '<div class="loading-overlay" style="color:var(--magenta);">Error loading ' + name + ': ' + err.message + '</div>';
+        console.error('MFE load error:', err);
+      });
+  }
+
+  // Nav click handlers
+  navLinks.forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      var name = link.getAttribute('data-mfe');
+      if (name) {
+        e.preventDefault();
+        loadMFE(name);
+      }
+    });
+  });
+
+  // Auth button handler
+  authBtn.addEventListener('click', function() {
+    if (currentToken) {
+      localStorage.removeItem(TOKEN_KEY);
+      currentToken = null;
+      updateAuthBtn();
+      window.location.href = LINK_BASE + '/';
+    } else {
+      loadMFE('auth');
+    }
+  });
+
+  // Determine initial MFE from URL
+  function getInitialMFE() {
+    var pathParts = path.split('/').filter(Boolean);
+    // /staging/shop/... or /shop/...
+    if (pathParts.length > 0) {
+      var page = pathParts[0];
+      var mfeMap = {
+        '': 'shop',
+        'shop': 'shop',
+        'product': 'product-detail',
+        'product-detail': 'product-detail',
+        'community': 'community',
+        'account': 'account',
+        'checkout': 'checkout',
+        'auth': 'auth',
+        'login': 'auth',
+        'register': 'auth',
+        'admin': 'admin'
+      };
+      return mfeMap[page] || 'shop';
+    }
+    return 'shop';
+  }
+
+  // Load initial MFE
+  var initialMFE = getInitialMFE();
+  loadMFE(initialMFE);
+
+  // Handle browser back/forward
+  window.addEventListener('popstate', function() {
+    loadMFE(getInitialMFE());
+  });
+
+  // Expose API for MFEs
+  window.PawradiseShell = {
+    getToken: function() { return currentToken; },
+    setToken: function(t) { currentToken = t; localStorage.setItem(TOKEN_KEY, t); updateAuthBtn(); },
+    clearToken: function() { localStorage.removeItem(TOKEN_KEY); currentToken = null; updateAuthBtn(); },
+    getAPIBase: function() { return API_BASE; },
+    getLinkBase: function() { return LINK_BASE; },
+    isStaging: function() { return isStaging; },
+    loadMFE: loadMFE
+  };
+})();
+</script>
+
+</body>
+</html>

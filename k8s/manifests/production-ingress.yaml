@@ -1,0 +1,257 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+  name: api-gateway
+  namespace: production
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: identity-service
+            port:
+              number: 8081
+        path: /api/v1/register
+        pathType: Prefix
+      - backend:
+          service:
+            name: identity-service
+            port:
+              number: 8081
+        path: /api/v1/login
+        pathType: Prefix
+      - backend:
+          service:
+            name: identity-service
+            port:
+              number: 8081
+        path: /api/v1/logout
+        pathType: Prefix
+      - backend:
+          service:
+            name: identity-service
+            port:
+              number: 8081
+        path: /api/v1/me
+        pathType: Prefix
+      - backend:
+          service:
+            name: identity-service
+            port:
+              number: 8081
+        path: /api/v1/referrals
+        pathType: Prefix
+      - backend:
+          service:
+            name: identity-service
+            port:
+              number: 8081
+        path: /api/v1/commissions
+        pathType: Prefix
+      - backend:
+          service:
+            name: identity-service
+            port:
+              number: 8081
+        path: /api/v1/commissions/record
+        pathType: Prefix
+      - backend:
+          service:
+            name: identity-service
+            port:
+              number: 8081
+        path: /api/v1/profile
+        pathType: Prefix
+      - backend:
+          service:
+            name: product-service
+            port:
+              number: 8082
+        path: /api/v1/products
+        pathType: Prefix
+      - backend:
+          service:
+            name: product-service
+            port:
+              number: 8082
+        path: /api/v1/categories
+        pathType: Prefix
+      - backend:
+          service:
+            name: product-service
+            port:
+              number: 8082
+        path: /api/v1/bundles
+        pathType: Prefix
+      - backend:
+          service:
+            name: product-service
+            port:
+              number: 8082
+        path: /api/v1/recommendations
+        pathType: Prefix
+      - backend:
+          service:
+            name: commerce-service
+            port:
+              number: 8083
+        path: /api/v1/guest-orders
+        pathType: Prefix
+      - backend:
+          service:
+            name: commerce-service
+            port:
+              number: 8083
+        path: /api/v1/coupons
+        pathType: Prefix
+      - backend:
+          service:
+            name: commerce-service
+            port:
+              number: 8083
+        path: /api/v1/orders
+        pathType: Prefix
+      - backend:
+          service:
+            name: commerce-service
+            port:
+              number: 8083
+        path: /api/v1/cart
+        pathType: Prefix
+      - backend:
+          service:
+            name: commerce-service
+            port:
+              number: 8083
+        path: /api/v1/cart/items
+        pathType: Prefix
+      - backend:
+          service:
+            name: commerce-service
+            port:
+              number: 8083
+        path: /api/v1/wishlist
+        pathType: Prefix
+      - backend:
+          service:
+            name: commerce-service
+            port:
+              number: 8083
+        path: /api/v1/wishlist/toggle
+        pathType: Prefix
+      - backend:
+          service:
+            name: commerce-service
+            port:
+              number: 8083
+        path: /api/v1/recently-viewed
+        pathType: Prefix
+      - backend:
+          service:
+            name: commerce-service
+            port:
+              number: 8083
+        path: /api/v1/compare
+        pathType: Prefix
+      - backend:
+          service:
+            name: commerce-service
+            port:
+              number: 8083
+        path: /api/v1/compare/toggle
+        pathType: Prefix
+      - backend:
+          service:
+            name: community-service
+            port:
+              number: 8084
+        path: /api/v1/community/.*
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: community-service
+            port:
+              number: 8084
+        path: /api/v1/profile/.*
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: review-service
+            port:
+              number: 8085
+        path: /api/v1/reviews
+        pathType: Prefix
+      - backend:
+          service:
+            name: review-service
+            port:
+              number: 8085
+        path: /api/v1/reviews/.*
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: payment-service
+            port:
+              number: 8086
+        path: /api/v1/exchange-rates
+        pathType: Prefix
+      - backend:
+          service:
+            name: payment-service
+            port:
+              number: 8086
+        path: /api/v1/exchange-rates/.*
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: payment-service
+            port:
+              number: 8086
+        path: /api/v1/payments
+        pathType: Prefix
+      - backend:
+          service:
+            name: payment-service
+            port:
+              number: 8086
+        path: /api/v1/payments/.*
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: payment-service
+            port:
+              number: 8086
+        path: /api/v1/settings
+        pathType: Prefix
+      - backend:
+          service:
+            name: payment-service
+            port:
+              number: 8086
+        path: /api/v1/settings/.*
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: admin-service
+            port:
+              number: 8087
+        path: /api/v1/admin/.*
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: media-service
+            port:
+              number: 8088
+        path: /api/v1/media/.*
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: identity-service
+            port:
+              number: 8081
+        path: /api/v1/health
+        pathType: Prefix

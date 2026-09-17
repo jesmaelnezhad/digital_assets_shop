@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAWRADISE — Post</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0f;
+    --surface: #14141f;
+    --surface2: #1a1a2a;
+    --border: #2a2a3a;
+    --text: #e0e0e0;
+    --text2: #8888aa;
+    --cyan: #00d4ff;
+    --magenta: #ff0066;
+    --green: #00ff88;
+    --mono: Consolas, 'Courier New', monospace;
+    --sans: -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; line-height: 1.6; }
+  .terminal-line { font-family: var(--mono); font-size: 11px; color: var(--text2); padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .terminal-line .prompt { color: var(--cyan); }
+  header { padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 100; }
+  .logo { font-family: var(--mono); font-size: 20px; font-weight: bold; color: var(--cyan); letter-spacing: 2px; text-decoration: none; }
+  .logo span { color: var(--magenta); }
+  nav { display: flex; gap: 24px; align-items: center; }
+  nav a { color: var(--text2); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+  nav a:hover { color: var(--cyan); }
+  .env-badge { font-family: var(--mono); font-size: 10px; padding: 4px 10px; border-radius: 10px; border: 1px solid var(--border); color: var(--text2); letter-spacing: 1px; margin-left: 12px; }
+  .container { max-width: 680px; margin: 0 auto; padding: 32px 24px; }
+  .page-title { font-family: var(--mono); font-size: 20px; color: var(--text); margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+  .page-title .badge { font-size: 10px; background: var(--magenta); color: var(--bg); padding: 3px 10px; border-radius: 10px; font-weight: bold; letter-spacing: 1px; }
+  .back-link { display: inline-block; margin-bottom: 16px; color: var(--text2); font-size: 13px; text-decoration: none; font-family: var(--mono); }
+  .back-link:hover { color: var(--cyan); }
+  .post-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 24px; margin-bottom: 24px; }
+  .post-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .post-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 16px; color: var(--cyan); flex-shrink: 0; overflow: hidden; }
+  .post-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .post-author { font-size: 14px; font-weight: 500; color: var(--text); }
+  .post-author:hover { color: var(--cyan); text-decoration: none; }
+  .post-meta { font-size: 11px; color: var(--text2); font-family: var(--mono); margin-top: 2px; }
+  .post-content { font-size: 15px; line-height: 1.6; color: var(--text); margin-bottom: 16px; padding: 16px; background: var(--surface2); border-radius: 4px; word-break: break-word; border-left: 3px solid var(--cyan); }
+  .post-actions { display: flex; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .post-action { padding: 6px 14px; background: transparent; border: 1px solid var(--border); color: var(--text2); font-family: var(--mono); font-size: 11px; cursor: pointer; border-radius: 3px; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+  .post-action:hover { border-color: var(--cyan); color: var(--cyan); }
+  .post-action.liked { border-color: var(--magenta); color: var(--magenta); }
+  .post-action.liked:hover { background: var(--magenta); color: var(--bg); }
+  .post-action-count { font-size: 11px; color: var(--text2); font-family: var(--mono); }
+  .comments-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .comments-section-title { font-family: var(--mono); font-size: 12px; color: var(--cyan); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .comments-section-title .count { background: var(--surface2); border: 1px solid var(--border); padding: 2px 8px; border-radius: 10px; font-size: 10px; color: var(--text2); }
+  .comment { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .comment:last-child { border-bottom: none; }
+  .comment-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11px; color: var(--cyan); flex-shrink: 0; overflow: hidden; }
+  .comment-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .comment-body { flex: 1; }
+  .comment-author { font-size: 12px; font-weight: 500; color: var(--cyan); }
+  .comment-time { font-size: 10px; color: var(--text2); font-family: var(--mono); margin-left: 8px; }
+  .comment-text { font-size: 13px; color: var(--text); margin-top: 4px; line-height: 1.4; word-break: break-word; }
+  .comment-delete { font-size: 10px; color: var(--text2); background: none; border: none; cursor: pointer; padding: 0; font-family: var(--mono); margin-top: 4px; }
+  .comment-delete:hover { color: var(--magenta); }
+  .login-prompt { text-align: center; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 20px; }
+  .login-prompt p { font-size: 13px; color: var(--text2); margin-bottom: 10px; }
+  .comment-input-box { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+  .comment-input-box input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px; color: var(--text); font-family: var(--mono); font-size: 13px; outline: none; }
+  .comment-input-box input:focus { border-color: var(--cyan); }
+  .comment-input-box input::placeholder { color: var(--text2); }
+  .empty-state { text-align: center; padding: 48px 0; color: var(--text2); }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: 0.2; font-family: var(--mono); }
+  .footer { border-top: 1px solid var(--border); padding: 16px 24px; text-align: center; font-size: 11px; color: var(--text2); font-family: var(--mono); }
+  .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; border-radius: 4px; font-family: var(--mono); font-size: 12px; z-index: 1000; opacity: 0; transform: translateY(10px); transition: all 0.3s; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { background: #00ff8822; border: 1px solid var(--green); color: var(--green); }
+  .toast.error { background: #ff006622; border: 1px solid var(--magenta); color: var(--magenta); }
+  @media (max-width: 768px) { .container { padding: 16px; } .post-content { padding: 12px; font-size: 14px; } }
+</style>
+</head>
+<body data-page="community">
+
+<div class="terminal-line"><span class="prompt">guest@pawradise</span>:<span>~</span>$ ./inspect --post <span id="termPostId">…</span></div>
+
+<header>
+  <a data-link="/" class="logo">PAW<span>RADISE</span></a>
+  <div style="display:flex;align-items:center;">
+    <nav style="margin-right:24px;">
+      <a data-link="/" data-nav="shop">SHOP</a>
+      <a data-link="/community" data-nav="community">COMMUNITY</a>
+      <a data-link="/account" data-nav="account">ACCOUNT</a>
+    </nav>
+    <button id="authBtn" style="background:transparent;border:1px solid var(--cyan);color:var(--cyan);font-family:var(--mono);font-size:12px;padding:6px 14px;border-radius:4px;cursor:pointer;margin-right:12px;letter-spacing:1px;">LOGIN</button>
+    <span id="envBadge" class="env-badge"></span>
+  </div>
+</header>
+
+<div class="container">
+  <div id="loadingState">
+    <div class="empty-state"><div class="icon">LOADING</div><div>fetching post...</div></div>
+  </div>
+
+  <div id="postContent" style="display:none;">
+    <div class="page-title">
+      <span>// post</span>
+      <span class="badge">DETAIL</span>
+    </div>
+
+    <a class="back-link" href="${LINK_BASE}/community">&lt; back to community</a>
+
+    <div class="post-card">
+      <div class="post-header">
+        <div class="post-avatar" id="postAvatar"></div>
+        <div>
+          <a class="post-author" id="postAuthorLink" href="#"></a>
+          <div class="post-meta" id="postMeta"></div>
+        </div>
+      </div>
+      <div class="post-content" id="postContentBody"></div>
+
+      <div class="post-actions">
+        <button class="post-action" id="likeBtn">
+          <span id="likeIcon">○</span> <span id="likeCount" class="post-action-count">0</span>
+        </button>
+        <button class="post-action" id="commentToggleBtn">
+          💬 <span id="commentCount" class="post-action-count">0</span>
+        </button>
+      </div>
+
+      <div class="comments-section" id="commentsSection" style="display:none;">
+        <div class="comments-section-title">
+          Comments
+          <span class="count" id="commentsCount">0</span>
+        </div>
+        <div id="commentsList"></div>
+
+        <div class="comment-input-box" id="commentInputBox" style="display:none;">
+          <input type="text" id="commentInput" placeholder="Write a comment..." maxlength="500"
+            onkeydown="if(event.key==='Enter')addComment()">
+          <button class="btn btn-primary" id="commentSubmitBtn" onclick="addComment()">POST</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="notFound" class="empty-state" style="display:none;">
+    <div class="icon">404</div>
+    <div>post not found</div>
+    <div style="margin-top:8px;font-size:12px;"><a href="${LINK_BASE}/community" style="color:var(--cyan);">back to community</a></div>
+  </div>
+</div>
+
+<div class="footer">PAWRADISE &copy; 2026 — <span id="envText">production</span></div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+  const path = window.location.pathname;
+  const isStaging = path.startsWith('/staging');
+  const API_BASE = isStaging ? '/staging/api/v1' : '/api/v1';
+  const LINK_BASE = isStaging ? '/staging' : '';
+  document.querySelectorAll('[data-link]').forEach(a => { a.href = LINK_BASE + a.getAttribute('data-link'); });
+  (function(){ const pg = document.body.getAttribute('data-page'); const el = document.querySelector('[data-nav="'+pg+'"]'); if(el) el.style.color = 'var(--cyan)'; })();
+  (function(){ const b=document.getElementById('authBtn'); if(!b) return;
+    const t=localStorage.getItem('pawradise_token');
+    if(t){ b.textContent='LOGOUT'; b.onclick=function(){ localStorage.removeItem('pawradise_token'); window.location.href=LINK_BASE+'/'; }; }
+    else { b.textContent='LOGIN'; b.onclick=function(){ window.location.href=LINK_BASE+'/login?redirect='+encodeURIComponent(window.location.pathname+window.location.search); }; }
+  })();
+  document.getElementById('envBadge').textContent = isStaging ? 'ENV: staging' : 'ENV: production';
+  document.getElementById('envText').textContent = isStaging ? 'staging' : 'production';
+
+  function toast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + (type || 'success');
+    setTimeout(() => { t.className = 'toast'; }, 2500);
+  }
+
+  function escapeHtml(t){ const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+  function initials(name){ if(!name) return '?'; return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+  function timeAgo(dateStr){ const now=new Date(); const then=new Date(dateStr); const diff=Math.floor((now - then)/1000);
+    if(diff<60) return diff+'s ago'; if(diff<3600) return Math.floor(diff/60)+'m ago';
+    if(diff<86400) return Math.floor(diff/3600)+'h ago'; return Math.floor(diff/86400)+'d ago'; }
+
+  // Extract post ID from URL: /post/123 or /staging/post/123
+  const parts = path.split('/').filter(Boolean);
+  const postId = parseInt(parts.pop()) || 0;
+  document.getElementById('termPostId').textContent = postId;
+
+  let post = null;
+  let comments = [];
+  let commentSectionOpen = false;
+
+  const token = localStorage.getItem('pawradise_token');
+  const isLoggedIn = !!token;
+
+  function getMyUserId() {
+    try {
+      const res = fetch(API_BASE + '/me', { headers: { 'Authorization': 'Bearer ' + token } });
+      // We'll cache this; for now return 0 if not logged in
+      return 0;
+    } catch { return 0; }
+  }
+
+  async function loadPost() {
+    try {
+      const res = await fetch(API_BASE + '/community/posts/' + postId);
+      if (!res.ok) {
+        if (res.status === 404) {
+          document.getElementById('loadingState').style.display = 'none';
+          document.getElementById('notFound').style.display = 'block';
+        }
+        return;
+      }
+      const data = await res.json();
+      post = data.post || data;
+      comments = data.comments || [];
+      renderPost(post, data);
+      renderComments(comments);
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('postContent').style.display = 'block';
+    } catch (e) {
+      console.error(e);
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('postContent').innerHTML = '<div class="empty-state"><div class="icon">ERR</div><div>failed to load post</div></div>';
+    }
+  }
+
+  function renderPost(p, data) {
+    const avatar = document.getElementById('postAvatar');
+    if (p.avatar_url) {
+      avatar.innerHTML = '<img src="' + escapeHtml(p.avatar_url) + '" alt="">';
+    } else {
+      avatar.textContent = initials(p.name);
+    }
+
+    document.getElementById('postAuthorLink').textContent = p.name || 'Anonymous';
+    document.getElementById('postAuthorLink').href = LINK_BASE + '/profile/' + p.user_id;
+    document.getElementById('postMeta').innerHTML = '@' + (p.email || 'user') + ' · ' + timeAgo(p.created_at);
+    document.getElementById('postContentBody').textContent = p.content;
+
+    const likeBtn = document.getElementById('likeBtn');
+    const likeIcon = document.getElementById('likeIcon');
+    const likeCount = document.getElementById('likeCount');
+    likeCount.textContent = p.like_count || 0;
+    if (data.is_liked) {
+      likeBtn.classList.add('liked');
+      likeIcon.textContent = '♥';
+    } else {
+      likeBtn.classList.remove('liked');
+      likeIcon.textContent = '○';
+    }
+    likeBtn.onclick = () => toggleLike();
+
+    document.getElementById('commentCount').textContent = p.comment_count || 0;
+    document.getElementById('commentsCount').textContent = comments.length;
+
+    const commentToggleBtn = document.getElementById('commentToggleBtn');
+    commentToggleBtn.onclick = () => toggleComments();
+
+    // Follow button for the author
+    setupFollowButton(p.user_id, p.name, data.is_following !== undefined ? data.is_following : (p.is_followed || false));
+  }
+
+  function setupFollowButton(authorId, authorName, isFollowing) {
+    // Add follow button after the post actions
+    const actionsDiv = document.querySelector('.post-actions');
+    const followBtn = document.createElement('button');
+    followBtn.className = 'post-action' + (isFollowing ? ' liked' : '');
+    followBtn.innerHTML = (isFollowing ? 'UNFOLLOW' : 'FOLLOW') + ' ' + (authorName ? '·' : '');
+    followBtn.onclick = () => toggleFollow(authorId);
+    actionsDiv.appendChild(followBtn);
+  }
+
+  async function toggleLike() {
+    if (!isLoggedIn) {
+      window.location.href = LINK_BASE + '/login?redirect=' + encodeURIComponent(LINK_BASE + '/post/' + postId);
+      return;
+    }
+
+    const likeBtn = document.getElementById('likeBtn');
+    const likeIcon = document.getElementById('likeIcon');
+    const likeCount = document.getElementById('likeCount');
+    const currentlyLiked = likeBtn.classList.contains('liked');
+
+    try {
+      const method = currentlyLiked ? 'DELETE' : 'POST';
+      const res = await fetch(API_BASE + '/community/posts/' + postId + '/like', {
+        method: method,
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const newLiked = data.liked;
+        likeBtn.classList.toggle('liked', newLiked);
+        likeIcon.textContent = newLiked ? '♥' : '○';
+        likeCount.textContent = data.like_count;
+        // Also update the post data
+        if (post) post.liked = newLiked;
+      } else {
+        toast('Could not update like', 'error');
+      }
+    } catch (e) {
+      toast('Network error', 'error');
+    }
+  }
+
+  function toggleComments() {
+    const section = document.getElementById('commentsSection');
+    commentSectionOpen = !commentSectionOpen;
+    section.style.display = commentSectionOpen ? 'block' : 'none';
+    document.getElementById('commentInputBox').style.display = commentSectionOpen ? 'flex' : 'none';
+
+    if (commentSectionOpen && comments.length === 0) {
+      // Try to load comments if not loaded
+      loadComments();
+    }
+  }
+
+  async function loadComments() {
+    try {
+      const res = await fetch(API_BASE + '/community/posts/' + postId);
+      if (!res.ok) return;
+      const data = await res.json();
+      comments = data.comments || [];
+      renderComments(comments);
+      document.getElementById('commentsCount').textContent = comments.length;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Cache my user ID after login
+  let myUserId = 0;
+  async function initMyUserId() {
+    if (!isLoggedIn) return;
+    try {
+      const res = await fetch(API_BASE + '/me', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (res.ok) {
+        const data = await res.json();
+        myUserId = data.id || 0;
+      }
+    } catch {}
+  }
+
+  function renderComments(comments) {
+    const list = document.getElementById('commentsList');
+    if (comments.length === 0) {
+      list.innerHTML = '<div style="font-size:12px;color:var(--text2);padding:8px 0;">No comments yet. Be the first!</div>';
+      return;
+    }
+
+    list.innerHTML = comments.map(c => {
+      const avatarHtml = c.user.avatar_url ? '<img src="' + escapeHtml(c.user.avatar_url) + '" alt="">' : initials(c.user.name);
+      const canDelete = c.user_id === myUserId;
+      return `
+        <div class="comment">
+          <div class="comment-avatar">${avatarHtml}</div>
+          <div class="comment-body">
+            <div style="display:flex;align-items:center;">
+              <span class="comment-author">${escapeHtml(c.user.name)}</span>
+              <span class="comment-time">${timeAgo(c.created_at)}</span>
+            </div>
+            <div class="comment-text">${escapeHtml(c.content)}</div>
+            ${canDelete ? '<button class="comment-delete" onclick="deleteComment(' + c.id + ')">delete</button>' : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function addComment() {
+    const input = document.getElementById('commentInput');
+    const content = input.value.trim();
+    if (!content) return;
+
+    const btn = document.getElementById('commentSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'POSTING...';
+
+    try {
+      const res = await fetch(API_BASE + '/community/posts/' + postId + '/comments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ content: content })
+      });
+      if (res.ok) {
+        input.value = '';
+        loadComments();
+        toast('Comment added', 'success');
+      } else {
+        toast('Could not add comment', 'error');
+      }
+    } catch (e) {
+      toast('Network error', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'POST';
+    }
+  }
+
+  async function deleteComment(commentId) {
+    if (!confirm('Delete this comment?')) return;
+
+    try {
+      const res = await fetch(API_BASE + '/community/posts/' + postId + '/comments/' + commentId, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (res.ok) {
+        loadComments();
+        toast('Comment deleted', 'success');
+      } else {
+        toast('Could not delete comment', 'error');
+      }
+    } catch (e) {
+      toast('Network error', 'error');
+    }
+  }
+
+  async function toggleFollow(authorId) {
+    if (!isLoggedIn) {
+      window.location.href = LINK_BASE + '/login?redirect=' + encodeURIComponent(LINK_BASE + '/post/' + postId);
+      return;
+    }
+
+    try {
+      const res = await fetch(API_BASE + '/community/follow/' + authorId, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast(data.following ? 'Followed user' : 'Unfollowed user', 'success');
+        // Reload post to update follow button state
+        loadPost();
+      } else {
+        toast('Could not update follow', 'error');
+      }
+    } catch (e) {
+      toast('Network error', 'error');
+    }
+  }
+
+  // Initialize comment section state
+  document.getElementById('commentToggleBtn').onclick = () => {
+    commentSectionOpen = !commentSectionOpen;
+    document.getElementById('commentsSection').style.display = commentSectionOpen ? 'block' : 'none';
+    if (commentSectionOpen) {
+      document.getElementById('commentInputBox').style.display = 'flex';
+      if (comments.length === 0) loadComments();
+    } else {
+      document.getElementById('commentInputBox').style.display = 'none';
+    }
+  };
+
+  loadPost();
+</script>
+</body>
+</html>

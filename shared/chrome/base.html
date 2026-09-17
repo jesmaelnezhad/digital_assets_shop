@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pawradise — Digital Assets</title>
+    <meta name="description" content="Discover and purchase premium digital assets">
+    <link rel="stylesheet" href="/assets/theme.css">
+    <script src="/env.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        /* Header */
+        .header {
+            background-color: var(--color-bg-elevated);
+            border-bottom: 1px solid var(--color-border);
+            padding: var(--space-sm) var(--space-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-md);
+        }
+        .logo {
+            font-family: var(--font-mono);
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: var(--color-accent-primary);
+            text-decoration: none;
+            letter-spacing: 0.5px;
+        }
+        .nav {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+        .nav a {
+            color: var(--color-text);
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-sm);
+            transition: color 0.15s ease;
+        }
+        .nav a:hover {
+            color: var(--color-accent-primary);
+        }
+        .nav a.active {
+            color: var(--color-accent-primary);
+            font-weight: 500;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            font-size: 0.7rem;
+            font-family: var(--font-mono);
+            background-color: var(--color-accent-secondary);
+            color: var(--color-bg);
+            border-radius: 999px;
+            font-weight: 600;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-sm) var(--space-md);
+            font-size: 0.9rem;
+            font-family: var(--font-sans);
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
+        .btn-primary {
+            background-color: var(--color-accent-primary);
+            color: var(--color-bg);
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            box-shadow: var(--glow-hover);
+        }
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--color-border);
+            color: var(--color-text);
+        }
+        .btn-secondary:hover {
+            border-color: var(--color-accent-primary);
+            color: var(--color-accent-primary);
+        }
+        .btn-ghost {
+            background: transparent;
+            color: var(--color-text);
+        }
+        .btn-ghost:hover {
+            color: var(--color-accent-primary);
+        }
+        /* Main */
+        main {
+            flex: 1;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: var(--space-lg);
+            width: 100%;
+        }
+        /* Footer */
+        .footer {
+            background-color: var(--color-bg-elevated);
+            border-top: 1px solid var(--color-border);
+            padding: var(--space-xl) var(--space-lg);
+            margin-top: auto;
+        }
+        .footer-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-xl);
+        }
+        .footer h4 {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--color-accent-primary);
+            margin-bottom: var(--space-sm);
+        }
+        .footer a {
+            display: block;
+            color: var(--color-text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 2px 0;
+            transition: color 0.15s ease;
+        }
+        .footer a:hover {
+            color: var(--color-text);
+        }
+        .footer-bottom {
+            max-width: 1280px;
+            margin: var(--space-lg) auto 0;
+            padding-top: var(--space-lg);
+            border-top: 1px solid var(--color-border);
+            text-align: center;
+            color: var(--color-text-muted);
+            font-size: 0.8rem;
+            font-family: var(--font-mono);
+        }
+        /* Responsive */
+        @media (max-width: 640px) {
+            .header-inner { flex-wrap: wrap; }
+            .nav { display: none; }
+            .nav.open { display: flex; flex-direction: column; width: 100%; }
+            main { padding: var(--space-md); }
+        }
+    </style>
+    <!-- CHROME_HEADER -->
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo">/pawradise</a>
+            <nav class="nav" id="mainNav">
+                <a href="/" data-nav="home">Shop</a>
+                <a href="/community" data-nav="community">Community</a>
+                <a href="/account" data-nav="account">Account</a>
+                <a href="/admin" data-nav="admin">Admin</a>
+            </nav>
+            <div class="header-actions">
+                <a href="/cart" class="btn btn-ghost" id="cartLink">
+                    Cart <span class="badge" id="cartBadge" style="display:none">0</span>
+                </a>
+                <a href="/login" class="btn btn-secondary" id="authBtn">Login</a>
+                <a href="/register" class="btn btn-primary" id="signupBtn">Sign Up</a>
+                <span id="userBadge" style="display:none" class="badge" style="background:var(--color-accent-secondary)"></span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- PAGE_CONTENT -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div>
+                <h4>Marketplace</h4>
+                <a href="/">All Products</a>
+                <a href="/categories">Categories</a>
+                <a href="/bundles">Bundles</a>
+            </div>
+            <div>
+                <h4>Account</h4>
+                <a href="/account">My Account</a>
+                <a href="/orders">Orders</a>
+                <a href="/wishlist">Wishlist</a>
+                <a href="/referrals">Referrals</a>
+            </div>
+            <div>
+                <h4>Community</h4>
+                <a href="/community">Feed</a>
+                <a href="/profile">Profiles</a>
+            </div>
+            <div>
+                <h4>Support</h4>
+                <a href="/help">Help Center</a>
+                <a href="/contact">Contact</a>
+                <a href="/terms">Terms</a>
+                <a href="/privacy">Privacy</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span>// pawradise.ir — digital assets marketplace</span>
+        </div>
+    </footer>
+
+    <script src="/assets/alpine.min.js" defer></script>
+    <script src="/assets/api.js"></script>
+    <script src="/assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-gateway
+  namespace: production
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      # Identity routes (8081)
+      - path: /api/v1/register(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: identity-service
+            port:
+              number: 80
+      - path: /api/v1/login(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: identity-service
+            port:
+              number: 80
+      - path: /api/v1/logout(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: identity-service
+            port:
+              number: 80
+      - path: /api/v1/me(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: identity-service
+            port:
+              number: 80
+      - path: /api/v1/referrals(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: identity-service
+            port:
+              number: 80
+      - path: /api/v1/commissions(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: identity-service
+            port:
+              number: 80
+      - path: /api/v1/commissions/record
+        pathType: Prefix
+        backend:
+          service:
+            name: identity-service
+            port:
+              number: 80
+      # Product routes (8082)
+      - path: /api/v1/products(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: product-service
+            port:
+              number: 80
+      - path: /api/v1/categories
+        pathType: Prefix
+        backend:
+          service:
+            name: product-service
+            port:
+              number: 80
+      - path: /api/v1/bundles(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: product-service
+            port:
+              number: 80
+      - path: /api/v1/recommendations(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: product-service
+            port:
+              number: 80
+      # Commerce routes (8083)
+      - path: /api/v1/guest-orders(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: commerce-service
+            port:
+              number: 80
+      - path: /api/v1/coupons(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: commerce-service
+            port:
+              number: 80
+      - path: /api/v1/orders(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: commerce-service
+            port:
+              number: 80
+      - path: /api/v1/cart(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: commerce-service
+            port:
+              number: 80
+      - path: /api/v1/wishlist(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: commerce-service
+            port:
+              number: 80
+      - path: /api/v1/recently-viewed
+        pathType: Prefix
+        backend:
+          service:
+            name: commerce-service
+            port:
+              number: 80
+      - path: /api/v1/compare(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: commerce-service
+            port:
+              number: 80
+      # Community routes (8084)
+      - path: /api/v1/community(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: community-service
+            port:
+              number: 80
+      - path: /api/v1/profile(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: community-service
+            port:
+              number: 80
+      # Review routes (8085)
+      - path: /api/v1/reviews(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: review-service
+            port:
+              number: 80
+      # Payment routes (8086)
+      - path: /api/v1/exchange-rates(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: payment-service
+            port:
+              number: 80
+      - path: /api/v1/payments(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: payment-service
+            port:
+              number: 80
+      - path: /api/v1/settings(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: payment-service
+            port:
+              number: 80
+      # Admin routes (8087)
+      - path: /api/v1/admin(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: admin-service
+            port:
+              number: 80
+      # Media routes (8088)
+      - path: /api/v1/media(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: media-service
+            port:
+              number: 80
+      # Health check
+      - path: /api/v1/health
+        pathType: Prefix
+        backend:
+          service:
+            name: identity-service
+            port:
+              number: 80

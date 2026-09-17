@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pawradise - Auth</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0b1020;
+    color: #e6e8ef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .container {
+    max-width: 400px;
+    width: 100%;
+    padding: 40px;
+    border-radius: 16px;
+    background: #111827;
+    border: 1px solid #1f2937;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  }
+  h1 { margin: 0 0 8px; font-size: 28px; text-align: center; }
+  .subtitle { text-align: center; margin-bottom: 24px; color: #9ca3af; font-size: 14px; }
+  .form-group { margin-bottom: 16px; }
+  label { display: block; margin-bottom: 6px; font-size: 14px; color: #d1d5db; }
+  input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #1f2937;
+    background: #0b1020;
+    color: #e6e8ef;
+    font-size: 14px;
+  }
+  input:focus { outline: none; border-color: #2563eb; }
+  button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  button:hover { background: #1d4ed8; }
+  button:disabled { background: #4b5563; cursor: not-allowed; }
+  button.secondary { background: #374151; }
+  button.secondary:hover { background: #4b5563; }
+  .error {
+    background: #7f1d1d;
+    color: #fecaca;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;
+  }
+  .success {
+    background: #064e3b;
+    color: #6ee7b7;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;
+  }
+  .switch {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 14px;
+    color: #9ca3af;
+  }
+  .switch a {
+    color: #60a5fa;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .env-badge {
+    display: inline-block;
+    margin-top: 18px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    background: #111827;
+    color: #6ee7b7;
+    border: 1px solid #064e3b;
+  }
+  .user-info {
+    text-align: center;
+    margin: 16px 0;
+  }
+  .user-info h2 { font-size: 20px; margin-bottom: 8px; }
+  .user-info p { color: #9ca3af; font-size: 14px; }
+  .avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: bold;
+    color: white;
+    margin: 0 auto 16px;
+  }
+  .btn-group { display: flex; gap: 8px; margin-top: 16px; }
+  .btn-group button { flex: 1; margin-top: 0; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <!-- Login/Register Form -->
+    <div id="authForm">
+      <h1 id="formTitle">Welcome</h1>
+      <p class="subtitle" id="formSubtitle">Login to your account</p>
+      <div id="message"></div>
+      <form id="loginForm" onsubmit="handleAuthSubmit(event)">
+        <div class="form-group" id="nameGroup">
+          <label for="name">Name</label>
+          <input type="text" id="name" placeholder="John Doe">
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="you@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Min 6 characters" required>
+        </div>
+        <button type="submit" id="submitBtn">Login</button>
+      </form>
+      <div class="switch">
+        <span id="switchText">Don't have an account? </span>
+        <a id="switchLink">Register</a>
+      </div>
+      <div style="text-align: center; margin-top: 20px;">
+        <span class="env-badge" id="env">ENV: staging</span>
+      </div>
+    </div>
+
+    <!-- Profile View -->
+    <div id="profileView" class="hidden">
+      <div class="avatar" id="avatar">U</div>
+      <div class="user-info">
+        <h2 id="profileName">User</h2>
+        <p id="profileEmail">user@example.com</p>
+      </div>
+      <form id="profileForm" onsubmit="handleProfileUpdate(event)">
+        <div class="form-group">
+          <label for="profileNameInput">Name</label>
+          <input type="text" id="profileNameInput" value="">
+        </div>
+        <div class="form-group">
+          <label for="profileEmailInput">Email</label>
+          <input type="email" id="profileEmailInput" value="">
+        </div>
+        <button type="submit">Update Profile</button>
+      </form>
+      <div id="profileMessage"></div>
+      <div class="btn-group">
+        <button class="secondary" onclick="handleLogout()">Logout</button>
+      </div>
+      <div style="text-align: center; margin-top: 20px;">
+        <span class="env-badge" id="envBadge">ENV: staging</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api/v1';
+    let currentUser = null;
+    let isLoginMode = true;
+
+    // Detect environment from path
+    function detectEnvironment() {
+      const path = window.location.pathname;
+      if (path.startsWith('/staging')) {
+        document.getElementById('env').textContent = 'ENV: staging';
+        document.getElementById('envBadge').textContent = 'ENV: staging';
+        return 'staging';
+      }
+      document.getElementById('env').textContent = 'ENV: production';
+      document.getElementById('envBadge').textContent = 'ENV: production';
+      return 'production';
+    }
+
+    function showMessage(text, type) {
+      const msgEl = document.getElementById('message');
+      msgEl.innerHTML = `<div class="${type}">${text}</div>`;
+      setTimeout(() => { msgEl.innerHTML = ''; }, 5000);
+    }
+
+    function showProfileMessage(text, type) {
+      const msgEl = document.getElementById('profileMessage');
+      msgEl.innerHTML = `<div class="${type}">${text}</div>`;
+      setTimeout(() => { msgEl.innerHTML = ''; }, 5000);
+    }
+
+    function switchMode() {
+      isLoginMode = !isLoginMode;
+      document.getElementById('formTitle').textContent = isLoginMode ? 'Welcome' : 'Create Account';
+      document.getElementById('formSubtitle').textContent = isLoginMode ? 'Login to your account' : 'Register a new account';
+      document.getElementById('submitBtn').textContent = isLoginMode ? 'Login' : 'Register';
+      document.getElementById('switchText').textContent = isLoginMode ? "Don't have an account? " : "Already have an account? ";
+      document.getElementById('switchLink').textContent = isLoginMode ? 'Register' : 'Login';
+      document.getElementById('nameGroup').style.display = isLoginMode ? 'none' : 'block';
+      document.getElementById('message').innerHTML = '';
+    }
+
+    document.getElementById('switchLink').addEventListener('click', switchMode);
+
+    async function handleAuthSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const name = document.getElementById('name').value;
+      const btn = document.getElementById('submitBtn');
+
+      btn.disabled = true;
+      btn.textContent = isLoginMode ? 'Logging in...' : 'Registering...';
+
+      try {
+        const endpoint = isLoginMode ? '/login' : '/register';
+        const body = isLoginMode ? { email, password } : { email, password, name };
+
+        const res = await fetch(API_BASE + endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          currentUser = data.user;
+          showProfileView();
+        } else {
+          showMessage(data.error || 'Something went wrong', 'error');
+        }
+      } catch (err) {
+        showMessage('Network error. Please try again.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = isLoginMode ? 'Login' : 'Register';
+      }
+    }
+
+    function showProfileView() {
+      document.getElementById('authForm').classList.add('hidden');
+      document.getElementById('profileView').classList.remove('hidden');
+
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      document.getElementById('profileName').textContent = user.name || 'User';
+      document.getElementById('profileEmail').textContent = user.email || '';
+      document.getElementById('profileNameInput').value = user.name || '';
+      document.getElementById('profileEmailInput').value = user.email || '';
+      document.getElementById('avatar').textContent = (user.name || '?')[0].toUpperCase();
+    }
+
+    async function handleProfileUpdate(e) {
+      e.preventDefault();
+      const name = document.getElementById('profileNameInput').value;
+      const email = document.getElementById('profileEmailInput').value;
+      const btn = e.target.querySelector('button[type="submit"]');
+
+      btn.disabled = true;
+      btn.textContent = 'Updating...';
+
+      try {
+        const res = await fetch(API_BASE + '/me', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+          },
+          body: JSON.stringify({ name, email })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          localStorage.setItem('user', JSON.stringify(data));
+          currentUser = data;
+          document.getElementById('profileName').textContent = data.name;
+          document.getElementById('profileEmail').textContent = data.email;
+          document.getElementById('avatar').textContent = (data.name || '?')[0].toUpperCase();
+          showProfileMessage('Profile updated successfully', 'success');
+        } else {
+          showProfileMessage(data.error || 'Failed to update profile', 'error');
+        }
+      } catch (err) {
+        showProfileMessage('Network error. Please try again.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Update Profile';
+      }
+    }
+
+    async function handleLogout() {
+      try {
+        await fetch(API_BASE + '/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+          }
+        });
+      } catch (e) {
+        // Ignore logout errors
+      }
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      currentUser = null;
+      document.getElementById('profileView').classList.add('hidden');
+      document.getElementById('authForm').classList.remove('hidden');
+      document.getElementById('message').innerHTML = '';
+      document.getElementById('email').value = '';
+      document.getElementById('password').value = '';
+      document.getElementById('name').value = '';
+    }
+
+    // Check for existing session on load
+    window.addEventListener('DOMContentLoaded', () => {
+      detectEnvironment();
+      const token = localStorage.getItem('token');
+      if (token) {
+        fetch(API_BASE + '/me', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.id) {
+            localStorage.setItem('user', JSON.stringify(data));
+            currentUser = data;
+            showProfileView();
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        });
+      }
+    });
+  </script>
+</body>
+</html>

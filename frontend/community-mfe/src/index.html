@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pawradise — Community</title>
+    <meta name="description" content="Join the Pawradise community">
+    <link rel="stylesheet" href="/assets/theme.css">
+    <script src="/env.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: #0a0e14; color: #c7d0dc; min-height: 100vh; display: flex; flex-direction: column; }
+        .header { background-color: #10151d; border-bottom: 1px solid #1e2530; padding: 8px 32px; position: sticky; top: 0; z-index: 100; }
+        .header-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .logo { font-family: var(--font-mono); font-size: 1.25rem; font-weight: bold; color: #4dd6c9; text-decoration: none; }
+        .nav { display: flex; gap: 16px; }
+        .nav a { color: #c7d0dc; text-decoration: none; font-size: 0.9rem; }
+        .nav a:hover { color: #4dd6c9; }
+        main { flex: 1; max-width: 1280px; margin: 0 auto; padding: var(--space-lg); width: 100%; }
+        .page-header h1 { font-family: var(--font-mono); font-size: 1.5rem; color: #4dd6c9; margin-bottom: var(--space-md); }
+        .filter-tabs { display: flex; gap: var(--space-sm); margin-bottom: var(--space-lg); }
+        .filter-tab { padding: var(--space-sm) var(--space-md); background-color: #10151d; border: 1px solid var(--color-border); border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: all 0.15s ease; }
+        .filter-tab.active { border-color: #4dd6c9; color: #4dd6c9; }
+        .create-post { background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); margin-bottom: var(--space-lg); }
+        .create-post textarea { width: 100%; padding: var(--space-sm); background-color: #0a0e14; border: 1px solid var(--color-border); border-radius: 4px; color: #c7d0dc; font-family: 'Inter', system-ui, sans-serif; resize: vertical; min-height: 80px; margin-bottom: var(--space-sm); }
+        .create-post .char-count { font-family: var(--font-mono); font-size: 0.8rem; color: var(--color-text-muted); text-align: right; }
+        .create-post .char-count.over { color: var(--color-danger); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: var(--space-sm) var(--space-md); font-size: 0.9rem; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; transition: all 0.15s ease; }
+        .btn-primary { background-color: #4dd6c9; color: var(--color-bg); font-weight: 600; }
+        .btn-primary:hover { box-shadow: var(--glow-hover); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { background-color: transparent; border: 1px solid var(--color-border); color: #c7d0dc; }
+        .btn-ghost { background: transparent; color: #c7d0dc; }
+        .post-feed { display: flex; flex-direction: column; gap: 16px; }
+        .post-card { background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); }
+        .post-header { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+        .post-avatar { width: 36px; height: 36px; border-radius: 50%; background-color: #0a0e14; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-weight: bold; color: #4dd6c9; overflow: hidden; }
+        .post-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .post-author { font-weight: 600; }
+        .post-date { font-family: var(--font-mono); font-size: 0.8rem; color: var(--color-text-muted); }
+        .post-content { line-height: 1.6; margin-bottom: var(--space-md); }
+        .post-actions { display: flex; gap: 16px; font-family: var(--font-mono); font-size: 0.85rem; color: var(--color-text-muted); }
+        .post-action { cursor: pointer; transition: color 0.15s; }
+        .post-action:hover { color: #4dd6c9; }
+        .post-action.liked { color: #4dd6c9; }
+        .empty-state { text-align: center; padding: var(--space-xl); color: var(--color-text-muted); }
+        .pagination { display: flex; justify-content: center; gap: var(--space-sm); margin-top: var(--space-xl); }
+        .pagination button { padding: var(--space-sm) var(--space-md); background-color: #10151d; border: 1px solid var(--color-border); border-radius: 4px; color: #c7d0dc; cursor: pointer; font-family: var(--font-mono); }
+        .pagination button:disabled { opacity: 0.4; }
+        .footer { background-color: #10151d; border-top: 1px solid var(--color-border); padding: var(--space-xl) var(--space-lg); margin-top: auto; text-align: center; font-family: var(--font-mono); color: var(--color-text-muted); font-size: 0.8rem; }
+        @media (max-width: 640px) { .header-inner { flex-wrap: wrap; } .nav { display: none; } }
+    </style>
+    <!-- CHROME_HEADER -->
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo">/pawradise</a>
+            <nav class="nav">
+                <a href="/">Shop</a>
+                <a href="/category">Categories</a>
+                <a href="/product/bundle.html">Bundles</a>
+                <a href="/product/request.html">Request</a>
+                <a href="/community">Community</a>
+                <a href="/account">Account</a>
+            </nav>
+        </div>
+    </header>
+
+    <main x-data="communityApp()" x-init="init()">
+        <div class="page-header"><h1>Community Feed</h1></div>
+
+        <div class="filter-tabs">
+            <div class="filter-tab" :class="{ active: filter === 'recent' }" @click="filter = 'recent'; loadPosts()">Recent</div>
+            <div class="filter-tab" :class="{ active: filter === 'following' }" @click="filter = 'following'; loadPosts()" x-show="isAuthenticated">Following</div>
+        </div>
+
+        <div class="create-post" x-show="isAuthenticated">
+            <textarea x-model="newPostContent" placeholder="Share something with the community..." maxlength="500"></textarea>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <div class="char-count" :class="{ over: newPostContent.length >= 500 }">
+                    <span x-text="newPostContent.length"></span>/500
+                </div>
+                <button class="btn btn-primary" @click="createPost()" :disabled="!newPostContent.trim() || newPostContent.length > 500">
+                    Post
+                </button>
+            </div>
+        </div>
+
+        <div class="create-post" x-show="!isAuthenticated" style="text-align:center">
+            <p style="color:var(--color-text-muted)">Join the conversation!</p>
+            <a href="/login?next=/community" class="btn btn-primary" style="margin-top:var(--space-sm)">Log in to Post</a>
+        </div>
+
+        <div class="post-feed" x-show="posts.length > 0">
+            <template x-for="post in posts" :key="post.id">
+                <div class="post-card">
+                    <div class="post-header">
+                        <a :href="`/profile/${post.author.id}`" class="post-avatar">
+                            <img :src="post.author.avatar_url" x-show="post.author.avatar_url" :alt="post.author.name">
+                            <span x-show="!post.author.avatar_url" x-text="post.author.name?.[0]?.toUpperCase() || '?'"></span>
+                        </a>
+                        <div>
+                            <a :href="`/profile/${post.author.id}`" class="post-author" style="color:inherit;text-decoration:none" x-text="post.author.display_name || post.author.name"></a>
+                            <div class="post-date" x-text="new Date(post.created_at).toLocaleDateString()"></div>
+                        </div>
+                    </div>
+                    <div class="post-content" x-text="post.content"></div>
+                    <div class="post-actions">
+                        <span class="post-action" :class="{ liked: post.liked }" @click="toggleLike(post)">
+                            <span x-text="post.liked ? '♥' : '♡'"></span>
+                            <span x-text="post.like_count"></span>
+                        </span>
+                        <a :href="`/post/${post.id}`" class="post-action">
+                            💬 <span x-text="post.comment_count"></span>
+                        </a>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <div class="empty-state" x-show="!loading && posts.length === 0">
+            <p>No posts yet. Be the first to share something!</p>
+        </div>
+
+        <div class="pagination" x-show="totalPages > 1">
+            <button :disabled="page <= 1" @click="page--; loadPosts()">Prev</button>
+            <span style="font-family:var(--font-mono);color:var(--color-text-muted)">Page <span x-text="page"></span> of <span x-text="totalPages"></span></span>
+            <button :disabled="page >= totalPages" @click="page++; loadPosts()">Next</button>
+        </div>
+    </main>
+
+    <footer class="footer">// pawradise.ir — community</footer>
+
+    <script src="/assets/alpine.min.js" defer></script>
+    <script src="/assets/api.js"></script>
+    <script>
+        function communityApp() {
+            return {
+                posts: [],
+                page: 1,
+                totalPages: 0,
+                filter: 'recent',
+                newPostContent: '',
+                isAuthenticated: false,
+                loading: true,
+                async init() {
+                    await this.checkAuth();
+                    await this.loadPosts();
+                },
+                async checkAuth() {
+                    try {
+                        await window.auth.getProfile();
+                        this.isAuthenticated = true;
+                    } catch(e) { this.isAuthenticated = false; }
+                },
+                async loadPosts() {
+                    this.loading = true;
+                    try {
+                        const data = await window.community.getPosts(this.filter, this.page);
+                        this.posts = data.posts || [];
+                        this.totalPages = Math.ceil((data.total || 0) / 20);
+                    } catch(e) { this.posts = []; }
+                    this.loading = false;
+                },
+                async createPost() {
+                    if (!this.newPostContent.trim() || this.newPostContent.length > 500) return;
+                    try {
+                        await window.community.createPost(this.newPostContent);
+                        this.newPostContent = '';
+                        this.loadPosts();
+                    } catch(e) { alert('Failed to create post'); }
+                },
+                async toggleLike(post) {
+                    if (!this.isAuthenticated) { window.location.href = '/login'; return; }
+                    try {
+                        if (post.liked) {
+                            await window.community.unlikePost(post.id);
+                            post.liked = false;
+                            post.like_count--;
+                        } else {
+                            await window.community.likePost(post.id);
+                            post.liked = true;
+                            post.like_count++;
+                        }
+                    } catch(e) {}
+                }
+            };
+        }
+    </script>
+    <!-- CHROME_FOOTER -->
+</body>
+</html>

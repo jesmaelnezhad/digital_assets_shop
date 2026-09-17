@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: account-mfe-config
+  namespace: pawradise
+data:
+  default.conf: |
+    server {
+      listen 80;
+      server_name _;
+      root /usr/share/nginx/html;
+      index index.html;
+
+      location / {
+        try_files $uri $uri/ /index.html;
+      }
+
+      location = /health {
+        return 200 "OK";
+        add_header Content-Type text/plain;
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-mfe
+  namespace: pawradise
+  labels:
+    app: account-mfe
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: account-mfe
+  template:
+    metadata:
+      labels:
+        app: account-mfe
+    spec:
+      containers:
+      - name: account-mfe
+        image: registry.local/pawradise-account-mfe:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/http.d
+          readOnly: true
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "64Mi"
+            cpu: "50m"
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: account-mfe-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: account-mfe
+  namespace: pawradise
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: account-mfe
+  type: ClusterIP

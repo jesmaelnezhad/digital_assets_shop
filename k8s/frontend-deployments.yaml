@@ -1,0 +1,744 @@
+# Frontend K8s Manifests
+# One Deployment + Service per MFE, per namespace (production + staging)
+
+---
+# Auth MFE - Production
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-mfe
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-mfe
+      namespace: production
+  template:
+    metadata:
+      labels:
+        app: auth-mfe
+        namespace: production
+    spec:
+      containers:
+      - name: auth-mfe
+        image: 130.185.123.156:30099/pawradise/auth-mfe:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_BASE
+          value: "/api/v1"
+        - name: IS_STAGING
+          value: "false"
+        - name: ENV_NAME
+          value: "production"
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-mfe
+  namespace: production
+spec:
+  selector:
+    app: auth-mfe
+    namespace: production
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+
+---
+# Auth MFE - Staging
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-mfe
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-mfe
+      namespace: staging
+  template:
+    metadata:
+      labels:
+        app: auth-mfe
+        namespace: staging
+    spec:
+      containers:
+      - name: auth-mfe
+        image: 130.185.123.156:30099/pawradise/auth-mfe:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_BASE
+          value: "/staging/api/v1"
+        - name: IS_STAGING
+          value: "true"
+        - name: ENV_NAME
+          value: "staging"
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-mfe
+  namespace: staging
+spec:
+  selector:
+    app: auth-mfe
+    namespace: staging
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+
+---
+# Shop MFE - Production
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-mfe
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shop-mfe
+      namespace: production
+  template:
+    metadata:
+      labels:
+        app: shop-mfe
+        namespace: production
+    spec:
+      containers:
+      - name: shop-mfe
+        image: 130.185.123.156:30099/pawradise/shop-mfe:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_BASE
+          value: "/api/v1"
+        - name: IS_STAGING
+          value: "false"
+        - name: ENV_NAME
+          value: "production"
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shop-mfe
+  namespace: production
+spec:
+  selector:
+    app: shop-mfe
+    namespace: production
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+
+---
+# Shop MFE - Staging
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-mfe
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shop-mfe
+      namespace: staging
+  template:
+    metadata:
+      labels:
+        app: shop-mfe
+        namespace: staging
+    spec:
+      containers:
+      - name: shop-mfe
+        image: 130.185.123.156:30099/pawradise/shop-mfe:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_BASE
+          value: "/staging/api/v1"
+        - name: IS_STAGING
+          value: "true"
+        - name: ENV_NAME
+          value: "staging"
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shop-mfe
+  namespace: staging
+spec:
+  selector:
+    app: shop-mfe
+    namespace: staging
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+
+---
+# Product MFE - Production
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-mfe
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-mfe
+      namespace: production
+  template:
+    metadata:
+      labels:
+        app: product-mfe
+        namespace: production
+    spec:
+      containers:
+      - name: product-mfe
+        image: 130.185.123.156:30099/pawradise/product-mfe:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_BASE
+          value: "/api/v1"
+        - name: IS_STAGING
+          value: "false"
+        - name: ENV_NAME
+          value: "production"
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-mfe
+  namespace: production
+spec:
+  selector:
+    app: product-mfe
+    namespace: production
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+
+---
+# Product MFE - Staging
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-mfe
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-mfe
+      namespace: staging
+  template:
+    metadata:
+      labels:
+        app: product-mfe
+        namespace: staging
+    spec:
+      containers:
+      - name: product-mfe
+        image: 130.185.123.156:30099/pawradise/product-mfe:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_BASE
+          value: "/staging/api/v1"
+        - name: IS_STAGING
+          value: "true"
+        - name: ENV_NAME
+          value: "staging"
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-mfe
+  namespace: staging
+spec:
+  selector:
+    app: product-mfe
+    namespace: staging
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+
+---
+# Account MFE - Production
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-mfe
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: account-mfe
+      namespace: production
+  template:
+    metadata:
+      labels:
+        app: account-mfe
+        namespace: production
+    spec:
+      containers:
+      - name: account-mfe
+        image: 130.185.123.156:30099/pawradise/account-mfe:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_BASE
+          value: "/api/v1"
+        - name: IS_STAGING
+          value: "false"
+        - name: ENV_NAME
+          value: "production"
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: account-mfe
+  namespace: production
+spec:
+  selector:
+    app: account-mfe
+    namespace: production
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+
+---
+# Account MFE - Staging
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-mfe
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: account-mfe
+      namespace: staging
+  template:
+    metadata:
+      labels:
+        app: account-mfe
+        namespace: staging
+    spec:
+      containers:
+      - name: account-mfe
+        image: 130.185.123.156:30099/pawradise/account-mfe:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_BASE
+          value: "/staging/api/v1"
+        - name: IS_STAGING
+          value: "true"
+        - name: ENV_NAME
+          value: "staging"
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: account-mfe
+  namespace: staging
+spec:
+  selector:
+    app: account-mfe
+    namespace: staging
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+
+---
+# Checkout MFE - Production
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout-mfe
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checkout-mfe
+      namespace: production
+  template:
+    metadata:
+      labels:
+        app: checkout-mfe
+        namespace: production
+    spec:
+      containers:
+      - name: checkout-mfe
+        image: 130.185.123.156:30099/pawradise/checkout-mfe:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_BASE
+          value: "/api/v1"
+        - name: IS_STAGING
+          value: "false"
+        - name: ENV_NAME
+          value: "production"
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout-mfe
+  namespace: production
+spec:
+  selector:
+    app: checkout-mfe
+    namespace: production
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+
+---
+# Checkout MFE - Staging
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout-mfe
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checkout-mfe
+      namespace: staging
+  template:
+    metadata:
+      labels:
+        app: checkout-mfe
+        namespace: staging
+    spec:
+      containers:
+      - name: checkout-mfe
+        image: 130.185.123.156:30099/pawradise/checkout-mfe:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_BASE
+          value: "/staging/api/v1"
+        - name: IS_STAGING
+          value: "true"
+        - name: ENV_NAME
+          value: "staging"
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout-mfe
+  namespace: staging
+spec:
+  selector:
+    app: checkout-mfe
+    namespace: staging
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+
+---
+# Community MFE - Production
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: community-mfe
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: community-mfe
+      namespace: production
+  template:
+    metadata:
+      labels:
+        app: community-mfe
+        namespace: production
+    spec:
+      containers:
+      - name: community-mfe
+        image: 130.185.123.156:30099/pawradise/community-mfe:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_BASE
+          value: "/api/v1"
+        - name: IS_STAGING
+          value: "false"
+        - name: ENV_NAME
+          value: "production"
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: community-mfe
+  namespace: production
+spec:
+  selector:
+    app: community-mfe
+    namespace: production
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+
+---
+# Community MFE - Staging
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: community-mfe
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: community-mfe
+      namespace: staging
+  template:
+    metadata:
+      labels:
+        app: community-mfe
+        namespace: staging
+    spec:
+      containers:
+      - name: community-mfe
+        image: 130.185.123.156:30099/pawradise/community-mfe:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_BASE
+          value: "/staging/api/v1"
+        - name: IS_STAGING
+          value: "true"
+        - name: ENV_NAME
+          value: "staging"
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: community-mfe
+  namespace: staging
+spec:
+  selector:
+    app: community-mfe
+    namespace: staging
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+
+---
+# Admin App - Production
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-app
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-app
+      namespace: production
+  template:
+    metadata:
+      labels:
+        app: admin-app
+        namespace: production
+    spec:
+      containers:
+      - name: admin-app
+        image: 130.185.123.156:30099/pawradise/admin-app:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_BASE
+          value: "/api/v1/admin"
+        - name: IS_STAGING
+          value: "false"
+        - name: ENV_NAME
+          value: "production"
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-app
+  namespace: production
+spec:
+  selector:
+    app: admin-app
+    namespace: production
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+
+---
+# Admin App - Staging
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-app
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-app
+      namespace: staging
+  template:
+    metadata:
+      labels:
+        app: admin-app
+        namespace: staging
+    spec:
+      containers:
+      - name: admin-app
+        image: 130.185.123.156:30099/pawradise/admin-app:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_BASE
+          value: "/staging/api/v1/admin"
+        - name: IS_STAGING
+          value: "true"
+        - name: ENV_NAME
+          value: "staging"
+        resources:
+          limits:
+            cpu: 50m
+            memory: 32Mi
+          requests:
+            cpu: 10m
+            memory: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-app
+  namespace: staging
+spec:
+  selector:
+    app: admin-app
+    namespace: staging
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP

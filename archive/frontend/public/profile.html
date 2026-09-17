@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAWRADISE — Profile</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0f;
+    --surface: #14141f;
+    --surface2: #1a1a2a;
+    --border: #2a2a3a;
+    --text: #e0e0e0;
+    --text2: #8888aa;
+    --cyan: #00d4ff;
+    --magenta: #ff0066;
+    --green: #00ff88;
+    --mono: Consolas, 'Courier New', monospace;
+    --sans: -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; line-height: 1.6; }
+  .terminal-line { font-family: var(--mono); font-size: 11px; color: var(--text2); padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .terminal-line .prompt { color: var(--cyan); }
+  header { padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 100; }
+  .logo { font-family: var(--mono); font-size: 20px; font-weight: bold; color: var(--cyan); letter-spacing: 2px; text-decoration: none; }
+  .logo span { color: var(--magenta); }
+  nav { display: flex; gap: 24px; align-items: center; }
+  nav a { color: var(--text2); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+  nav a:hover { color: var(--cyan); }
+  .env-badge { font-family: var(--mono); font-size: 10px; padding: 4px 10px; border-radius: 10px; border: 1px solid var(--border); color: var(--text2); letter-spacing: 1px; margin-left: 12px; }
+  .container { max-width: 720px; margin: 0 auto; padding: 32px 24px; }
+  .page-title { font-family: var(--mono); font-size: 22px; color: var(--text); margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+  .page-title .badge { font-size: 10px; background: var(--magenta); color: var(--bg); padding: 3px 10px; border-radius: 10px; font-weight: bold; letter-spacing: 1px; }
+  .profile-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 24px; margin-bottom: 24px; }
+  .profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 28px; color: var(--cyan); margin-bottom: 16px; border: 2px solid var(--border); overflow: hidden; }
+  .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .profile-name { font-size: 24px; font-weight: 600; margin-bottom: 4px; }
+  .profile-email { font-size: 13px; color: var(--text2); margin-bottom: 12px; font-family: var(--mono); }
+  .profile-bio { font-size: 14px; color: var(--text); margin-bottom: 16px; line-height: 1.5; }
+  .profile-stats { display: flex; gap: 24px; margin-bottom: 16px; }
+  .stat { text-align: center; }
+  .stat-value { font-family: var(--mono); font-size: 24px; color: var(--cyan); font-weight: bold; }
+  .stat-label { font-size: 11px; color: var(--text2); font-family: var(--mono); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+  .profile-field { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .profile-field-label { color: var(--text2); font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; width: 80px; flex-shrink: 0; }
+  .profile-field-value { font-family: var(--mono); color: var(--text); word-break: break-all; }
+  .profile-field-value.connected { color: var(--green); }
+  .btn { padding: 8px 18px; border: 1px solid var(--cyan); background: transparent; color: var(--cyan); font-family: var(--mono); font-size: 12px; cursor: pointer; border-radius: 3px; transition: all 0.2s; text-decoration: none; }
+  .btn:hover { background: var(--cyan); color: var(--bg); }
+  .btn-magenta { border-color: var(--magenta); color: var(--magenta); }
+  .btn-magenta:hover { background: var(--magenta); color: var(--bg); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .section-title { font-family: var(--mono); font-size: 12px; color: var(--cyan); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .section-title .count { background: var(--surface2); border: 1px solid var(--border); padding: 2px 8px; border-radius: 10px; font-size: 10px; color: var(--text2); }
+  .post-mini { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px; margin-bottom: 10px; }
+  .post-mini-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .post-mini-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 10px; color: var(--cyan); flex-shrink: 0; overflow: hidden; }
+  .post-mini-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .post-mini-author { font-size: 12px; font-weight: 500; color: var(--text); }
+  .post-mini-time { font-size: 11px; color: var(--text2); font-family: var(--mono); margin-left: auto; }
+  .post-mini-content { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 6px; word-break: break-word; }
+  .post-mini-actions { display: flex; gap: 12px; font-size: 11px; color: var(--text2); font-family: var(--mono); }
+  .post-mini-actions span { display: flex; align-items: center; gap: 4px; }
+  .post-mini-actions .liked { color: var(--magenta); }
+  .empty-state { text-align: center; padding: 48px 0; color: var(--text2); }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: 0.2; font-family: var(--mono); }
+  .login-prompt { text-align: center; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 20px; }
+  .login-prompt p { font-size: 13px; color: var(--text2); margin-bottom: 10px; }
+  .footer { border-top: 1px solid var(--border); padding: 16px 24px; text-align: center; font-size: 11px; color: var(--text2); font-family: var(--mono); }
+  .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; border-radius: 4px; font-family: var(--mono); font-size: 12px; z-index: 1000; opacity: 0; transform: translateY(10px); transition: all 0.3s; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { background: #00ff8822; border: 1px solid var(--green); color: var(--green); }
+  .toast.error { background: #ff006622; border: 1px solid var(--magenta); color: var(--magenta); }
+  @media (max-width: 768px) { .container { padding: 16px; } .profile-stats { flex-wrap: wrap; gap: 16px; } }
+</style>
+</head>
+<body data-page="profile">
+
+<div class="terminal-line"><span class="prompt">guest@pawradise</span>:<span>~</span>$ ./inspect --user <span id="termUserId">…</span></div>
+
+<header>
+  <a data-link="/" class="logo">PAW<span>RADISE</span></a>
+  <div style="display:flex;align-items:center;">
+    <nav style="margin-right:24px;">
+      <a data-link="/" data-nav="shop">SHOP</a>
+      <a data-link="/community" data-nav="community">COMMUNITY</a>
+      <a data-link="/account" data-nav="account">ACCOUNT</a>
+    </nav>
+    <button id="authBtn" style="background:transparent;border:1px solid var(--cyan);color:var(--cyan);font-family:var(--mono);font-size:12px;padding:6px 14px;border-radius:4px;cursor:pointer;margin-right:12px;letter-spacing:1px;">LOGIN</button>
+    <span id="envBadge" class="env-badge"></span>
+  </div>
+</header>
+
+<div class="container">
+  <div id="loadingState">
+    <div class="empty-state"><div class="icon">LOADING</div><div>fetching profile...</div></div>
+  </div>
+
+  <div id="profileContent" style="display:none;">
+    <div class="page-title">
+      <span>// user</span>
+      <span class="badge">PUBLIC PROFILE</span>
+    </div>
+
+    <div class="profile-card">
+      <div class="profile-avatar" id="profileAvatar"></div>
+      <div class="profile-name" id="profileName"></div>
+      <div class="profile-email" id="profileEmail"></div>
+      <div class="profile-bio" id="profileBio"></div>
+
+      <div class="profile-stats">
+        <div class="stat"><div class="stat-value" id="statPosts">0</div><div class="stat-label">Posts</div></div>
+        <div class="stat"><div class="stat-value" id="statFollowers">0</div><div class="stat-label">Followers</div></div>
+        <div class="stat"><div class="stat-value" id="statFollowing">0</div><div class="stat-label">Following</div></div>
+      </div>
+
+      <div class="profile-field">
+        <div class="profile-field-label">Joined</div>
+        <div class="profile-field-value" id="profileJoined"></div>
+      </div>
+      <div class="profile-field">
+        <div class="profile-field-label">Wallet</div>
+        <div class="profile-field-value" id="profileWallet"></div>
+      </div>
+    </div>
+
+    <div id="followSection" style="margin-bottom:24px;display:none;">
+      <button class="btn btn-magenta" id="followBtn">FOLLOW</button>
+      <span style="margin-left:12px;font-size:12px;color:var(--text2);font-family:var(--mono);" id="followHint"></span>
+    </div>
+
+    <div class="section-title">
+      Posts
+      <span class="count" id="postCount">0</span>
+    </div>
+    <div id="profilePosts"></div>
+  </div>
+
+  <div id="notFound" class="empty-state" style="display:none;">
+    <div class="icon">404</div>
+    <div>user not found</div>
+    <div style="margin-top:8px;font-size:12px;"><a href="${LINK_BASE}/" style="color:var(--cyan);">back to shop</a></div>
+  </div>
+</div>
+
+<div class="footer">PAWRADISE &copy; 2026 — <span id="envText">production</span></div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+  const path = window.location.pathname;
+  const isStaging = path.startsWith('/staging');
+  const API_BASE = isStaging ? '/staging/api/v1' : '/api/v1';
+  const LINK_BASE = isStaging ? '/staging' : '';
+  document.querySelectorAll('[data-link]').forEach(a => { a.href = LINK_BASE + a.getAttribute('data-link'); });
+  (function(){ const pg = document.body.getAttribute('data-page'); const el = document.querySelector('[data-nav="'+pg+'"]'); if(el) el.style.color = 'var(--cyan)'; })();
+  (function(){ const b=document.getElementById('authBtn'); if(!b) return;
+    const t=localStorage.getItem('pawradise_token');
+    if(t){ b.textContent='LOGOUT'; b.onclick=function(){ localStorage.removeItem('pawradise_token'); window.location.href=LINK_BASE+'/'; }; }
+    else { b.textContent='LOGIN'; b.onclick=function(){ window.location.href=LINK_BASE+'/login?redirect='+encodeURIComponent(window.location.pathname+window.location.search); }; }
+  })();
+  document.getElementById('envBadge').textContent = isStaging ? 'ENV: staging' : 'ENV: production';
+  document.getElementById('envText').textContent = isStaging ? 'staging' : 'production';
+
+  function toast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + (type || 'success');
+    setTimeout(() => { t.className = 'toast'; }, 2500);
+  }
+
+  function escapeHtml(t){ const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+  function initials(name){ if(!name) return '?'; return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+  function timeAgo(dateStr){ const now=new Date(); const then=new Date(dateStr); const diff=Math.floor((now - then)/1000);
+    if(diff<60) return diff+'s ago'; if(diff<3600) return Math.floor(diff/60)+'m ago';
+    if(diff<86400) return Math.floor(diff/3600)+'h ago'; return Math.floor(diff/86400)+'d ago'; }
+  function formatDate(dateStr){ if(!dateStr) return ''; try{ const d=new Date(dateStr); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }catch{ return dateStr; } }
+
+  // Extract user ID from URL: /profile/123 or /staging/profile/123
+  const parts = path.split('/').filter(Boolean);
+  const userId = parseInt(parts.pop()) || 0;
+  document.getElementById('termUserId').textContent = userId;
+
+  let currentUser = null;
+  let posts = [];
+
+  async function loadProfile() {
+    try {
+      const res = await fetch(API_BASE + '/community/users/' + userId);
+      if (!res.ok) {
+        if (res.status === 404) {
+          document.getElementById('loadingState').style.display = 'none';
+          document.getElementById('notFound').style.display = 'block';
+        }
+        return;
+      }
+      const data = await res.json();
+      renderProfile(data);
+      loadPosts(data);
+    } catch (e) {
+      console.error(e);
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('profileContent').innerHTML = '<div class="empty-state"><div class="icon">ERR</div><div>failed to load profile</div></div>';
+    }
+  }
+
+  function renderProfile(data) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('profileContent').style.display = 'block';
+
+    const user = data.user || {};
+    const profile = data.profile || {};
+    const avatar = document.getElementById('profileAvatar');
+    if (profile.avatar_url) {
+      avatar.innerHTML = '<img src="' + escapeHtml(profile.avatar_url) + '" alt="">';
+    } else {
+      avatar.textContent = initials(user.name);
+    }
+
+    document.getElementById('profileName').textContent = user.name || 'Anonymous';
+    document.getElementById('profileEmail').textContent = '@' + (user.email || 'user');
+    document.getElementById('profileBio').textContent = profile.bio || 'no bio yet';
+    document.getElementById('profileJoined').textContent = formatDate(profile.created_at);
+
+    const walletEl = document.getElementById('profileWallet');
+    if (profile.wallet_address) {
+      walletEl.textContent = profile.wallet_address;
+      walletEl.className = 'profile-field-value connected';
+    } else {
+      walletEl.textContent = 'not connected';
+      walletEl.className = 'profile-field-value';
+    }
+
+    document.getElementById('statPosts').textContent = data.post_count || 0;
+    document.getElementById('statFollowers').textContent = data.followers || 0;
+    document.getElementById('statFollowing').textContent = data.following || 0;
+    document.getElementById('postCount').textContent = data.post_count || 0;
+
+    // Follow section (only show if not viewing own profile and logged in)
+    const token = localStorage.getItem('pawradise_token');
+    let myId = 0;
+    if (token) {
+      try {
+        const meRes = await fetch(API_BASE + '/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (meRes.ok) { const meData = await meRes.json(); myId = meData.id || 0; }
+      } catch {}
+    }
+
+    if (user.id !== myId && token) {
+      document.getElementById('followSection').style.display = 'block';
+      const followBtn = document.getElementById('followBtn');
+      const followHint = document.getElementById('followHint');
+      const isFollowing = data.is_following || false;
+      followBtn.textContent = isFollowing ? 'UNFOLLOW' : 'FOLLOW';
+      followBtn.onclick = () => toggleFollow(user.id);
+      followHint.textContent = isFollowing ? 'followed' : 'follow this user';
+    } else if (!token) {
+      const fs = document.getElementById('followSection');
+      fs.style.display = 'block';
+      fs.innerHTML = '<div class="login-prompt"><p>Log in to follow this user</p><a href="' + LINK_BASE + '/login?redirect=' + encodeURIComponent(LINK_BASE + '/profile/' + userId) + '" class="btn">LOGIN</a></div>';
+    } else {
+      document.getElementById('followSection').style.display = 'none';
+    }
+  }
+
+  async function loadPosts(data) {
+    try {
+      const res = await fetch(API_BASE + '/community/users/' + userId);
+      if (!res.ok) return;
+      const profileData = await res.json();
+      posts = (profileData.posts || profileData.user_posts || []) ;
+      // Fallback: fetch feed and filter by user
+      if (posts.length === 0) {
+        const feedRes = await fetch(API_BASE + '/community/feed');
+        if (feedRes.ok) {
+          const feedData = await feedRes.json();
+          posts = (feedData.posts || []).filter(p => p.user_id === userId);
+        }
+      }
+      renderPosts(posts);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function renderPosts(posts) {
+    const container = document.getElementById('profilePosts');
+    if (posts.length === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">NO POSTS</div><div>no posts yet</div></div>';
+      return;
+    }
+    container.innerHTML = posts.map(post => {
+      const avatarHtml = post.user.avatar_url ? '<img src="' + escapeHtml(post.user.avatar_url) + '" alt="">' : initials(post.user.name);
+      const likedClass = post.liked ? ' liked' : '';
+      return `
+        <div class="post-mini">
+          <div class="post-mini-header">
+            <div class="post-mini-avatar">${avatarHtml}</div>
+            <span class="post-mini-author">${escapeHtml(post.user.name)}</span>
+            <span class="post-mini-time">${timeAgo(post.created_at)}</span>
+          </div>
+          <div class="post-mini-content">${escapeHtml(post.content)}</div>
+          <div class="post-mini-actions">
+            <span class="${post.liked ? 'liked' : ''}">${post.liked ? '♥' : '○'} ${post.like_count} likes</span>
+            <span>💬 ${post.comment_count} comments</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function toggleFollow(targetUserId) {
+    const token = localStorage.getItem('pawradise_token');
+    if (!token) { window.location.href = LINK_BASE + '/login?redirect=' + encodeURIComponent(LINK_BASE + '/profile/' + targetUserId); return; }
+
+    const btn = document.getElementById('followBtn');
+    const hint = document.getElementById('followHint');
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    try {
+      const res = await fetch(API_BASE + '/community/follow/' + targetUserId, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        btn.textContent = data.following ? 'UNFOLLOW' : 'FOLLOW';
+        hint.textContent = data.following ? 'followed' : 'follow this user';
+        // Refresh stats
+        loadProfile();
+        toast(data.following ? 'Followed user' : 'Unfollowed user', 'success');
+      } else {
+        toast('Could not update follow', 'error');
+        loadProfile();
+      }
+    } catch (e) {
+      toast('Network error', 'error');
+      loadProfile();
+    }
+  }
+
+  loadProfile();
+</script>
+</body>
+</html>

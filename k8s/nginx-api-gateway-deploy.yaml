@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-api-gateway
+  namespace: ingress-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-api-gateway
+  template:
+    metadata:
+      labels:
+        app: nginx-api-gateway
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25-alpine
+        ports:
+        - containerPort: 80
+          name: http
+        command: ["/bin/sh","-c","cp /config/nginx.conf /etc/nginx/nginx.conf && nginx -g 'daemon off;'"]
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /config
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-api-gateway

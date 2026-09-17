@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pawradise — Post</title>
+    <meta name="description" content="Community post">
+    <link rel="stylesheet" href="/assets/theme.css">
+    <script src="/env.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: #0a0e14; color: #c7d0dc; min-height: 100vh; display: flex; flex-direction: column; }
+        .header { background-color: #10151d; border-bottom: 1px solid #1e2530; padding: 8px 32px; }
+        .header-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+        .logo { font-family: var(--font-mono); font-size: 1.25rem; font-weight: bold; color: #4dd6c9; text-decoration: none; }
+        .nav { display: flex; gap: 16px; }
+        .nav a { color: #c7d0dc; text-decoration: none; font-size: 0.9rem; padding: var(--space-xs) var(--space-sm); border-radius: 4px; transition: color 0.15s ease; }
+        .nav a:hover, .nav a.active { color: #4dd6c9; }
+        main { flex: 1; max-width: 800px; margin: 0 auto; padding: var(--space-lg); width: 100%; }
+        .breadcrumb { font-family: var(--font-mono); font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: var(--space-md); }
+        .breadcrumb a { color: var(--color-text-muted); text-decoration: none; }
+        .breadcrumb a:hover { color: #4dd6c9; }
+        .post-detail { background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-lg); margin-bottom: var(--space-lg); }
+        .post-header { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); }
+        .post-avatar { width: 48px; height: 48px; background-color: #0a0e14; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 1.2rem; color: #4dd6c9; }
+        .post-author { font-family: var(--font-mono); font-size: 1rem; }
+        .post-date { font-size: 0.8rem; color: var(--color-text-muted); }
+        .post-content { line-height: 1.7; margin-bottom: var(--space-md); font-size: 1.05rem; }
+        .post-stats { display: flex; gap: var(--space-lg); font-size: 0.9rem; color: var(--color-text-muted); }
+        .comments-section { background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-lg); }
+        .comments-section h2 { font-family: var(--font-mono); font-size: 1.1rem; margin-bottom: var(--space-md); }
+        .comment-form { margin-bottom: var(--space-md); }
+        .comment-form textarea { width: 100%; padding: var(--space-sm) var(--space-md); background-color: #0a0e14; border: 1px solid var(--color-border); border-radius: 4px; color: #c7d0dc; font-size: 0.95rem; resize: vertical; min-height: 60px; }
+        .comment-form textarea:focus { outline: none; border-color: #4dd6c9; box-shadow: var(--glow-focus); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: var(--space-sm) var(--space-md); font-size: 0.9rem; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; transition: all 0.15s ease; }
+        .btn-primary { background-color: #4dd6c9; color: var(--color-bg); font-weight: 600; }
+        .btn-primary:hover { box-shadow: var(--glow-hover); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .comment { padding: var(--space-sm) 0; border-bottom: 1px solid #1e2530; }
+        .comment:last-child { border-bottom: none; }
+        .comment-header { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-xs); }
+        .comment-avatar { width: 32px; height: 32px; background-color: #0a0e14; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 0.8rem; color: #4dd6c9; }
+        .comment-author { font-family: var(--font-mono); font-size: 0.85rem; }
+        .comment-date { font-size: 0.75rem; color: var(--color-text-muted); }
+        .comment-content { font-size: 0.9rem; line-height: 1.5; }
+        .empty-state { text-align: center; padding: var(--space-xl); color: var(--color-text-muted); }
+        .footer { background-color: #10151d; border-top: 1px solid var(--color-border); padding: var(--space-lg); text-align: center; color: var(--color-text-muted); font-size: 0.8rem; font-family: var(--font-mono); }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--color-border); border-top-color: #4dd6c9; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 640px) { .nav { display: none; } }
+    </style>
+    <!-- CHROME_HEADER -->
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo">/pawradise</a>
+            <nav class="nav">
+                <a href="/">Shop</a>
+                <a href="/category">Categories</a>
+                <a href="/product/bundle.html">Bundles</a>
+                <a href="/product/request.html">Request</a>
+                <a href="/community">Community</a>
+                <a href="/account">Account</a>
+            </nav>
+        </div>
+    </header>
+
+    <main x-data="{
+        post: null,
+        comments: [],
+        newComment: '',
+        loading: true,
+        submitting: false,
+        isAuthed: false,
+        async load() {
+            this.loading = true;
+            const id = window.location.pathname.split('/').pop();
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/community/posts/${id}`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.status === 404) { this.notFound = true; return; }
+                if (!res.ok) throw new Error('Failed to load post');
+                const data = await res.json();
+                this.post = data.post;
+                this.comments = data.comments || [];
+            } catch (e) {
+                console.error(e);
+            } finally {
+                this.loading = false;
+            }
+        },
+        async checkAuth() {
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/me`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                this.isAuthed = res.ok;
+            } catch (e) { this.isAuthed = false; }
+        },
+        async addComment() {
+            if (!this.newComment.trim() || this.newComment.length > 500) return;
+            if (!this.isAuthed) { window.location.href = `/login?next=/post/${this.post.id}`; return; }
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/community/posts/${this.post.id}/comments`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: this.newComment })
+                });
+                if (!res.ok) throw new Error('Failed to add comment');
+                this.newComment = '';
+                this.load();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+    }" x-init="checkAuth(); load()">
+        
+        <div class="breadcrumb">
+            <a href="/community">Community</a> / Post
+        </div>
+
+        <div x-show="loading" class="empty-state"><div class="spinner"></div><p style="margin-top:var(--space-sm)">Loading post...</p></div>
+
+        <div x-show="post && !loading">
+            <div class="post-detail">
+                <div class="post-header">
+                    <a :href="`/profile/${post.author.id}`" class="post-avatar" x-text="(post.author.name || '?')[0].toUpperCase()"></a>
+                    <div>
+                        <a :href="`/profile/${post.author.id}`" class="post-author" x-text="post.author.name" style="text-decoration:none;color:inherit"></a>
+                        <div class="post-date" x-text="new Date(post.created_at).toLocaleDateString()"></div>
+                    </div>
+                </div>
+                <p class="post-content" x-text="post.content"></p>
+                <div class="post-stats">
+                    <span>♥ <span x-text="post.like_count"></span> likes</span>
+                    <span>💬 <span x-text="post.comment_count"></span> comments</span>
+                </div>
+            </div>
+
+            <div class="comments-section">
+                <h2>Comments (<span x-text="comments.length"></span>)</h2>
+                <div class="comment-form">
+                    <textarea x-model="newComment" placeholder="Add a comment..." maxlength="500"></textarea>
+                    <div style="display:flex;justify-content:flex-end;margin-top:var(--space-sm)">
+                        <button class="btn btn-primary" @click="addComment()" :disabled="newComment.length === 0 || newComment.length > 500">Comment</button>
+                    </div>
+                </div>
+                <template x-for="comment in comments" :key="comment.id">
+                    <div class="comment">
+                        <div class="comment-header">
+                            <a :href="`/profile/${comment.user.id}`" class="comment-avatar" x-text="(comment.user.name || '?')[0].toUpperCase()"></a>
+                            <div>
+                                <a :href="`/profile/${comment.user.id}`" class="comment-author" x-text="comment.user.name" style="text-decoration:none;color:inherit"></a>
+                                <div class="comment-date" x-text="new Date(comment.created_at).toLocaleDateString()"></div>
+                            </div>
+                        </div>
+                        <p class="comment-content" x-text="comment.content"></p>
+                    </div>
+                </template>
+                <div x-show="comments.length === 0" class="empty-state">
+                    <p>No comments yet. Be the first to comment!</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">// pawradise.ir — digital assets marketplace</footer>
+
+    <script src="/assets/alpine.min.js" defer></script>
+    <script src="/assets/api.js"></script>
+    <!-- CHROME_FOOTER -->
+</body>
+</html>

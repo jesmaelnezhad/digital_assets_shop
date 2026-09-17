@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pawradise — Checkout</title>
+    <meta name="description" content="Complete your purchase">
+    <link rel="stylesheet" href="/assets/theme.css">
+    <script src="/env.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font-sans); background-color: var(--color-bg); color: var(--color-text); min-height: 100vh; display: flex; flex-direction: column; }
+        .header { background-color: var(--color-bg-elevated); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) var(--space-lg); }
+        .header-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); }
+        .logo { font-family: var(--font-mono); font-size: 1.25rem; font-weight: bold; color: var(--color-accent-primary); text-decoration: none; }
+        .nav { display: flex; gap: var(--space-md); }
+        .nav a { color: var(--color-text); text-decoration: none; font-size: 0.9rem; padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); transition: color 0.15s ease; }
+        .nav a:hover, .nav a.active { color: var(--color-accent-primary); }
+        main { flex: 1; max-width: 1280px; margin: 0 auto; padding: var(--space-lg); width: 100%; }
+        .page-title { font-family: var(--font-mono); font-size: 1.5rem; margin-bottom: var(--space-lg); }
+        .checkout-grid { display: grid; grid-template-columns: 1fr 380px; gap: var(--space-xl); }
+        .section { background-color: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-lg); margin-bottom: var(--space-md); }
+        .section h2 { font-family: var(--font-mono); font-size: 1.1rem; margin-bottom: var(--space-md); }
+        .cart-item { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-border); }
+        .cart-item:last-child { border-bottom: none; }
+        .cart-item img { width: 50px; height: 50px; object-fit: cover; border-radius: var(--radius-sm); }
+        .cart-item .info { flex: 1; }
+        .cart-item .title { font-family: var(--font-mono); font-size: 0.9rem; }
+        .cart-item .price { font-family: var(--font-mono); color: var(--color-accent-primary); }
+        .coupon-input { display: flex; gap: var(--space-sm); }
+        .coupon-input input { flex: 1; padding: var(--space-sm) var(--space-md); background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text); font-size: 0.9rem; }
+        .coupon-input input:focus { outline: none; border-color: var(--color-accent-primary); box-shadow: var(--glow-focus); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: var(--space-sm) var(--space-md); font-size: 0.9rem; border: none; border-radius: var(--radius-sm); cursor: pointer; text-decoration: none; transition: all 0.15s ease; }
+        .btn-primary { background-color: var(--color-accent-primary); color: var(--color-bg); font-weight: 600; }
+        .btn-primary:hover { box-shadow: var(--glow-hover); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-secondary { background-color: transparent; border: 1px solid var(--color-border); color: var(--color-text); }
+        .btn-secondary:hover { border-color: var(--color-accent-primary); color: var(--color-accent-primary); }
+        .summary-row { display: flex; justify-content: space-between; padding: var(--space-xs) 0; font-size: 0.9rem; }
+        .summary-row.total { font-family: var(--font-mono); font-size: 1.25rem; color: var(--color-accent-primary); font-weight: 600; border-top: 1px solid var(--color-border); padding-top: var(--space-sm); margin-top: var(--space-sm); }
+        .payment-method { display: flex; gap: var(--space-sm); margin-bottom: var(--space-md); }
+        .payment-method label { display: flex; align-items: center; gap: var(--space-xs); cursor: pointer; padding: var(--space-sm) var(--space-md); background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.9rem; }
+        .payment-method input[type="radio"] { accent-color: var(--color-accent-primary); }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: var(--space-md); }
+        .modal { background-color: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-xl); max-width: 480px; width: 100%; }
+        .modal h3 { font-family: var(--font-mono); font-size: 1.25rem; margin-bottom: var(--space-md); }
+        .modal .modal-actions { display: flex; gap: var(--space-sm); margin-top: var(--space-lg); }
+        .modal .modal-actions .btn { flex: 1; }
+        .payment-status { text-align: center; padding: var(--space-xl); }
+        .payment-status .spinner { display: inline-block; width: 40px; height: 40px; border: 3px solid var(--color-border); border-top-color: var(--color-accent-primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: var(--space-md); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .payment-status.success { color: var(--color-success); }
+        .payment-status.error { color: var(--color-danger); }
+        .guest-email { width: 100%; padding: var(--space-sm) var(--space-md); background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text); font-size: 0.95rem; margin-bottom: var(--space-md); }
+        .guest-email:focus { outline: none; border-color: var(--color-accent-primary); box-shadow: var(--glow-focus); }
+        .empty-state { text-align: center; padding: var(--space-xl); color: var(--color-text-muted); }
+        .footer { background-color: var(--color-bg-elevated); border-top: 1px solid var(--color-border); padding: var(--space-lg); text-align: center; color: var(--color-text-muted); font-size: 0.8rem; font-family: var(--font-mono); }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--color-border); border-top-color: var(--color-accent-primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .banner { padding: var(--space-sm) var(--space-md); border-radius: var(--radius-sm); margin-bottom: var(--space-md); font-size: 0.85rem; display: none; }
+        .banner.success { background-color: rgba(95, 214, 138, 0.1); border: 1px solid var(--color-success); color: var(--color-success); }
+        .banner.error { background-color: rgba(224, 111, 111, 0.1); border: 1px solid var(--color-danger); color: var(--color-danger); }
+        .banner.visible { display: block; }
+        @media (max-width: 640px) { .nav { display: none; } .checkout-grid { grid-template-columns: 1fr; } }
+    </style>
+    <!-- CHROME_HEADER -->
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo">/pawradise</a>
+            <nav class="nav">
+                <a href="/">Shop</a>
+                <a href="/category">Categories</a>
+                <a href="/product/bundle.html">Bundles</a>
+                <a href="/product/request.html">Request</a>
+                <a href="/community">Community</a>
+                <a href="/account">Account</a>
+            </nav>
+        </div>
+    </header>
+
+    <main x-data="{
+        cart: { items: [], total: 0 },
+        couponCode: '',
+        couponDiscount: 0,
+        couponError: '',
+        couponSuccess: '',
+        loading: true,
+        isGuest: false,
+        guestEmail: '',
+        showConfirmModal: false,
+        processing: false,
+        paymentStatus: '',
+        orderId: null,
+        finalTotal() { return Math.max(0, this.cart.total - this.couponDiscount); },
+        async load() {
+            this.loading = true;
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/cart`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.status === 401) { this.isGuest = true; this.loading = false; return; }
+                if (!res.ok) throw new Error('Failed to load cart');
+                this.cart = await res.json();
+            } catch (e) {
+                console.error(e);
+            } finally {
+                this.loading = false;
+            }
+        },
+        async applyCoupon() {
+            this.couponError = '';
+            this.couponSuccess = '';
+            if (!this.couponCode.trim()) return;
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/coupons/validate`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: this.couponCode, cart_total: this.cart.total })
+                });
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.error || 'Invalid coupon');
+                }
+                const data = await res.json();
+                if (data.valid) {
+                    this.couponDiscount = data.discount_type === 'percentage' 
+                        ? this.cart.total * (data.discount_value / 100)
+                        : data.discount_value;
+                    this.couponSuccess = `Coupon applied: -$${this.couponDiscount.toFixed(2)}`;
+                }
+            } catch (e) {
+                this.couponError = e.message;
+            }
+        },
+        async checkout() {
+            if (this.isGuest && !this.guestEmail.includes('@')) {
+                this.couponError = 'Please enter a valid email';
+                return;
+            }
+            this.showConfirmModal = true;
+        },
+        async confirmCheckout() {
+            this.processing = true;
+            this.showConfirmModal = false;
+            try {
+                const items = this.cart.items.map(i => ({
+                    product_id: i.product_id,
+                    quantity: i.quantity,
+                    tier_id: i.product_tier_id
+                }));
+                let res;
+                if (this.isGuest) {
+                    res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/guest-orders`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: this.guestEmail, items, coupon_code: this.couponCode })
+                    });
+                } else {
+                    res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/orders`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ items, coupon_code: this.couponCode })
+                    });
+                }
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.error || 'Checkout failed');
+                }
+                const order = await res.json();
+                this.orderId = order.id;
+                this.paymentStatus = 'processing';
+                this.pollOrderStatus(order.id);
+            } catch (e) {
+                this.paymentStatus = 'error';
+                this.couponError = e.message;
+            } finally {
+                this.processing = false;
+            }
+        },
+        async pollOrderStatus(orderId) {
+            const check = async () => {
+                try {
+                    const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/orders/${orderId}/status`, {
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.status === 'paid' || data.status === 'delivered') {
+                            this.paymentStatus = 'paid';
+                            return;
+                        }
+                    }
+                    setTimeout(check, 3000);
+                } catch (e) {
+                    setTimeout(check, 3000);
+                }
+            };
+            check();
+        }
+    }" x-init="load()">
+        
+        <h1 class="page-title">Checkout</h1>
+
+        <div x-show="loading" class="empty-state"><div class="spinner"></div><p style="margin-top:var(--space-sm)">Loading checkout...</p></div>
+
+        <div x-show="!loading && !isGuest && cart.items?.length === 0" class="empty-state">
+            <h2 style="font-family:var(--font-mono);margin-bottom:var(--space-sm)">Your cart is empty</h2>
+            <a href="/" class="btn btn-primary" style="margin-top:var(--space-md)">Browse Products</a>
+        </div>
+
+        <div x-show="!loading && (isGuest || cart.items?.length > 0)" class="checkout-grid">
+            <div>
+                <div class="section" x-show="!paymentStatus">
+                    <h2>Cart Review</h2>
+                    <template x-for="item in cart.items" :key="item.id">
+                        <div class="cart-item">
+                            <img :src="item.preview_image_url" :alt="item.product_title" x-show="item.preview_image_url">
+                            <div class="info">
+                                <div class="title" x-text="item.product_title"></div>
+                                <div style="font-size:0.8rem;color:var(--color-text-muted)">Qty: <span x-text="item.quantity"></span></div>
+                            </div>
+                            <div class="price" x-text="'$' + (item.unit_price_usd * item.quantity).toFixed(2)"></div>
+                        </div>
+                    </template>
+                    <div x-show="isGuest" style="margin-top:var(--space-md)">
+                        <label style="font-size:0.85rem;color:var(--color-text-muted);margin-bottom:var(--space-xs);display:block">Email (for download link)</label>
+                        <input type="email" class="guest-email" x-model="guestEmail" placeholder="you@example.com">
+                    </div>
+                </div>
+
+                <div class="section" x-show="!paymentStatus">
+                    <h2>Coupon Code</h2>
+                    <div class="coupon-input">
+                        <input type="text" x-model="couponCode" placeholder="Enter coupon code">
+                        <button class="btn btn-secondary" @click="applyCoupon()">Apply</button>
+                    </div>
+                    <div class="banner success" :class="{ visible: couponSuccess }" x-text="couponSuccess"></div>
+                    <div class="banner error" :class="{ visible: couponError }" x-text="couponError"></div>
+                </div>
+
+                <div class="section payment-status" x-show="paymentStatus === 'processing'">
+                    <div class="spinner"></div>
+                    <h3>Processing Payment...</h3>
+                    <p style="margin-top:var(--space-sm);color:var(--color-text-muted)">Waiting for blockchain confirmation.</p>
+                </div>
+
+                <div class="section payment-status success" x-show="paymentStatus === 'paid'">
+                    <h3>Payment Successful!</h3>
+                    <p style="margin-top:var(--space-sm)">Your order #<span x-text="orderId"></span> is confirmed.</p>
+                    <a :href="`/account`" class="btn btn-primary" style="margin-top:var(--space-md)">View Orders</a>
+                </div>
+
+                <div class="section payment-status error" x-show="paymentStatus === 'error'">
+                    <h3>Payment Failed</h3>
+                    <p style="margin-top:var(--space-sm)" x-text="couponError"></p>
+                    <button class="btn btn-primary" @click="paymentStatus = ''" style="margin-top:var(--space-md)">Try Again</button>
+                </div>
+            </div>
+
+            <div x-show="!paymentStatus">
+                <div class="section">
+                    <h2>Order Summary</h2>
+                    <div class="summary-row"><span>Subtotal</span><span x-text="'$' + cart.total.toFixed(2)"></span></div>
+                    <div class="summary-row" x-show="couponDiscount > 0"><span>Discount</span><span x-text="'-$' + couponDiscount.toFixed(2)"></span></div>
+                    <div class="summary-row total"><span>Total</span><span x-text="'$' + finalTotal().toFixed(2)"></span></div>
+                    <button class="btn btn-primary" style="width:100%;margin-top:var(--space-md)" @click="checkout()" :disabled="processing">
+                        Confirm & Pay
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" x-show="showConfirmModal" x-transition>
+            <div class="modal">
+                <h3>Confirm Order</h3>
+                <p style="color:var(--color-text-muted);margin-bottom:var(--space-md)">You are about to pay <strong x-text="'$' + finalTotal().toFixed(2)"></strong> for your order.</p>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" @click="showConfirmModal = false">Cancel</button>
+                    <button class="btn btn-primary" @click="confirmCheckout()">Confirm Payment</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">// pawradise.ir — digital assets marketplace</footer>
+
+    <script src="/assets/alpine.min.js" defer></script>
+    <script src="/assets/api.js"></script>
+    <!-- CHROME_FOOTER -->
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pawradise — Profile</title>
+    <meta name="description" content="User profile">
+    <link rel="stylesheet" href="/assets/theme.css">
+    <script src="/env.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font-sans); background-color: var(--color-bg); color: var(--color-text); min-height: 100vh; display: flex; flex-direction: column; }
+        .header { background-color: var(--color-bg-elevated); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) var(--space-lg); }
+        .header-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); }
+        .logo { font-family: var(--font-mono); font-size: 1.25rem; font-weight: bold; color: var(--color-accent-primary); text-decoration: none; }
+        .nav { display: flex; gap: var(--space-md); }
+        .nav a { color: var(--color-text); text-decoration: none; font-size: 0.9rem; padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); transition: color 0.15s ease; }
+        .nav a:hover, .nav a.active { color: var(--color-accent-primary); }
+        main { flex: 1; max-width: 800px; margin: 0 auto; padding: var(--space-lg); width: 100%; }
+        .breadcrumb { font-family: var(--font-mono); font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: var(--space-md); }
+        .breadcrumb a { color: var(--color-text-muted); text-decoration: none; }
+        .breadcrumb a:hover { color: var(--color-accent-primary); }
+        .profile-header { background-color: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-xl); margin-bottom: var(--space-lg); text-align: center; }
+        .profile-avatar { width: 100px; height: 100px; background-color: var(--color-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 2.5rem; color: var(--color-accent-primary); margin: 0 auto var(--space-md); }
+        .profile-name { font-family: var(--font-mono); font-size: 1.5rem; margin-bottom: var(--space-xs); }
+        .profile-stats { display: flex; justify-content: center; gap: var(--space-xl); margin-bottom: var(--space-md); }
+        .profile-stats .stat { text-align: center; }
+        .profile-stats .value { font-family: var(--font-mono); font-size: 1.5rem; color: var(--color-accent-primary); font-weight: 600; }
+        .profile-stats .label { font-size: 0.8rem; color: var(--color-text-muted); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: var(--space-sm) var(--space-md); font-size: 0.9rem; border: none; border-radius: var(--radius-sm); cursor: pointer; text-decoration: none; transition: all 0.15s ease; }
+        .btn-primary { background-color: var(--color-accent-primary); color: var(--color-bg); font-weight: 600; }
+        .btn-primary:hover { box-shadow: var(--glow-hover); }
+        .btn-secondary { background-color: transparent; border: 1px solid var(--color-border); color: var(--color-text); }
+        .btn-secondary:hover { border-color: var(--color-accent-primary); color: var(--color-accent-primary); }
+        .posts-section { background-color: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-lg); }
+        .posts-section h2 { font-family: var(--font-mono); font-size: 1.1rem; margin-bottom: var(--space-md); }
+        .post-card { padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-border); }
+        .post-card:last-child { border-bottom: none; }
+        .post-content { line-height: 1.5; margin-bottom: var(--space-xs); }
+        .post-date { font-size: 0.8rem; color: var(--color-text-muted); }
+        .empty-state { text-align: center; padding: var(--space-xl); color: var(--color-text-muted); }
+        .footer { background-color: var(--color-bg-elevated); border-top: 1px solid var(--color-border); padding: var(--space-lg); text-align: center; color: var(--color-text-muted); font-size: 0.8rem; font-family: var(--font-mono); }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--color-border); border-top-color: var(--color-accent-primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 640px) { .nav { display: none; } }
+    </style>
+    <!-- CHROME_HEADER -->
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo">/pawradise</a>
+            <nav class="nav">
+                <a href="/">Shop</a>
+                <a href="/category">Categories</a>
+                <a href="/product/bundle.html">Bundles</a>
+                <a href="/product/request.html">Request</a>
+                <a href="/community">Community</a>
+                <a href="/account">Account</a>
+            </nav>
+        </div>
+    </header>
+
+    <main x-data="{
+        user: null,
+        posts: [],
+        loading: true,
+        isAuthed: false,
+        isFollowing: false,
+        notFound: false,
+        async load() {
+            this.loading = true;
+            const id = window.location.pathname.split('/').pop();
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/community/users/${id}`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.status === 404) { this.notFound = true; return; }
+                if (!res.ok) throw new Error('Failed to load profile');
+                const data = await res.json();
+                this.user = data;
+                this.isFollowing = data.following || false;
+                this.loadPosts(id);
+            } catch (e) {
+                console.error(e);
+            } finally {
+                this.loading = false;
+            }
+        },
+        async loadPosts(userId) {
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/community/posts?user_id=${userId}&page=1&per_page=20`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    this.posts = data.posts || [];
+                }
+            } catch (e) {}
+        },
+        async checkAuth() {
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/me`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                this.isAuthed = res.ok;
+            } catch (e) { this.isAuthed = false; }
+        },
+        async follow() {
+            if (!this.isAuthed) { window.location.href = `/login?next=/profile/${this.user.id}`; return; }
+            const wasFollowing = this.isFollowing;
+            this.isFollowing = !wasFollowing;
+            this.user.follower_count += wasFollowing ? -1 : 1;
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/community/follow/${this.user.id}`, {
+                    method: wasFollowing ? 'DELETE' : 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!res.ok) throw new Error('Failed');
+            } catch (e) {
+                this.isFollowing = wasFollowing;
+                this.user.follower_count += wasFollowing ? 1 : -1;
+            }
+        }
+    }" x-init="checkAuth(); load()">
+        
+        <div class="breadcrumb">
+            <a href="/community">Community</a> / Profile
+        </div>
+
+        <div x-show="loading" class="empty-state"><div class="spinner"></div><p style="margin-top:var(--space-sm)">Loading profile...</p></div>
+
+        <div x-show="notFound" class="empty-state">
+            <h2 style="font-family:var(--font-mono);margin-bottom:var(--space-sm)">User Not Found</h2>
+        </div>
+
+        <div x-show="user && !loading">
+            <div class="profile-header">
+                <div class="profile-avatar" x-text="(user.name || '?')[0].toUpperCase()"></div>
+                <h1 class="profile-name" x-text="user.name || user.display_name"></h1>
+                <div class="profile-stats">
+                    <div class="stat">
+                        <div class="value" x-text="user.post_count || 0"></div>
+                        <div class="label">Posts</div>
+                    </div>
+                    <div class="stat">
+                        <div class="value" x-text="user.follower_count || 0"></div>
+                        <div class="label">Followers</div>
+                    </div>
+                    <div class="stat">
+                        <div class="value" x-text="user.following_count || 0"></div>
+                        <div class="label">Following</div>
+                    </div>
+                </div>
+                <button class="btn" :class="isFollowing ? 'btn-secondary' : 'btn-primary'" @click="follow()" x-show="isAuthed">
+                    <span x-text="isFollowing ? 'Unfollow' : 'Follow'"></span>
+                </button>
+                <button class="btn btn-primary" @click="window.location.href = '/login'" x-show="!isAuthed">
+                    Login to Follow
+                </button>
+            </div>
+
+            <div class="posts-section">
+                <h2>Posts</h2>
+                <template x-for="post in posts" :key="post.id">
+                    <a :href="`/post/${post.id}`" style="text-decoration:none;color:inherit">
+                        <div class="post-card">
+                            <p class="post-content" x-text="post.content"></p>
+                            <div class="post-date" x-text="new Date(post.created_at).toLocaleDateString()"></div>
+                        </div>
+                    </a>
+                </template>
+                <div x-show="posts.length === 0" class="empty-state">
+                    <p>No posts yet.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">// pawradise.ir — digital assets marketplace</footer>
+
+    <script src="/assets/alpine.min.js" defer></script>
+    <script src="/assets/api.js"></script>
+    <!-- CHROME_FOOTER -->
+</body>
+</html>

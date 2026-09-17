@@ -1,0 +1,138 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-api-gateway
+  namespace: ingress-nginx
+data:
+  nginx.conf: |
+    worker_processes auto;
+    error_log /var/log/nginx/error.log warn;
+    pid /tmp/nginx.pid;
+    events { worker_connections 1024; }
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+        access_log /var/log/nginx/access.log;
+        sendfile on;
+        keepalive_timeout 65;
+        client_max_body_size 50m;
+        resolver kube-dns.kube-system.svc.cluster.local valid=10s;
+        
+        # Production API routing
+        server {
+            listen 80 default_server;
+            server_name _;
+            
+            # Health
+            location = /health { return 200 '{"status":"ok"}'; add_header Content-Type application/json; }
+            
+            # Identity Service (8081)
+            location /api/v1/register { proxy_pass http://identity-service.production.svc.cluster.local:80; }
+            location /api/v1/login { proxy_pass http://identity-service.production.svc.cluster.local:80; }
+            location /api/v1/logout { proxy_pass http://identity-service.production.svc.cluster.local:80; }
+            location /api/v1/me { proxy_pass http://identity-service.production.svc.cluster.local:80; }
+            location ~ ^/api/v1/profile { proxy_pass http://identity-service.production.svc.cluster.local:80; }
+            location /api/v1/referrals { proxy_pass http://identity-service.production.svc.cluster.local:80; }
+            location /api/v1/commissions { proxy_pass http://identity-service.production.svc.cluster.local:80; }
+            location /api/v1/referrals/track { proxy_pass http://identity-service.production.svc.cluster.local:80; }
+            location /api/v1/commissions/record { proxy_pass http://identity-service.production.svc.cluster.local:80; }
+            
+            # Product Service (8082)
+            location /api/v1/products { proxy_pass http://product-service.production.svc.cluster.local:80; }
+            location ~ ^/api/v1/products/ { proxy_pass http://product-service.production.svc.cluster.local:80; }
+            location /api/v1/categories { proxy_pass http://product-service.production.svc.cluster.local:80; }
+            location /api/v1/bundles { proxy_pass http://product-service.production.svc.cluster.local:80; }
+            location ~ ^/api/v1/bundles/ { proxy_pass http://product-service.production.svc.cluster.local:80; }
+            location /api/v1/recommendations { proxy_pass http://product-service.production.svc.cluster.local:80; }
+            location ~ ^/api/v1/recommendations/ { proxy_pass http://product-service.production.svc.cluster.local:80; }
+            
+            # Commerce Service (8083)
+            location /api/v1/guest-orders { proxy_pass http://commerce-service.production.svc.cluster.local:80; }
+            location ~ ^/api/v1/guest-orders/ { proxy_pass http://commerce-service.production.svc.cluster.local:80; }
+            location /api/v1/coupons { proxy_pass http://commerce-service.production.svc.cluster.local:80; }
+            location ~ ^/api/v1/coupons/ { proxy_pass http://commerce-service.production.svc.cluster.local:80; }
+            location /api/v1/orders { proxy_pass http://commerce-service.production.svc.cluster.local:80; }
+            location ~ ^/api/v1/orders/ { proxy_pass http://commerce-service.production.svc.cluster.local:80; }
+            location /api/v1/cart { proxy_pass http://commerce-service.production.svc.cluster.local:80; }
+            location /api/v1/cart/items { proxy_pass http://commerce-service.production.svc.cluster.local:80; }
+            location ~ ^/api/v1/cart/items/ { proxy_pass http://commerce-service.production.svc.cluster.local:80; }
+            location /api/v1/wishlist { proxy_pass http://commerce-service.production.svc.cluster.local:80; }
+            location /api/v1/wishlist/toggle { proxy_pass http://commerce-service.production.svc.cluster.local:80; }
+            location /api/v1/recently-viewed { proxy_pass http://commerce-service.production.svc.cluster.local:80; }
+            location /api/v1/compare { proxy_pass http://commerce-service.production.svc.cluster.local:80; }
+            location /api/v1/compare/toggle { proxy_pass http://commerce-service.production.svc.cluster.local:80; }
+            
+            # Community Service (8084)
+            location /api/v1/community/ { proxy_pass http://community-service.production.svc.cluster.local:80; }
+            location /api/v1/profile { proxy_pass http://community-service.production.svc.cluster.local:80; }
+            
+            # Review Service (8085)
+            location ~ ^/api/v1/reviews/ { proxy_pass http://review-service.production.svc.cluster.local:80; }
+            location /api/v1/reviews { proxy_pass http://review-service.production.svc.cluster.local:80; }
+            
+            # Payment Service (8086)
+            location ~ ^/api/v1/exchange-rates/ { proxy_pass http://payment-service.production.svc.cluster.local:80; }
+            location /api/v1/exchange-rates { proxy_pass http://payment-service.production.svc.cluster.local:80; }
+            location ~ ^/api/v1/payments/ { proxy_pass http://payment-service.production.svc.cluster.local:80; }
+            location /api/v1/settings { proxy_pass http://payment-service.production.svc.cluster.local:80; }
+            location ~ ^/api/v1/settings/ { proxy_pass http://payment-service.production.svc.cluster.local:80; }
+            
+            # Admin Service (8087)
+            location /api/v1/admin/ { proxy_pass http://admin-service.production.svc.cluster.local:80; }
+            
+            # Media Service (8088)
+            location /api/v1/media/ { proxy_pass http://media-service.production.svc.cluster.local:80; }
+            
+            # Staging - rewrite /staging prefix and route to staging services
+            location /staging/api/v1/register { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://identity-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/login { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://identity-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/logout { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://identity-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/me { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://identity-service.staging.svc.cluster.local:80; }
+            location ~ ^/staging/api/v1/profile { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://identity-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/referrals { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://identity-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/commissions { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://identity-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/products { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://product-service.staging.svc.cluster.local:80; }
+            location ~ ^/staging/api/v1/products/ { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://product-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/categories { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://product-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/bundles { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://product-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/orders { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://commerce-service.staging.svc.cluster.local:80; }
+            location ~ ^/staging/api/v1/orders/ { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://commerce-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/cart { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://commerce-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/wishlist { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://commerce-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/community/ { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://community-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/profile { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://community-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/reviews { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://review-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/exchange-rates { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://payment-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/payments/ { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://payment-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/settings { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://payment-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/admin/ { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://admin-service.staging.svc.cluster.local:80; }
+            location /staging/api/v1/media/ { rewrite ^/staging/(.*)$ /$1 break; proxy_pass http://media-service.staging.svc.cluster.local:80; }
+            
+            # Static files
+            location = / { root /var/www/production; try_files /index.html =404; }
+            location = /community { root /var/www/production; try_files /community.html =404; }
+            location = /account { root /var/www/production; try_files /account.html =404; }
+            location = /checkout { root /var/www/production; try_files /checkout.html =404; }
+            location = /login { root /var/www/production; try_files /login.html =404; }
+            location = /admin { root /var/www/production; try_files /admin.html =404; }
+            location ~ ^/product/ { root /var/www/production; try_files /product.html =404; }
+            
+            # Staging static files
+            location = /staging { return 301 /staging/; }
+            location = /staging/ { root /var/www/staging; try_files /index.html =404; }
+            location = /staging/community { root /var/www/staging; try_files /community.html =404; }
+            location = /staging/account { root /var/www/staging; try_files /account.html =404; }
+            location = /staging/checkout { root /var/www/staging; try_files /checkout.html =404; }
+            location = /staging/login { root /var/www/staging; try_files /login.html =404; }
+            location = /staging/admin { root /var/www/staging; try_files /admin.html =404; }
+            
+            # Proxy headers
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Authorization $http_authorization;
+            proxy_connect_timeout 5s;
+            proxy_read_timeout 30s;
+        }
+    }

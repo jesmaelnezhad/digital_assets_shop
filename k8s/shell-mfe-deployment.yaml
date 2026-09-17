@@ -1,0 +1,202 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shell-mfe-config
+  namespace: pawradise
+data:
+  default.conf: |
+    server {
+      listen 80;
+      server_name _;
+      root /usr/share/nginx/html;
+      index index.html;
+
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+
+      location / {
+        try_files $uri $uri/ /index.html;
+      }
+
+      # Service API proxies
+      location /api/v1/identity/ {
+        proxy_pass http://identity-service.pawradise.svc.cluster.local:8081/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Authorization $http_authorization;
+      }
+
+      location /api/v1/products/ {
+        proxy_pass http://product-service.pawradise.svc.cluster.local:8082/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Authorization $http_authorization;
+      }
+
+      location /api/v1/categories/ {
+        proxy_pass http://product-service.pawradise.svc.cluster.local:8082/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Authorization $http_authorization;
+      }
+
+      location /api/v1/bundles/ {
+        proxy_pass http://product-service.pawradise.svc.cluster.local:8082/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Authorization $http_authorization;
+      }
+
+      location /api/v1/orders/ {
+        proxy_pass http://commerce-service.pawradise.svc.cluster.local:8083/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Authorization $http_authorization;
+      }
+
+      location /api/v1/cart/ {
+        proxy_pass http://commerce-service.pawradise.svc.cluster.local:8083/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Authorization $http_authorization;
+      }
+
+      location /api/v1/wishlist/ {
+        proxy_pass http://commerce-service.pawradise.svc.cluster.local:8083/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Authorization $http_authorization;
+      }
+
+      location /api/v1/coupons/ {
+        proxy_pass http://commerce-service.pawradise.svc.cluster.local:8083/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Authorization $http_authorization;
+      }
+
+      location /api/v1/guest-orders/ {
+        proxy_pass http://commerce-service.pawradise.svc.cluster.local:8083/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+
+      location /api/v1/community/ {
+        proxy_pass http://community-service.pawradise.svc.cluster.local:8084/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Authorization $http_authorization;
+      }
+
+      location /api/v1/ratings/ {
+        proxy_pass http://review-service.pawradise.svc.cluster.local:8085/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+
+      location /api/v1/reviews/ {
+        proxy_pass http://review-service.pawradise.svc.cluster.local:8085/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+
+      location /api/v1/payments/ {
+        proxy_pass http://payment-service.pawradise.svc.cluster.local:8086/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Authorization $http_authorization;
+      }
+
+      location /api/v1/exchange-rates/ {
+        proxy_pass http://payment-service.pawradise.svc.cluster.local:8086/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+
+      location /api/v1/admin/ {
+        proxy_pass http://admin-service.pawradise.svc.cluster.local:8087/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Authorization $http_authorization;
+      }
+
+      location /api/v1/media/ {
+        proxy_pass http://media-service.pawradise.svc.cluster.local:8088/internal/v1/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Authorization $http_authorization;
+      }
+
+      location = /health {
+        return 200 "OK";
+        add_header Content-Type text/plain;
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shell-mfe
+  namespace: pawradise
+  labels:
+    app: shell-mfe
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shell-mfe
+  template:
+    metadata:
+      labels:
+        app: shell-mfe
+    spec:
+      containers:
+      - name: shell-mfe
+        image: registry.local/pawradise-shell-mfe:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/http.d
+          readOnly: true
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "64Mi"
+            cpu: "50m"
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: shell-mfe-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shell-mfe
+  namespace: pawradise
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: shell-mfe
+  type: ClusterIP

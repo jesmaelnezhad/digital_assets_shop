@@ -1,0 +1,461 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-pod
+  namespace: staging
+  labels:
+    app: backend-pod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-pod
+  template:
+    metadata:
+      labels:
+        app: backend-pod
+    spec:
+      containers:
+      # ---- Identity Service (port 8081) ----
+      - name: identity-service
+        image: 194.5.206.106:30099/pawradise-identity-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8081
+        env:
+        - name: PORT
+          value: "8081"
+        - name: DB_HOST
+          value: postgres.database.svc.cluster.local
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: app
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          value: "appdb_identity_staging"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        - name: ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: ADMIN_TOKEN
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      # ---- Product Service (port 8082) ----
+      - name: product-service
+        image: 194.5.206.106:30099/pawradise-product-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8082
+        env:
+        - name: PORT
+          value: "8082"
+        - name: DB_HOST
+          value: postgres.database.svc.cluster.local
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: app
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          value: "appdb_product_staging"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        - name: ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: ADMIN_TOKEN
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8082
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8082
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      # ---- Commerce Service (port 8083) ----
+      - name: commerce-service
+        image: 194.5.206.106:30099/pawradise-commerce-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8083
+        env:
+        - name: PORT
+          value: "8083"
+        - name: DB_HOST
+          value: postgres.database.svc.cluster.local
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: app
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          value: "appdb_commerce_staging"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        - name: ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: ADMIN_TOKEN
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8083
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8083
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      # ---- Community Service (port 8084) ----
+      - name: community-service
+        image: 194.5.206.106:30099/pawradise-community-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8084
+        env:
+        - name: PORT
+          value: "8084"
+        - name: DB_HOST
+          value: postgres.database.svc.cluster.local
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: app
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          value: "appdb_community_staging"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        - name: ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: ADMIN_TOKEN
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8084
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8084
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      # ---- Review Service (port 8085) ----
+      - name: review-service
+        image: 194.5.206.106:30099/pawradise-review-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8085
+        env:
+        - name: PORT
+          value: "8085"
+        - name: DB_HOST
+          value: postgres.database.svc.cluster.local
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: app
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          value: "appdb_review_staging"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        - name: ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: ADMIN_TOKEN
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8085
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8085
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      # ---- Payment Service (port 8086) ----
+      - name: payment-service
+        image: 194.5.206.106:30099/pawradise-payment-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8086
+        env:
+        - name: PORT
+          value: "8086"
+        - name: DB_HOST
+          value: postgres.database.svc.cluster.local
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: app
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          value: "appdb_payment_staging"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        - name: ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: ADMIN_TOKEN
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8086
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8086
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      # ---- Admin Service (port 8087) ----
+      - name: admin-service
+        image: 194.5.206.106:30099/pawradise-admin-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8087
+        env:
+        - name: PORT
+          value: "8087"
+        - name: DB_HOST
+          value: postgres.database.svc.cluster.local
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: app
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          value: "appdb_admin_staging"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        - name: ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: ADMIN_TOKEN
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8087
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8087
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      # ---- Media Service (port 8088) ----
+      - name: media-service
+        image: 194.5.206.106:30099/pawradise-media-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8088
+        env:
+        - name: PORT
+          value: "8088"
+        - name: DB_HOST
+          value: postgres.database.svc.cluster.local
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: app
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          value: "appdb_media_staging"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        - name: ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: ADMIN_TOKEN
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8088
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8088
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-pod
+  namespace: staging
+spec:
+  ports:
+  - name: identity
+    port: 8081
+    targetPort: 8081
+  - name: product
+    port: 8082
+    targetPort: 8082
+  - name: commerce
+    port: 8083
+    targetPort: 8083
+  - name: community
+    port: 8084
+    targetPort: 8084
+  - name: review
+    port: 8085
+    targetPort: 8085
+  - name: payment
+    port: 8086
+    targetPort: 8086
+  - name: admin
+    port: 8087
+    targetPort: 8087
+  - name: media
+    port: 8088
+    targetPort: 8088
+  selector:
+    app: backend-pod
+  type: ClusterIP

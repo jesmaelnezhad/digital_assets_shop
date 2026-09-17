@@ -1,0 +1,109 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-ingress-staging
+  namespace: staging
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: shop-mfe
+            port:
+              number: 80
+      - path: /login
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-mfe
+            port:
+              number: 80
+      - path: /register
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-mfe
+            port:
+              number: 80
+      - path: /auth
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-mfe
+            port:
+              number: 80
+      - path: /product
+        pathType: Prefix
+        backend:
+          service:
+            name: product-mfe
+            port:
+              number: 80
+      - path: /account
+        pathType: Prefix
+        backend:
+          service:
+            name: account-mfe
+            port:
+              number: 80
+      - path: /cart
+        pathType: Prefix
+        backend:
+          service:
+            name: account-mfe
+            port:
+              number: 80
+      - path: /wishlist
+        pathType: Prefix
+        backend:
+          service:
+            name: account-mfe
+            port:
+              number: 80
+      - path: /referrals
+        pathType: Prefix
+        backend:
+          service:
+            name: account-mfe
+            port:
+              number: 80
+      - path: /checkout
+        pathType: Prefix
+        backend:
+          service:
+            name: checkout-mfe
+            port:
+              number: 80
+      - path: /community
+        pathType: Prefix
+        backend:
+          service:
+            name: community-mfe
+            port:
+              number: 80
+      - path: /post
+        pathType: Prefix
+        backend:
+          service:
+            name: community-mfe
+            port:
+              number: 80
+      - path: /profile
+        pathType: Prefix
+        backend:
+          service:
+            name: community-mfe
+            port:
+              number: 80
+      - path: /admin
+        pathType: Prefix
+        backend:
+          service:
+            name: admin-app
+            port:
+              number: 80

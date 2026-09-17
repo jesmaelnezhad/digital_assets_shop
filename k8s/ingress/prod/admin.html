@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pawradise - Admin</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0b1020;
+    color: #e6e8ef;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: #111827;
+    border-radius: 16px;
+    border: 1px solid #1f2937;
+    padding: 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  }
+  h1 { font-size: 24px; margin-bottom: 8px; }
+  .subtitle { color: #9ca3af; font-size: 14px; margin-bottom: 24px; }
+  .admin-login { margin-bottom: 24px; padding: 20px; border: 1px solid #1f2937; border-radius: 8px; }
+  .admin-login h2 { font-size: 18px; margin-bottom: 12px; }
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; margin-bottom: 6px; font-size: 14px; color: #d1d5db; }
+  .form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #1f2937;
+    background: #0b1020;
+    color: #e6e8ef;
+    font-size: 14px;
+  }
+  .form-group input:focus { outline: none; border-color: #2563eb; }
+  button {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button:hover { background: #1d4ed8; }
+  button:disabled { background: #4b5563; cursor: not-allowed; }
+  button.danger { background: #dc2626; }
+  button.danger:hover { background: #b91c1c; }
+  button.secondary { background: #374151; }
+  button.secondary:hover { background: #4b5563; }
+  .btn-group { display: flex; gap: 8px; margin-top: 16px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  th, td { padding: 12px; text-align: left; border-bottom: 1px solid #1f2937; }
+  th { color: #9ca3af; font-weight: 500; font-size: 12px; text-transform: uppercase; }
+  tr:hover { background: #1a2035; }
+  .actions { display: flex; gap: 8px; }
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    background: #1f2937;
+    color: #e6e8ef;
+    font-size: 14px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: #7f1d1d; color: #fecaca; }
+  .toast.success { background: #064e3b; color: #6ee7b7; }
+  .hidden { display: none; }
+  .env-badge {
+    display: inline-block;
+    margin-top: 18px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    background: #111827;
+    color: #6ee7b7;
+    border: 1px solid #064e3b;
+  }
+  .loading { text-align: center; padding: 40px; color: #6b7280; }
+  .secret-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .secret-row input {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #1f2937;
+    background: #0b1020;
+    color: #e6e8ef;
+    font-family: monospace;
+    font-size: 13px;
+  }
+  .copy-hint { font-size: 11px; color: #6b7280; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <span class="env-badge" id="env">ENV: staging</span>
+
+    <div id="adminLogin" class="admin-login">
+      <h2>Admin Login</h2>
+      <div class="form-group">
+        <label for="adminToken">Admin Token</label>
+        <input type="password" id="adminToken" placeholder="Enter admin token">
+      </div>
+      <button id="loginBtn" onclick="adminLogin()">Login</button>
+      <p style="margin-top: 12px; font-size: 12px; color: #6b7280;">Contact your administrator for the admin token.</p>
+    </div>
+
+    <div id="adminPanel" class="hidden">
+      <h1>Admin Panel</h1>
+      <p class="subtitle">Manage users and application settings</p>
+      <div class="btn-group">
+        <button class="secondary" onclick="logout()">Logout</button>
+      </div>
+      <div id="toast" class="toast"></div>
+      <div id="loading" class="loading">Loading users...</div>
+      <table id="usersTable" class="hidden">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Email</th>
+            <th>Name</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function detectEnvironment() {
+      const path = window.location.pathname;
+      if (path.startsWith('/staging')) {
+        document.getElementById('env').textContent = 'ENV: staging';
+        return 'staging';
+      }
+      document.getElementById('env').textContent = 'ENV: production';
+      return 'production';
+    }
+
+    const API_BASE = '/api/v1';
+    let adminToken = null;
+
+    function showToast(msg, type) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show ' + type;
+      setTimeout(() => { t.className = 'toast'; }, 3000);
+    }
+
+    async function adminLogin() {
+      const token = document.getElementById('adminToken').value.trim();
+      if (!token) { showToast('Enter admin token', 'error'); return; }
+
+      document.getElementById('loginBtn').disabled = true;
+      try {
+        const res = await fetch(API_BASE + '/admin/users', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.ok) {
+          adminToken = token;
+          document.getElementById('adminLogin').classList.add('hidden');
+          document.getElementById('adminPanel').classList.remove('hidden');
+          loadUsers();
+          showToast('Login successful', 'success');
+        } else if (res.status === 401) {
+          showToast('Invalid admin token', 'error');
+        } else {
+          showToast('Access forbidden', 'error');
+        }
+      } catch (e) {
+        showToast('Network error', 'error');
+      } finally {
+        document.getElementById('loginBtn').disabled = false;
+      }
+    }
+
+    function logout() {
+      adminToken = null;
+      document.getElementById('adminLogin').classList.remove('hidden');
+      document.getElementById('adminPanel').classList.add('hidden');
+      document.getElementById('adminToken').value = '';
+      showToast('Logged out', 'info');
+    }
+
+    async function loadUsers() {
+      document.getElementById('loading').classList.remove('hidden');
+      document.getElementById('usersTable').classList.add('hidden');
+      try {
+        const res = await fetch(API_BASE + '/admin/users', {
+          headers: { 'Authorization': 'Bearer ' + adminToken }
+        });
+        const data = await res.json();
+        document.getElementById('loading').classList.add('hidden');
+
+        if (!res.ok) {
+          showToast('Failed to load users', 'error');
+          return;
+        }
+
+        if (!data.users || data.users.length === 0) {
+          showToast('No users found', 'info');
+          return;
+        }
+
+        const tbody = document.getElementById('usersBody');
+        tbody.innerHTML = '';
+        data.users.forEach(u => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${u.id}</td>
+            <td>${escapeHtml(u.email)}</td>
+            <td>${escapeHtml(u.name || '—')}</td>
+            <td style="color:#6b7280;font-size:13px;">${formatDate(u.created_at)}</td>
+            <td class="actions">
+              <button class="danger" onclick="resetPassword(${u.id}, '${escapeHtml(u.email)}')">Reset Password</button>
+              <button class="danger" onclick="deleteUser(${u.id}, '${escapeHtml(u.email)}')">Delete</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+        document.getElementById('usersTable').classList.remove('hidden');
+      } catch (e) {
+        document.getElementById('loading').classList.add('hidden');
+        showToast('Error loading users', 'error');
+      }
+    }
+
+    async function resetPassword(id, email) {
+      if (!confirm(`Reset password for ${email}?`)) return;
+      try {
+        const res = await fetch(API_BASE + '/admin/users/' + id + '/reset-password', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + adminToken,
+            'Content-Type': 'application/json'
+          }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast('Password reset: ' + data.new_password, 'success');
+          loadUsers();
+        } else {
+          showToast(data.error || 'Failed', 'error');
+        }
+      } catch (e) { showToast('Network error', 'error'); }
+    }
+
+    async function deleteUser(id, email) {
+      if (!confirm(`Delete user ${email}? This cannot be undone.`)) return;
+      try {
+        const res = await fetch(API_BASE + '/admin/users/' + id, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + adminToken }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast('User deleted', 'success');
+          loadUsers();
+        } else {
+          showToast(data.error || 'Failed', 'error');
+        }
+      } catch (e) { showToast('Network error', 'error'); }
+    }
+
+    function escapeHtml(s) {
+      if (!s) return '';
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function formatDate(d) {
+      if (!d) return '—';
+      try {
+        const dt = new Date(d);
+        return dt.toLocaleDateString() + ' ' + dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      } catch { return d; }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      detectEnvironment();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: staging
+spec:
+  template:
+    spec:
+      containers:
+      - name: frontend
+        image: registry.local/pawradise-frontend:local
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/http.d
+          readOnly: true
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: frontend-nginx-config

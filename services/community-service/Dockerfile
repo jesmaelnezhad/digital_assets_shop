@@ -1,0 +1,7 @@
+FROM alpine:3.19
+RUN apk add --no-cache ca-certificates
+WORKDIR /
+COPY community-service-binary /server
+RUN chmod +x /server
+EXPOSE 8084
+CMD ["/server"]

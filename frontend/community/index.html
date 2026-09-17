@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAWRADISE — Community</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --bg:#0a0a0f; --surface:#14141f; --surface2:#1a1a2a;
+    --border:#2a2a3a; --text:#e0e0e0; --text2:#8888aa;
+    --cyan:#00d4ff; --magenta:#ff0066; --green:#00ff88;
+    --mono:Consolas,'Courier New',monospace;
+    --sans:-apple-system,'Segoe UI',Roboto,sans-serif;
+  }
+  body { background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; line-height:1.6; }
+  .header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 24px; background:var(--surface);
+    border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100;
+    box-shadow:0 0 20px rgba(0,212,255,0.05);
+  }
+  .logo {
+    font-family:var(--mono); font-size:20px; font-weight:bold;
+    color:var(--cyan); letter-spacing:2px; text-decoration:none;
+    text-shadow:0 0 10px rgba(0,212,255,0.5);
+  }
+  .logo span { color:var(--magenta); text-shadow:0 0 10px rgba(255,0,102,0.5); }
+  .header nav { display:flex; gap:24px; align-items:center; }
+  .header nav a {
+    color:var(--text2); text-decoration:none; font-size:13px;
+    font-family:var(--mono); transition:color 0.2s; letter-spacing:1px;
+  }
+  .header nav a:hover { color:var(--cyan); text-shadow:0 0 8px rgba(0,212,255,0.5); }
+  .header nav a.active { color:var(--cyan); }
+  .env-badge {
+    font-family:var(--mono); font-size:10px; color:var(--text2);
+    margin-left:16px; padding:4px 10px; border-radius:10px;
+    border:1px solid var(--border); letter-spacing:1px;
+  }
+  .auth-btn {
+    background:transparent; border:1px solid var(--cyan); color:var(--cyan);
+    font-family:var(--mono); font-size:12px; padding:6px 14px;
+    border-radius:4px; cursor:pointer; margin-left:12px; letter-spacing:1px;
+    transition:all 0.2s;
+  }
+  .auth-btn:hover { background:var(--cyan); color:var(--bg); }
+  .terminal-line {
+    font-family:var(--mono); font-size:11px; color:var(--text2);
+    padding:8px 16px; border-bottom:1px solid var(--border); background:var(--surface);
+  }
+  .terminal-line .prompt { color:var(--cyan); }
+  .container { max-width:720px; margin:0 auto; padding:32px 24px; }
+  .tabs { display:flex; gap:4px; margin-bottom:24px; }
+  .tab {
+    padding:8px 16px; background:var(--surface); border:1px solid var(--border);
+    color:var(--text2); font-family:var(--mono); font-size:11px; cursor:pointer;
+    border-radius:4px; transition:all 0.2s; letter-spacing:1px;
+  }
+  .tab:hover { color:var(--text); }
+  .tab.active { background:var(--cyan); color:var(--bg); font-weight:bold; border-color:var(--cyan); }
+  .post {
+    background:var(--surface); border:1px solid var(--border); border-radius:6px;
+    padding:20px; margin-bottom:16px; transition:border-color 0.2s;
+  }
+  .post:hover { border-color:var(--cyan); }
+  .post-header { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .post-author { font-family:var(--mono); font-size:12px; }
+  .post-author .name { color:var(--text); font-weight:bold; }
+  .post-author .handle { color:var(--text2); }
+  .post-time { font-family:var(--mono); font-size:10px; color:var(--text2); margin-left:auto; }
+  .post-content { font-size:14px; line-height:1.6; color:var(--text); margin-bottom:12px; white-space:pre-wrap; word-break:break-word; }
+  .post-actions { display:flex; gap:8px; }
+  .post-action {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 12px; background:transparent; border:1px solid var(--border);
+    color:var(--text2); font-family:var(--mono); font-size:11px;
+    border-radius:4px; cursor:pointer; transition:all 0.2s; letter-spacing:1px;
+  }
+  .post-action:hover { border-color:var(--cyan); color:var(--cyan); }
+  .post-action.liked { border-color:var(--magenta); color:var(--magenta); }
+  .post-action .count { font-size:10px; }
+  .post-create {
+    background:var(--surface); border:1px solid var(--border); border-radius:6px;
+    padding:16px; margin-bottom:24px;
+  }
+  .post-create textarea {
+    width:100%; min-height:80px; background:var(--bg); border:1px solid var(--border);
+    border-radius:4px; color:var(--text); font-family:var(--sans); font-size:14px;
+    padding:10px 12px; resize:vertical; outline:none; margin-bottom:10px;
+  }
+  .post-create textarea:focus { border-color:var(--cyan); }
+  .post-create .btn { width:100%; }
+  .comments { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+  .comment {
+    padding:8px 0; border-bottom:1px solid var(--border);
+  }
+  .comment:last-child { border-bottom:none; }
+  .comment-author { font-family:var(--mono); font-size:11px; color:var(--cyan); margin-bottom:4px; }
+  .comment-content { font-size:13px; color:var(--text); line-height:1.4; }
+  .add-comment {
+    display:flex; gap:8px; margin-top:12px;
+  }
+  .add-comment input {
+    flex:1; background:var(--bg); border:1px solid var(--border); border-radius:4px;
+    color:var(--text); font-family:var(--sans); font-size:13px;
+    padding:8px 12px; outline:none;
+  }
+  .add-comment input:focus { border-color:var(--cyan); }
+  .add-comment button {
+    padding:8px 14px; background:var(--cyan); color:var(--bg); border:none;
+    border-radius:4px; font-family:var(--mono); font-size:11px; cursor:pointer;
+    font-weight:bold; letter-spacing:1px;
+  }
+  .add-comment button:hover { box-shadow:0 0 12px rgba(0,212,255,0.5); }
+  .empty-state { text-align:center; padding:48px 0; color:var(--text2); }
+  .empty-state .icon { font-size:40px; margin-bottom:12px; opacity:0.3; }
+  .footer { border-top:1px solid var(--border); padding:16px; text-align:center; font-size:11px; color:var(--text2); font-family:var(--mono); }
+  .error-msg { color:var(--magenta); font-family:var(--mono); font-size:12px; padding:10px 12px; background:rgba(255,0,102,0.08); border:1px solid var(--magenta); border-radius:4px; margin-bottom:12px; }
+  @media (max-width:768px) { .container { padding:16px; } }
+</style>
+</head>
+<body>
+
+<div class="terminal-line"><span class="prompt">guest@pawradise</span>:<span>~</span>$ ./community --feed<span class="cursor"></span></div>
+
+<header class="header">
+  <a href="/" class="logo">PAW<span>RADISE</span></a>
+  <nav style="margin-right:24px;">
+    <a href="/" data-nav="shop">SHOP</a>
+    <a href="/community" data-nav="community" class="active">COMMUNITY</a>
+    <a href="/account" data-nav="account">ACCOUNT</a>
+  </nav>
+  <div style="display:flex;align-items:center;">
+    <button id="authBtn" class="auth-btn">LOGIN</button>
+    <span id="envBadge" class="env-badge"></span>
+  </div>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" data-filter="recent" onclick="setFilter('recent')">RECENT</button>
+    <button class="tab" data-filter="following" onclick="setFilter('following')">FOLLOWING</button>
+  </div>
+
+  <div class="post-create">
+    <textarea id="postContent" placeholder="what's on your mind?&#10;share something with the community..." maxlength="2000"></textarea>
+    <button class="btn" onclick="createPost()">POST &gt;_</button>
+  </div>
+  <div id="postError"></div>
+
+  <div id="feed">
+    <div class="empty-state"><div class="icon">LOADING</div><div>fetching feed...</div></div>
+  </div>
+</div>
+
+<div class="footer">PAWRADISE &copy; 2026 &mdash; <span id="envText">production</span> environment</div>
+
+<script>
+(function() {
+  var path = window.location.pathname;
+  var isStaging = path.startsWith('/staging');
+  var API_BASE = isStaging ? '/staging/api/v1' : '/api/v1';
+  var LINK_BASE = isStaging ? '/staging' : '';
+
+  document.getElementById('envBadge').textContent = isStaging ? 'ENV: staging' : 'ENV: production';
+  document.getElementById('envText').textContent = isStaging ? 'staging' : 'production';
+
+  // Auth button
+  (function() {
+    var b = document.getElementById('authBtn');
+    if (!b) return;
+    var t = localStorage.getItem('pawradise_token');
+    if (t) {
+      b.textContent = 'LOGOUT';
+      b.onclick = function() { localStorage.removeItem('pawradise_token'); window.location.href = LINK_BASE + '/'; };
+    } else {
+      b.textContent = 'LOGIN';
+      b.onclick = function() { window.location.href = LINK_BASE + '/auth/?redirect=' + encodeURIComponent(window.location.pathname); };
+    }
+  })();
+
+  var currentFilter = 'recent';
+
+  function setFilter(f) {
+    currentFilter = f;
+    document.querySelectorAll('.tab').forEach(function(t) {
+      t.classList.toggle('active', t.dataset.filter === f);
+    });
+    loadFeed();
+  }
+
+  function escapeHtml(text) {
+    var d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  function showError(msg) {
+    document.getElementById('postError').innerHTML = '<div class="error-msg">' + escapeHtml(msg) + '</div>';
+    setTimeout(function() { document.getElementById('postError').innerHTML = ''; }, 5000);
+  }
+
+  function getToken() {
+    return localStorage.getItem('pawradise_token') || '';
+  }
+
+  function isLoggedIn() {
+    return !!getToken();
+  }
+
+  function formatTime(isoStr) {
+    if (!isoStr) return '';
+    try {
+      var d = new Date(isoStr);
+      var now = new Date();
+      var diff = now - d;
+      var mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return mins + 'm ago';
+      var hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + 'h ago';
+      var days = Math.floor(hrs / 24);
+      if (days < 7) return days + 'd ago';
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch (e) { return isoStr; }
+  }
+
+  async function loadFeed() {
+    var feed = document.getElementById('feed');
+    feed.innerHTML = '<div class="empty-state"><div class="icon">LOADING</div><div>fetching feed...</div></div>';
+
+    try {
+      var url = API_BASE + '/community/posts?filter=' + currentFilter + '&per_page=20';
+      var res = await fetch(url, {
+        headers: { 'Authorization': 'Bearer ' + getToken() }
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var data = await res.json();
+      var posts = data.posts || [];
+
+      if (posts.length === 0) {
+        feed.innerHTML = '<div class="empty-state"><div class="icon">NO_POSTS</div><div>no posts yet</div><div style="margin-top:8px;font-size:12px;">be the first to post something!</div></div>';
+        return;
+      }
+
+      feed.innerHTML = posts.map(function(post) {
+        var authorName = post.author ? (post.author.display || post.author.name || 'unknown') : 'unknown';
+        var authorEmail = post.author ? post.author.email : '';
+        var isLiked = false; // will be set by user interaction
+        var likeCount = post.like_count || 0;
+        var commentCount = post.comment_count || 0;
+
+        return '' +
+          '<div class="post">' +
+            '<div class="post-header">' +
+              '<span class="post-author"><span class="name">' + escapeHtml(authorName) + '</span> <span class="handle">' + escapeHtml(authorEmail) + '</span></span>' +
+              '<span class="post-time">' + formatTime(post.created_at) + '</span>' +
+            '</div>' +
+            '<div class="post-content">' + escapeHtml(post.content) + '</div>' +
+            '<div class="post-actions">' +
+              '<button class="post-action like-btn" onclick="toggleLike(' + post.id + ')">' +
+                '<span class="count" id="like-count-' + post.id + '">' + likeCount + '</span>' +
+                (isLiked ? 'LIKED' : 'LIKE') +
+              '</button>' +
+              '<button class="post-action comment-btn" onclick="toggleComments(' + post.id + ')">' +
+                '<span class="count">' + commentCount + '</span> COMMENTS' +
+              '</button>' +
+            '</div>' +
+            '<div class="comments" id="comments-' + post.id + '" style="display:none;"></div>' +
+          '</div>';
+      }).join('');
+    } catch (e) {
+      feed.innerHTML = '<div class="empty-state"><div class="icon">!</div><div>Failed to load feed</div></div>';
+      console.error(e);
+    }
+  }
+
+  async function createPost() {
+    var content = document.getElementById('postContent').value.trim();
+    if (!content) {
+      showError('Post content is required');
+      return;
+    }
+    if (content.length > 2000) {
+      showError('Post is too long (max 2000 characters)');
+      return;
+    }
+    if (!isLoggedIn()) {
+      showError('Please login to post');
+      return;
+    }
+
+    var btn = document.querySelector('.post-create .btn');
+    btn.disabled = true;
+    btn.textContent = 'POSTING...';
+
+    try {
+      var res = await fetch(API_BASE + '/community/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + getToken()
+        },
+        body: JSON.stringify({ content: content })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'failed to post');
+      document.getElementById('postContent').value = '';
+      showError('Post created!');
+      setTimeout(function() { loadFeed(); }, 500);
+    } catch (e) {
+      showError(e.message || 'Failed to create post');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'POST >_';
+    }
+  }
+
+  async function toggleLike(postId) {
+    if (!isLoggedIn()) {
+      window.location.href = LINK_BASE + '/auth/?redirect=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
+    var btn = document.querySelector('.like-btn');
+    var countEl = document.getElementById('like-count-' + postId);
+    try {
+      var method = 'POST';
+      var curBtn = event.target;
+      if (curBtn.classList.contains('liked')) {
+        method = 'DELETE';
+      }
+      var res = await fetch(API_BASE + '/community/posts/' + postId + '/like', {
+        method: method,
+        headers: { 'Authorization': 'Bearer ' + getToken() }
+      });
+
+      // Optimistic update
+      var count = parseInt(countEl.textContent);
+      if (method === 'POST') {
+        count++;
+        curBtn.classList.add('liked');
+        curBtn.innerHTML = '<span class="count">' + count + '</span> LIKED';
+      } else {
+        count--;
+        curBtn.classList.remove('liked');
+        curBtn.innerHTML = '<span class="count">' + count + '</span> LIKE';
+      }
+      countEl.textContent = count;
+    } catch (e) {
+      console.error(e);
+      loadFeed(); // reload on error
+    }
+  }
+
+  async function toggleComments(postId) {
+    var commentsEl = document.getElementById('comments-' + postId);
+    if (commentsEl.style.display === 'none') {
+      commentsEl.style.display = 'block';
+      var addForm = '<div class="add-comment">' +
+        '<input type="text" id="comment-input-' + postId + '" placeholder="write a comment..." maxlength="500">' +
+        '<button onclick="addComment(' + postId + ')">ADD</button>' +
+      '</div>';
+      commentsEl.innerHTML = addForm;
+    } else {
+      commentsEl.style.display = 'none';
+    }
+  }
+
+  async function addComment(postId) {
+    if (!isLoggedIn()) {
+      window.location.href = LINK_BASE + '/auth/?redirect=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
+    var input = document.getElementById('comment-input-' + postId);
+    var content = input.value.trim();
+    if (!content) return;
+
+    try {
+      var res = await fetch(API_BASE + '/community/posts/' + postId + '/comments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + getToken()
+        },
+        body: JSON.stringify({ content: content })
+      });
+      if (!res.ok) throw new Error('failed to add comment');
+      input.value = '';
+      loadFeed(); // reload to show new comment
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Expose to inline handlers
+  window.setFilter = setFilter;
+  window.createPost = createPost;
+  window.toggleLike = toggleLike;
+  window.toggleComments = toggleComments;
+  window.addComment = addComment;
+
+  // Load initial feed
+  loadFeed();
+})();
+</script>
+</body>
+</html>

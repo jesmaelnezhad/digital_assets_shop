@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-nginx-config
+  namespace: staging
+data:
+  default.conf: |
+    server {
+      listen 80 default_server;
+      listen [::]:80 default_server;
+      server_name _;
+      root /usr/share/nginx/html;
+      index index.html;
+
+      add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' http://backend.staging:8080; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
+
+      # Admin panel UI
+      location = /admin.html {
+        try_files /admin.html =404;
+      }
+
+      # Admin API proxy
+      location /admin-api/ {
+        rewrite ^/admin-api/(.*) /admin/$1 break;
+        proxy_pass http://backend.staging:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Authorization $http_authorization;
+      }
+
+      location / {
+        try_files $uri $uri/ /index.html;
+      }
+
+      location /api {
+        proxy_pass http://backend.staging:8080/api;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+      }
+    }

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAWRADISE — Login</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0f; --surface: #14141f; --surface2: #1a1a2a;
+    --border: #2a2a3a; --text: #e0e0e0; --text2: #8888aa;
+    --cyan: #00d4ff; --magenta: #ff0066; --green: #00ff88;
+    --mono: Consolas, 'Courier New', monospace;
+    --sans: -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+  .terminal-line { font-family: var(--mono); font-size: 11px; color: var(--text2); padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .terminal-line .prompt { color: var(--cyan); }
+  header { padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 100; }
+  .logo { font-family: var(--mono); font-size: 20px; font-weight: bold; color: var(--cyan); letter-spacing: 2px; text-decoration: none; }
+  .logo span { color: var(--magenta); }
+  nav { display: flex; gap: 24px; align-items: center; }
+  nav a { color: var(--text2); text-decoration: none; font-size: 14px; }
+  nav a:hover { color: var(--cyan); }
+  .env-badge { font-family: var(--mono); font-size: 10px; padding: 4px 10px; border-radius: 10px; border: 1px solid var(--border); color: var(--text2); letter-spacing: 1px; }
+  .container { max-width: 440px; margin: 0 auto; padding: 48px 24px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 32px; box-shadow: 0 0 30px rgba(0,212,255,0.07); }
+  .card h1 { font-family: var(--mono); font-size: 20px; margin-bottom: 4px; }
+  .card h1 span { color: var(--magenta); }
+  .card .sub { color: var(--text2); font-size: 13px; margin-bottom: 24px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .tab { flex: 1; text-align: center; padding: 10px; font-family: var(--mono); font-size: 13px; letter-spacing: 1px; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); border-radius: 4px; cursor: pointer; }
+  .tab.active { color: var(--cyan); border-color: var(--cyan); }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-family: var(--mono); font-size: 11px; color: var(--text2); margin-bottom: 6px; letter-spacing: 1px; }
+  .field input { width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 14px; font-family: var(--mono); }
+  .field input:focus { outline: none; border-color: var(--cyan); }
+  .btn { width: 100%; padding: 12px; background: var(--cyan); color: #000; border: none; border-radius: 4px; font-family: var(--mono); font-size: 14px; font-weight: bold; letter-spacing: 1px; cursor: pointer; margin-top: 6px; }
+  .btn:hover { box-shadow: 0 0 16px rgba(0,212,255,0.5); }
+  .error { display: none; background: rgba(255,0,102,0.1); border: 1px solid var(--magenta); color: var(--magenta); font-family: var(--mono); font-size: 12px; padding: 10px 12px; border-radius: 4px; margin-bottom: 14px; }
+  .footer { text-align: center; padding: 24px; color: var(--text2); font-size: 11px; font-family: var(--mono); }
+  @media (max-width: 768px) { .container { padding: 24px 16px; } .card { padding: 24px 20px; } }
+</style>
+</head>
+<body data-page="login">
+
+<div class="terminal-line"><span class="prompt">guest@pawradise</span>:<span>~</span>$ ./auth --interactive</div>
+
+<header>
+  <a data-link="/" class="logo">PAW<span>RADISE</span></a>
+  <div style="display:flex;align-items:center;">
+    <nav style="margin-right:24px;">
+      <a data-link="/" data-nav="shop">SHOP</a>
+      <a data-link="/community" data-nav="community">COMMUNITY</a>
+      <a data-link="/account" data-nav="account">ACCOUNT</a>
+    </nav>
+    <button id="authBtn" style="background:transparent;border:1px solid var(--cyan);color:var(--cyan);font-family:var(--mono);font-size:12px;padding:6px 14px;border-radius:4px;cursor:pointer;margin-right:12px;letter-spacing:1px;">LOGIN</button>
+    <span id="envBadge" class="env-badge"></span>
+  </div>
+</header>
+
+<div class="container">
+  <div class="card">
+    <h1>./<span>auth</span></h1>
+    <div class="sub">login or create an account to buy assets and join the community</div>
+    <div class="tabs">
+      <div class="tab active" id="tabLogin" onclick="switchTab('login')">LOGIN</div>
+      <div class="tab" id="tabRegister" onclick="switchTab('register')">REGISTER</div>
+    </div>
+    <div class="error" id="errorBox"></div>
+    <form id="loginForm" onsubmit="return doLogin(event)">
+      <div class="field"><label>EMAIL</label><input type="email" id="loginEmail" required autocomplete="email"></div>
+      <div class="field"><label>PASSWORD</label><input type="password" id="loginPassword" required autocomplete="current-password"></div>
+      <button class="btn" type="submit">LOGIN &gt;_</button>
+    </form>
+    <form id="registerForm" style="display:none" onsubmit="return doRegister(event)">
+      <div class="field"><label>DISPLAY NAME</label><input type="text" id="regName" required minlength="2" autocomplete="username"></div>
+      <div class="field"><label>EMAIL</label><input type="email" id="regEmail" required autocomplete="email"></div>
+      <div class="field"><label>PASSWORD (min 6 chars)</label><input type="password" id="regPassword" required minlength="6" autocomplete="new-password"></div>
+      <button class="btn" type="submit">CREATE ACCOUNT &gt;_</button>
+    </form>
+  </div>
+</div>
+
+<div class="footer">PAWRADISE &copy; 2026 — <span id="envText">production</span> environment</div>
+
+<script>
+  const path = window.location.pathname;
+  const isStaging = path.startsWith('/staging');
+  const API_BASE = isStaging ? '/staging/api/v1' : '/api/v1';
+  const LINK_BASE = isStaging ? '/staging' : '';
+  document.querySelectorAll('[data-link]').forEach(a => { a.href = LINK_BASE + a.getAttribute('data-link'); });
+  (function(){ const pg = document.body.getAttribute('data-page'); const el = document.querySelector('[data-nav="'+pg+'"]'); if(el) el.style.color = 'var(--cyan)'; })();
+  document.getElementById('envBadge').textContent = isStaging ? 'ENV: staging' : 'ENV: production';
+  document.getElementById('envText').textContent = isStaging ? 'staging' : 'production';
+
+  // already logged in -> go to redirect target
+  if (localStorage.getItem('pawradise_token')) { window.location.href = safeRedirect(); }
+  else { document.getElementById('authBtn').style.display = 'none'; }
+
+  function safeRedirect() {
+    const r = new URLSearchParams(window.location.search).get('redirect') || (LINK_BASE + '/');
+    if (!r.startsWith('/') || r.startsWith('//')) return LINK_BASE + '/';
+    // only allow same-env redirects: staging page must stay under /staging
+    if (isStaging && !r.startsWith('/staging')) return LINK_BASE + '/';
+    if (!isStaging && r.startsWith('/staging')) return '/';
+    return r;
+  }
+
+  function showError(msg) {
+    const b = document.getElementById('errorBox');
+    b.textContent = msg; b.style.display = 'block';
+  }
+
+  function switchTab(which) {
+    const login = which === 'login';
+    document.getElementById('loginForm').style.display = login ? 'block' : 'none';
+    document.getElementById('registerForm').style.display = login ? 'none' : 'block';
+    document.getElementById('tabLogin').classList.toggle('active', login);
+    document.getElementById('tabRegister').classList.toggle('active', !login);
+    document.getElementById('errorBox').style.display = 'none';
+  }
+
+  async function doLogin(e) {
+    e.preventDefault();
+    try {
+      const res = await fetch(API_BASE + '/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: document.getElementById('loginEmail').value.trim(), password: document.getElementById('loginPassword').value })
+      });
+      const data = await res.json();
+      if (!res.ok) { showError(data.error || 'login failed'); return false; }
+      localStorage.setItem('pawradise_token', data.token);
+      window.location.href = safeRedirect();
+    } catch (err) { showError('network error — try again'); }
+    return false;
+  }
+
+  async function doRegister(e) {
+    e.preventDefault();
+    try {
+      const res = await fetch(API_BASE + '/register', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: document.getElementById('regName').value.trim(), email: document.getElementById('regEmail').value.trim(), password: document.getElementById('regPassword').value })
+      });
+      const data = await res.json();
+      if (!res.ok) { showError(data.error || 'registration failed'); return false; }
+      localStorage.setItem('pawradise_token', data.token);
+      window.location.href = safeRedirect();
+    } catch (err) { showError('network error — try again'); }
+    return false;
+  }
+</script>
+</body>
+</html>

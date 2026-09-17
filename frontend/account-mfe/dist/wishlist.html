@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pawradise — Wishlist</title>
+    <meta name="description" content="Your wishlist">
+    <link rel="stylesheet" href="/assets/theme.css">
+    <script src="/env.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font-sans); background-color: var(--color-bg); color: var(--color-text); min-height: 100vh; display: flex; flex-direction: column; }
+        .header { background-color: var(--color-bg-elevated); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) var(--space-lg); }
+        .header-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); }
+        .logo { font-family: var(--font-mono); font-size: 1.25rem; font-weight: bold; color: var(--color-accent-primary); text-decoration: none; }
+        .nav { display: flex; gap: var(--space-md); }
+        .nav a { color: var(--color-text); text-decoration: none; font-size: 0.9rem; padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); transition: color 0.15s ease; }
+        .nav a:hover, .nav a.active { color: var(--color-accent-primary); }
+        main { flex: 1; max-width: 1280px; margin: 0 auto; padding: var(--space-lg); width: 100%; }
+        .page-title { font-family: var(--font-mono); font-size: 1.5rem; margin-bottom: var(--space-lg); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-md); }
+        .card { background-color: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; transition: border-color 0.15s ease; }
+        .card:hover { border-color: var(--color-accent-primary); }
+        .card-image { width: 100%; height: 180px; background: var(--color-bg); display: flex; align-items: center; justify-content: center; }
+        .card-image img { width: 100%; height: 100%; object-fit: cover; }
+        .card-body { padding: var(--space-md); }
+        .card-title { font-family: var(--font-mono); font-size: 1rem; margin-bottom: var(--space-xs); }
+        .card-price { font-family: var(--font-mono); font-size: 1.1rem; color: var(--color-accent-primary); font-weight: 600; }
+        .card-actions { display: flex; gap: var(--space-sm); margin-top: var(--space-sm); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: var(--space-sm) var(--space-md); font-size: 0.9rem; border: none; border-radius: var(--radius-sm); cursor: pointer; text-decoration: none; transition: all 0.15s ease; }
+        .btn-primary { background-color: var(--color-accent-primary); color: var(--color-bg); font-weight: 600; flex: 1; }
+        .btn-primary:hover { box-shadow: var(--glow-hover); }
+        .btn-danger { background-color: transparent; border: 1px solid var(--color-danger); color: var(--color-danger); }
+        .empty-state { text-align: center; padding: var(--space-xl); color: var(--color-text-muted); }
+        .footer { background-color: var(--color-bg-elevated); border-top: 1px solid var(--color-border); padding: var(--space-lg); text-align: center; color: var(--color-text-muted); font-size: 0.8rem; font-family: var(--font-mono); }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--color-border); border-top-color: var(--color-accent-primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 640px) { .nav { display: none; } }
+    </style>
+    <!-- CHROME_HEADER -->
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo">/pawradise</a>
+            <nav class="nav">
+                <a href="/">Shop</a>
+                <a href="/category">Categories</a>
+                <a href="/product/bundle.html">Bundles</a>
+                <a href="/product/request.html">Request</a>
+                <a href="/community">Community</a>
+                <a href="/account">Account</a>
+            </nav>
+        </div>
+    </header>
+
+    <main x-data="{
+        products: [],
+        loading: true,
+        async load() {
+            this.loading = true;
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/wishlist`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.status === 401) { window.location.href = '/login?next=/wishlist'; return; }
+                if (!res.ok) throw new Error('Failed to load wishlist');
+                const data = await res.json();
+                this.products = data.products || [];
+            } catch (e) {
+                console.error(e);
+            } finally {
+                this.loading = false;
+            }
+        },
+        async toggleWishlist(productId) {
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/wishlist/toggle`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ product_id: productId })
+                });
+                if (res.ok) {
+                    this.products = this.products.filter(p => p.id !== productId);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        },
+        async addToCart(productId) {
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/cart/items`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ product_id: productId, quantity: 1 })
+                });
+                if (res.ok) {
+                    this.products = this.products.filter(p => p.id !== productId);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    }" x-init="load()">
+        
+        <h1 class="page-title">Wishlist</h1>
+
+        <div x-show="loading" class="empty-state"><div class="spinner"></div><p style="margin-top:var(--space-sm)">Loading...</p></div>
+
+        <div x-show="!loading && products.length === 0" class="empty-state">
+            <h2 style="font-family:var(--font-mono);margin-bottom:var(--space-sm)">Your wishlist is empty</h2>
+            <p>Save products you love for later.</p>
+            <a href="/" class="btn btn-primary" style="margin-top:var(--space-md)">Browse Products</a>
+        </div>
+
+        <div class="grid" x-show="!loading && products.length > 0">
+            <template x-for="product in products" :key="product.id">
+                <div class="card">
+                    <a :href="`/product/${product.slug}`">
+                        <div class="card-image">
+                            <template x-if="product.preview_image_url"><img :src="product.preview_image_url" :alt="product.title"></template>
+                        </div>
+                    </a>
+                    <div class="card-body">
+                        <a :href="`/product/${product.slug}`" style="text-decoration:none;color:inherit">
+                            <h3 class="card-title" x-text="product.title"></h3>
+                        </a>
+                        <span class="card-price" x-text="'$' + (product.price_usd || 0).toFixed(2)"></span>
+                        <div class="card-actions">
+                            <button class="btn btn-primary" @click="addToCart(product.id)">Add to Cart</button>
+                            <button class="btn btn-danger" @click="toggleWishlist(product.id)">Remove</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </main>
+
+    <footer class="footer">// pawradise.ir — digital assets marketplace</footer>
+
+    <script src="/assets/alpine.min.js" defer></script>
+    <script src="/assets/api.js"></script>
+    <!-- CHROME_FOOTER -->
+</body>
+</html>

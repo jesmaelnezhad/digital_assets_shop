@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAWRADISE — Admin</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --bg:#0a0a0f; --surface:#14141f; --surface2:#1a1a2a;
+    --border:#2a2a3a; --text:#e0e0e0; --text2:#8888aa;
+    --cyan:#00d4ff; --magenta:#ff0066; --green:#00ff88;
+    --mono:Consolas,'Courier New',monospace;
+    --sans:-apple-system,'Segoe UI',Roboto,sans-serif;
+  }
+  body { background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; line-height:1.6; }
+  .header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 24px; background:var(--surface);
+    border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100;
+    box-shadow:0 0 20px rgba(0,212,255,0.05);
+  }
+  .logo {
+    font-family:var(--mono); font-size:18px; font-weight:bold;
+    color:var(--magenta); letter-spacing:2px; text-decoration:none;
+    text-shadow:0 0 10px rgba(255,0,102,0.5);
+  }
+  .nav-links { display:flex; gap:20px; align-items:center; }
+  .nav-links a {
+    color:var(--text2); text-decoration:none; font-size:12px;
+    font-family:var(--mono); transition:color 0.2s; letter-spacing:1px;
+  }
+  .nav-links a:hover { color:var(--cyan); }
+  .env-badge {
+    font-family:var(--mono); font-size:10px; color:var(--text2);
+    padding:4px 10px; border-radius:10px; border:1px solid var(--border); letter-spacing:1px;
+  }
+
+  .container { max-width:1000px; margin:0 auto; padding:32px 24px; }
+  .page-title { font-family:var(--mono); font-size:22px; color:var(--text); margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+  .sidebar {
+    display:flex; flex-wrap:wrap; gap:6px; margin-bottom:24px;
+  }
+  .nav-btn {
+    padding:8px 14px; background:var(--surface); border:1px solid var(--border);
+    color:var(--text2); font-family:var(--mono); font-size:11px; cursor:pointer;
+    border-radius:4px; transition:all 0.2s; letter-spacing:1px;
+  }
+  .nav-btn:hover { color:var(--text); border-color:var(--cyan); }
+  .nav-btn.active { background:var(--magenta); color:var(--bg); border-color:var(--magenta); font-weight:bold; }
+
+  .admin-section {
+    background:var(--surface); border:1px solid var(--border); border-radius:6px;
+    padding:20px; margin-bottom:16px;
+  }
+  .section-title { font-family:var(--mono); font-size:12px; color:var(--cyan); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { font-family:var(--mono); font-size:10px; color:var(--text2); text-align:left; padding:6px 10px; border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:1px; }
+  td { padding:10px; border-bottom:1px solid var(--border); }
+  tr:hover { background:var(--surface2); }
+  .actions a { color:var(--cyan); text-decoration:none; font-size:11px; font-family:var(--mono); }
+  .actions a:hover { text-decoration:underline; }
+  .actions button { background:transparent; border:1px solid var(--border); color:var(--text2); font-family:var(--mono); font-size:10px; padding:4px 10px; border-radius:3px; cursor:pointer; letter-spacing:1px; }
+  .actions button:hover { border-color:var(--magenta); color:var(--magenta); }
+  .actions button.danger:hover { border-color:var(--magenta); color:var(--magenta); }
+
+  .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
+  .stat-box {
+    background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:16px;
+    text-align:center;
+  }
+  .stat-value { font-family:var(--mono); font-size:28px; color:var(--cyan); font-weight:bold; }
+  .stat-label { font-family:var(--mono); font-size:10px; color:var(--text2); text-transform:uppercase; letter-spacing:1px; margin-top:4px; }
+
+  .form-group { margin-bottom:12px; }
+  .form-group label { display:block; font-family:var(--mono); font-size:11px; color:var(--text2); margin-bottom:4px; letter-spacing:1px; }
+  .form-group input, .form-group select {
+    width:100%; padding:8px 12px; background:var(--bg); border:1px solid var(--border);
+    color:var(--text); font-size:12px; font-family:var(--mono); border-radius:3px; outline:none;
+  }
+  .form-group input:focus, .form-group select:focus { border-color:var(--cyan); }
+  .form-actions { margin-top:8px; }
+
+  .btn {
+    padding:10px 18px; background:var(--cyan); color:var(--bg); border:none;
+    border-radius:4px; font-family:var(--mono); font-size:12px; font-weight:bold;
+    letter-spacing:1px; cursor:pointer; transition:all 0.2s;
+  }
+  .btn:hover { box-shadow:0 0 14px rgba(0,212,255,0.5); }
+  .btn.magenta { background:var(--magenta); }
+  .btn.magenta:hover { box-shadow:0 0 14px rgba(255,0,102,0.5); }
+  .btn:disabled { opacity:0.5; cursor:wait; }
+
+  .empty-state { text-align:center; padding:32px; color:var(--text2); font-family:var(--mono); font-size:12px; }
+  .loading { text-align:center; padding:48px 0; color:var(--text2); font-family:var(--mono); }
+  .loading .spinner { width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--cyan); border-radius:50%; animation:spin 0.7s linear infinite; margin:0 auto 8px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .error-msg { color:var(--magenta); font-family:var(--mono); font-size:11px; padding:10px 12px; background:rgba(255,0,102,0.08); border:1px solid var(--magenta); border-radius:4px; margin-bottom:12px; }
+
+  .toast {
+    position:fixed; bottom:24px; right:24px; padding:12px 20px;
+    background:var(--surface); border:1px solid var(--cyan); border-radius:4px;
+    font-family:var(--mono); font-size:12px; color:var(--text); z-index:1000;
+    box-shadow:0 4px 20px rgba(0,0,0,0.5);
+    animation:slideIn 0.3s ease;
+  }
+  .toast.success { border-color:var(--green); }
+  .toast.error { border-color:var(--magenta); color:var(--magenta); }
+  @keyframes slideIn { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <a href="/" class="logo">PAWRADISE <span style="color:var(--cyan);text-shadow:0 0 10px rgba(0,212,255,0.5);">ADMIN</span></a>
+  <div class="nav-links">
+    <span id="envBadge" class="env-badge"></span>
+    <a href="/">SHOP</a>
+  </div>
+</header>
+
+<div class="container">
+  <div class="page-title">ADMIN DASHBOARD</div>
+
+  <div class="sidebar" id="sidebar">
+    <button class="nav-btn active" data-panel="overview" onclick="switchPanel('overview')">OVERVIEW</button>
+    <button class="nav-btn" data-panel="users" onclick="switchPanel('users')">USERS</button>
+    <button class="nav-btn" data-panel="products" onclick="switchPanel('products')">PRODUCTS</button>
+    <button class="nav-btn" data-panel="orders" onclick="switchPanel('orders')">ORDERS</button>
+    <button class="nav-btn" data-panel="reviews" onclick="switchPanel('reviews')">REVIEWS</button>
+    <button class="nav-btn" data-panel="settings" onclick="switchPanel('settings')">SETTINGS</button>
+  </div>
+
+  <div id="panelOverview" class="admin-section">
+    <div class="section-title">SYSTEM OVERVIEW</div>
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-box"><div class="stat-value" id="statUsers">—</div><div class="stat-label">USERS</div></div>
+      <div class="stat-box"><div class="stat-value" id="statProducts">—</div><div class="stat-label">PRODUCTS</div></div>
+      <div class="stat-box"><div class="stat-value" id="statOrders">—</div><div class="stat-label">ORDERS</div></div>
+      <div class="stat-box"><div class="stat-value" id="statRevenue">—</div><div class="stat-label">REVENUE (USD)</div></div>
+    </div>
+    <div id="overviewStatus" class="loading"><div class="spinner"></div><span>loading system stats…</span></div>
+  </div>
+
+  <div id="panelUsers" class="admin-section" style="display:none;">
+    <div class="section-title">USER MANAGEMENT</div>
+    <div id="usersTable"></div>
+  </div>
+
+  <div id="panelProducts" class="admin-section" style="display:none;">
+    <div class="section-title">PRODUCT MANAGEMENT</div>
+    <div id="productsTable"></div>
+  </div>
+
+  <div id="panelOrders" class="admin-section" style="display:none;">
+    <div class="section-title">ORDER MANAGEMENT</div>
+    <div id="ordersTable"></div>
+  </div>
+
+  <div id="panelReviews" class="admin-section" style="display:none;">
+    <div class="section-title">REVIEW MANAGEMENT</div>
+    <div id="reviewsTable"></div>
+  </div>
+
+  <div id="panelSettings" class="admin-section" style="display:none;">
+    <div class="section-title">SYSTEM SETTINGS</div>
+    <div id="settingsForm"></div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  var API = '/api/v1';
+
+  // Env badge
+  document.getElementById('envBadge').textContent = '';
+  var path = window.location.pathname;
+  if (path.indexOf('/staging') === 0 || path.indexOf('staging') !== -1) {
+    var b = document.getElementById('envBadge');
+    b.textContent = 'STAGING';
+    b.style.borderColor = 'var(--magenta)';
+    b.style.color = 'var(--magenta)';
+  }
+
+  var currentPanel = 'overview';
+  var authenticated = false;
+  var adminEmail = localStorage.getItem('adminEmail') || '';
+  var adminToken = localStorage.getItem('adminToken') || '';
+
+  function switchPanel(panel) {
+    currentPanel = panel;
+    document.querySelectorAll('.nav-btn').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.panel === panel);
+    });
+    ['Overview','Users','Products','Orders','Reviews','Settings'].forEach(function(name,i) {
+      var el = document.getElementById('panel' + name);
+      if (el) el.style.display = (panel === ['overview','users','products','orders','reviews','settings'][i]) ? 'block' : 'none';
+    });
+    if (panel === 'overview') loadOverview();
+    if (panel === 'users') loadUsers();
+    if (panel === 'products') loadProducts();
+    if (panel === 'orders') loadOrders();
+    if (panel === 'reviews') loadReviews();
+    if (panel === 'settings') loadSettings();
+  }
+
+  // Authenticate admin
+  if (!adminEmail || !adminToken) {
+    showAuthForm();
+  } else {
+    checkAdminAuth();
+  }
+
+  function showAuthForm() {
+    var existing = document.querySelector('#authCard');
+    if (existing) return;
+    document.querySelector('.container').insertAdjacentHTML('afterbegin', ''
+      + '<div class="admin-section" id="authCard">'
+      + '  <div class="section-title">ADMIN AUTHENTICATION</div>'
+      + '  <div id="authMsg"></div>'
+      + '  <div class="form-group"><label>ADMIN EMAIL</label>'
+      + '    <input type="email" id="adminEmailInput" placeholder="admin@pawradise.ir">'
+      + '  </div>'
+      + '  <div class="form-group"><label>ADMIN TOKEN</label>'
+      + '    <input type="password" id="adminTokenInput" placeholder="admin-secret-token-...">'
+      + '  </div>'
+      + '  <div class="form-actions">'
+      + '    <button class="btn" onclick="authenticateAdmin()">AUTH</button>'
+      + '  </div>'
+      + '</div>'
+    );
+    document.getElementById('adminEmailInput').focus();
+    window.authenticateAdmin = function() {
+      var email = document.getElementById('adminEmailInput').value.trim();
+      var token = document.getElementById('adminTokenInput').value.trim();
+      if (!email || !token) {
+        document.getElementById('authMsg').innerHTML = '<div class="error-msg">both fields are required</div>';
+        return;
+      }
+      fetch(API + '/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_email: email, admin_token: token })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.authenticated || d.valid) {
+          localStorage.setItem('adminEmail', email);
+          localStorage.setItem('adminToken', token);
+          localStorage.setItem('adminName', d.name || email);
+          document.getElementById('authCard').outerHTML = '';
+          authenticated = true;
+          checkAdminAuth();
+        } else {
+          document.getElementById('authMsg').innerHTML = '<div class="error-msg">invalid credentials</div>';
+        }
+      });
+    };
+  }
+
+  function checkAdminAuth() {
+    var token = localStorage.getItem('adminToken');
+    if (!token) { showAuthForm(); return; }
+    headerAuthBtn();
+    loadOverview();
+  }
+
+  function headerAuthBtn() {
+    // Remove old auth area, add logout
+    var existing = document.getElementById('adminLogout');
+    if (!existing) {
+      var nav = document.querySelector('.nav-links');
+      var btn = document.createElement('button');
+      btn.id = 'adminLogout';
+      btn.className = 'nav-btn';
+      btn.textContent = 'LOGOUT';
+      btn.style.marginLeft = '12px';
+      btn.style.color = 'var(--magenta)';
+      btn.style.borderColor = 'var(--magenta)';
+      btn.onclick = function() {
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminEmail');
+        window.location.reload();
+      };
+      nav.appendChild(btn);
+    }
+  }
+
+  function showToast(msg, type) {
+    var old = document.querySelector('.toast');
+    if (old) old.remove();
+    var t = document.createElement('div');
+    t.className = 'toast ' + (type || '');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(t.remove.bind(t), 3000);
+  }
+
+  // --- Panel handlers ---
+
+  function loadOverview() {
+    var grid = document.getElementById('statsGrid');
+    var status = document.getElementById('overviewStatus');
+
+    fetch(API + '/admin/stats', {
+      headers: { 'Authorization': 'Bearer ' + adminToken }
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      document.getElementById('statUsers').textContent = d.users || 0;
+      document.getElementById('statProducts').textContent = d.products || 0;
+      document.getElementById('statOrders').textContent = d.orders || 0;
+      document.getElementById('statRevenue').textContent = '$' + (d.revenue || 0).toFixed(2);
+      status.style.display = 'none';
+    }).catch(function() {
+      status.innerHTML = '<div class="error-msg">failed to load overview stats</div>';
+    });
+  }
+
+  function loadUsers() {
+    var t = document.getElementById('usersTable');
+    t.innerHTML = '<div class="loading"><div class="spinner"></div><span>loading users…</span></div>';
+    fetch(API + '/admin/users?per_page=50', {
+      headers: { 'Authorization': 'Bearer ' + adminToken }
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      var rows = (d.users || []).map(function(u) {
+        return '<tr>' +
+          '<td>' + (u.id || '—') + '</td>' +
+          '<td>' + escapeHtml(u.name || '—') + '</td>' +
+          '<td>' + escapeHtml(u.email || '—') + '</td>' +
+          '<td>' + (u.wallet_address || '—') + '</td>' +
+          '<td>' + (u.created_at ? new Date(u.created_at).toLocaleDateString() : '—') + '</td>' +
+          '<td><button onclick="resetPassword(' + (u.id||0) + ')">RESET PWD</button>' +
+          (u.wallet_address ? ' <a onclick="revokeWallet(' + (u.id||0) + ',\'' + escapeHtml(u.wallet_address||'') + '\')">revoke</a>' : '') +
+          '</td>' +
+        '</tr>';
+      }).join('');
+      t.innerHTML = rows || '<div class="empty-state">no users found</div>';
+    }).catch(function() {
+      t.innerHTML = '<div class="error-msg">failed to load users</div>';
+    });
+  }
+
+  function loadProducts() {
+    var t = document.getElementById('productsTable');
+    t.innerHTML = '<div class="loading"><div class="spinner"></div><span>loading products…</span></div>';
+    fetch(API + '/products?per_page=100', {
+      headers: { 'Authorization': 'Bearer ' + adminToken }
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      var rows = (d.products || []).map(function(p) {
+        return '<tr>' +
+          '<td>' + p.id + '</td>' +
+          '<td>' + escapeHtml(p.title) + '</td>' +
+          '<td>' + escapeHtml(p.slug) + '</td>' +
+          '<td>$' + (p.price_usd || 0).toFixed(2) + '</td>' +
+          '<td>' + (p.category_name || '—') + '</td>' +
+          '<td>' + (p.status || '—') + '</td>' +
+          '<td>' + (p.download_count || 0) + '</td>' +
+          '<td><button class="danger" onclick="deleteProduct(' + p.id + ')">DELETE</button></td>' +
+        '</tr>';
+      }).join('');
+      t.innerHTML = rows || '<div class="empty-state">no products found</div>';
+    }).catch(function() {
+      t.innerHTML = '<div class="error-msg">failed to load products</div>';
+    });
+  }
+
+  function loadOrders() {
+    var t = document.getElementById('ordersTable');
+    t.innerHTML = '<div class="loading"><div class="spinner"></div><span>loading orders…</span></div>';
+    fetch(API + '/admin/orders?per_page=50', {
+      headers: { 'Authorization': 'Bearer ' + adminToken }
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      var rows = (d.orders || []).map(function(o) {
+        return '<tr>' +
+          '<td>' + (o.id || '—') + '</td>' +
+          '<td>' + (o.user_name || o.user_email || '—') + '</td>' +
+          '<td>$' + (o.total_usd || 0).toFixed(2) + '</td>' +
+          '<td>' + (o.status || '—') + '</td>' +
+          '<td>' + (o.payment_confirmations || 0) + ' conf</td>' +
+          '<td>' + (o.created_at ? new Date(o.created_at).toLocaleDateString() : '—') + '</td>' +
+          '<td><a href="/checkout?order=' + (o.id||0) + '" target="_blank">VIEW</a></td>' +
+        '</tr>';
+      }).join('');
+      t.innerHTML = rows || '<div class="empty-state">no orders found</div>';
+    }).catch(function() {
+      t.innerHTML = '<div class="error-msg">failed to load orders</div>';
+    });
+  }
+
+  function loadReviews() {
+    var t = document.getElementById('reviewsTable');
+    t.innerHTML = '<div class="loading"><div class="spinner"></div><span>loading reviews…</span></div>';
+    fetch(API + '/admin/reviews?per_page=50', {
+      headers: { 'Authorization': 'Bearer ' + adminToken }
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      var rows = (d.reviews || []).map(function(r) {
+        return '<tr>' +
+          '<td>' + (r.id || '—') + '</td>' +
+          '<td>' + (r.user_name || '—') + '</td>' +
+          '<td>' + escapeHtml((r.product_title || '—').substring(0,40)) + '</td>' +
+          '<td>' + escapeHtml((r.content || '').substring(0,60)) + '</td>' +
+          '<td>' + (r.rating || '—') + '/5</td>' +
+          '<td>' + (r.created_at ? new Date(r.created_at).toLocaleDateString() : '—') + '</td>' +
+          '<td><button class="danger" onclick="deleteReview(' + (r.id||0) + ')">DELETE</button></td>' +
+        '</tr>';
+      }).join('');
+      t.innerHTML = rows || '<div class="empty-state">no reviews found</div>';
+    }).catch(function() {
+      t.innerHTML = '<div class="error-msg">failed to load reviews</div>';
+    });
+  }
+
+  function loadSettings() {
+    var container = document.getElementById('settingsForm');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div><span>loading settings…</span></div>';
+    fetch(API + '/admin/settings', {
+      headers: { 'Authorization': 'Bearer ' + adminToken }
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      var settings = (d.settings || []);
+      var html = '<div style="max-width:480px;">';
+      settings.forEach(function(s) {
+        var val = s.value || '';
+        if (s.key === 'pricings_bsc_bnb_rate') {
+          html += '<div class="form-group"><label>BSC/BNB Rate to USD</label>' +
+            '<input type="number" step="0.0001" id="set_'+s.key+'" value="' + val + '" style="font-family:var(--mono);"></div>';
+        } else if (s.key === 'exchange_bsc_bnb_address') {
+          html += '<div class="form-group"><label>BSC BNB Payment Address</label>' +
+            '<input type="text" id="set_'+s.key+'" value="' + val + '" style="font-family:var(--mono);"></div>';
+        } else {
+          html += '<div class="form-group"><label>' + escapeHtml(s.key) + '</label>' +
+            '<input type="text" id="set_'+s.key+'" value="' + val + '"></div>';
+        }
+      });
+      html += '<div class="form-group"><label>—</label>' +
+        '<button class="btn" onclick="saveSettings()">SAVE SETTINGS</button></div></div>';
+      container.innerHTML = html;
+    }).catch(function() {
+      container.innerHTML = '<div class="error-msg">failed to load settings</div>';
+    });
+  }
+
+  window.saveSettings = function() {
+    var settings = document.querySelectorAll('#settingsForm input[type="text"], #settingsForm input[type="number"]');
+    var updates = {};
+    settings.forEach(function(el) {
+      var key = el.id.replace('set_', '');
+      updates[key] = el.value;
+    });
+    var btn = document.querySelector('#settingsForm .btn');
+    btn.disabled = true;
+    fetch(API + '/admin/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+      body: JSON.stringify({ settings: updates })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.success) {
+        showToast('Settings saved!', 'success');
+      } else {
+        showToast('Failed to save settings', 'error');
+        btn.disabled = false;
+      }
+    });
+  };
+
+  window.deleteProduct = function(id) {
+    if (!confirm('Delete product #' + id + '? This action cannot be undone.')) return;
+    fetch(API + '/admin/products/' + id, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + adminToken }
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.success || r.status === 200 || r.status === 204) {
+        showToast('Product #' + id + ' deleted', 'success');
+        loadProducts();
+      } else {
+        showToast('Failed to delete product', 'error');
+      }
+    });
+  };
+
+  window.deleteReview = function(id) {
+    if (!confirm('Delete review #' + id + '?')) return;
+    fetch(API + '/admin/reviews/' + id, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + adminToken }
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.success || r.status === 200 || r.status === 204) {
+        showToast('Review #' + id + ' deleted', 'success');
+        loadReviews();
+      } else {
+        showToast('Failed to delete review', 'error');
+      }
+    });
+  };
+
+  window.resetPassword = function(id) {
+    var email = prompt('Enter new password for user #' + id + ':');
+    if (!email) return;
+    fetch(API + '/admin/users/' + id + '/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+      body: JSON.stringify({ new_password: email })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.success || d.password_reset) {
+        showToast('Password reset for user #' + id + ' → ' + email, 'success');
+      } else {
+        showToast('Failed to reset password', 'error');
+      }
+    });
+  };
+
+  window.revokeWallet = function(userId, addr) {
+    if (!confirm('Revoke payment wallet address for user #' + userId + '?\n\n' + addr + '\n\nThis removes their ability to receive payouts. Continue?')) return;
+    fetch(API + '/admin/users/' + userId + '/revoke-wallet', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + adminToken }
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.success) {
+        showToast('Wallet revoked for user #' + userId, 'success');
+        loadUsers();
+      } else {
+        showToast('Failed to revoke wallet', 'error');
+      }
+    });
+  };
+
+  function escapeHtml(text) {
+    var d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  window.switchPanel = switchPanel;
+  window.authenticateAdmin = authenticateAdmin;
+  window.deleteProduct = deleteProduct;
+  window.deleteReview = deleteReview;
+  window.resetPassword = resetPassword;
+  window.revokeWallet = revokeWallet;
+  window.saveSettings = saveSettings;
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,397 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pawradise-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_DB: pawradise
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d pawradise"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  redis:
+    image: redis:7-alpine
+    container_name: pawradise-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 64mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  identity-service:
+    build:
+      context: ./services/identity-service
+      dockerfile: Dockerfile
+    container_name: pawradise-identity-service
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: app
+      DB_PASSWORD: dev_password
+      DB_NAME: identity_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: dev-jwt-secret-change-me
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  product-service:
+    build:
+      context: ./services/product-service
+      dockerfile: Dockerfile
+    container_name: pawradise-product-service
+    ports:
+      - "8082:8082"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: app
+      DB_PASSWORD: dev_password
+      DB_NAME: product_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MEDIA_SERVICE_URL: http://media-service:8088
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  commerce-service:
+    build:
+      context: ./services/commerce-service
+      dockerfile: Dockerfile
+    container_name: pawradise-commerce-service
+    ports:
+      - "8083:8083"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: app
+      DB_PASSWORD: dev_password
+      DB_NAME: commerce_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      IDENTITY_SERVICE_URL: http://identity-service:8081
+      PAYMENT_SERVICE_URL: http://payment-service:8086
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      identity-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  community-service:
+    build:
+      context: ./services/community-service
+      dockerfile: Dockerfile
+    container_name: pawradise-community-service
+    ports:
+      - "8084:8084"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: app
+      DB_PASSWORD: dev_password
+      DB_NAME: community_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      IDENTITY_SERVICE_URL: http://identity-service:8081
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  review-service:
+    build:
+      context: ./services/review-service
+      dockerfile: Dockerfile
+    container_name: pawradise-review-service
+    ports:
+      - "8085:8085"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: app
+      DB_PASSWORD: dev_password
+      DB_NAME: review_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PRODUCT_SERVICE_URL: http://product-service:8082
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  payment-service:
+    build:
+      context: ./services/payment-service
+      dockerfile: Dockerfile
+    container_name: pawradise-payment-service
+    ports:
+      - "8086:8086"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: app
+      DB_PASSWORD: dev_password
+      DB_NAME: payment_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      COMMERCE_SERVICE_URL: http://commerce-service:8083
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  admin-service:
+    build:
+      context: ./services/admin-service
+      dockerfile: Dockerfile
+    container_name: pawradise-admin-service
+    ports:
+      - "8087:8087"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: app
+      DB_PASSWORD: dev_password
+      DB_NAME: admin_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ADMIN_TOKEN: dev-admin-token
+      IDENTITY_SERVICE_URL: http://identity-service:8081
+      PRODUCT_SERVICE_URL: http://product-service:8082
+      COMMERCE_SERVICE_URL: http://commerce-service:8083
+      COMMUNITY_SERVICE_URL: http://community-service:8084
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  media-service:
+    build:
+      context: ./services/media-service
+      dockerfile: Dockerfile
+    container_name: pawradise-media-service
+    ports:
+      - "8088:8088"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PRODUCT_SERVICE_URL: http://product-service:8082
+      LOG_LEVEL: debug
+    volumes:
+      - media_data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  shell-mfe:
+    build:
+      context: ./mfe/shell
+      dockerfile: Dockerfile
+    container_name: pawradise-shell-mfe
+    ports:
+      - "30080:80"
+    environment:
+      IDENTITY_SERVICE_URL: http://identity-service:8081
+      PRODUCT_SERVICE_URL: http://product-service:8082
+      COMMERCE_SERVICE_URL: http://commerce-service:8083
+      COMMUNITY_SERVICE_URL: http://community-service:8084
+      REVIEW_SERVICE_URL: http://review-service:8085
+      PAYMENT_SERVICE_URL: http://payment-service:8086
+      ADMIN_SERVICE_URL: http://admin-service:8087
+      MEDIA_SERVICE_URL: http://media-service:8088
+    depends_on:
+      - identity-service
+      - product-service
+      - commerce-service
+      - community-service
+      - review-service
+      - payment-service
+      - admin-service
+      - media-service
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  shop-mfe:
+    build:
+      context: ./mfe/shop
+      dockerfile: Dockerfile
+    container_name: pawradise-shop-mfe
+    ports:
+      - "30081:80"
+    depends_on:
+      - shell-mfe
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  product-mfe:
+    build:
+      context: ./mfe/product
+      dockerfile: Dockerfile
+    container_name: pawradise-product-mfe
+    ports:
+      - "30082:80"
+    depends_on:
+      - shell-mfe
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  community-mfe:
+    build:
+      context: ./mfe/community
+      dockerfile: Dockerfile
+    container_name: pawradise-community-mfe
+    ports:
+      - "30083:80"
+    depends_on:
+      - shell-mfe
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  account-mfe:
+    build:
+      context: ./mfe/account
+      dockerfile: Dockerfile
+    container_name: pawradise-account-mfe
+    ports:
+      - "30084:80"
+    depends_on:
+      - shell-mfe
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  checkout-mfe:
+    build:
+      context: ./mfe/checkout
+      dockerfile: Dockerfile
+    container_name: pawradise-checkout-mfe
+    ports:
+      - "30085:80"
+    depends_on:
+      - shell-mfe
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  auth-mfe:
+    build:
+      context: ./mfe/auth
+      dockerfile: Dockerfile
+    container_name: pawradise-auth-mfe
+    ports:
+      - "30086:80"
+    depends_on:
+      - shell-mfe
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  admin-mfe:
+    build:
+      context: ./mfe/admin
+      dockerfile: Dockerfile
+    container_name: pawradise-admin-mfe
+    ports:
+      - "30087:80"
+    depends_on:
+      - shell-mfe
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+  registry:
+    image: registry:2
+    container_name: pawradise-registry
+    ports:
+      - "5000:5000"
+    environment:
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+    volumes:
+      - registry_data:/var/lib/registry
+    restart: unless-stopped
+    networks:
+      - pawradise
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_data:
+  registry_data:
+
+networks:
+  pawradise:
+    driver: bridge

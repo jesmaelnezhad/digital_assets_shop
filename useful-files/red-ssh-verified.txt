@@ -1,0 +1,16 @@
+# RED SSH/kubectl verification - 2026-09-06
+
+## What works (verified this session)
+- SSH to RED (194.5.206.106) from BLUE's bash: `ssh root@194.5.206.106` — works, no port flag needed
+- Key: ~/.ssh/id_ed25519, already in RED's ~/.ssh/authorized_keys
+- kubectl via that SSH: `ssh root@194.5.206.106 'k3s kubectl get pods -n staging --no-headers'` — works
+
+## Staging state (verified via SSH)
+- Backend pod: running (our pushed image, ~23m uptime)
+- Frontend pod: running
+- Services: backend NodePort 8080:30083/TCP, frontend NodePort 80:30084/TCP
+
+## Important rule
+If an SSH/kubectl command fails later, do NOT assume key or connection problems first. 
+Port 2222 was incorrectly assumed earlier — actual SSH uses default port 22.
+Verify the command itself before blaming connectivity/key issues.

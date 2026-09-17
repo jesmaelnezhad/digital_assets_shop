@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pawradise — Checkout</title>
+    <meta name="description" content="Complete your purchase">
+    <link rel="stylesheet" href="/assets/theme.css">
+    <script src="/env.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: #0a0e14; color: #c7d0dc; min-height: 100vh; display: flex; flex-direction: column; }
+        .header { background-color: #10151d; border-bottom: 1px solid #1e2530; padding: 8px 32px; }
+        .header-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .logo { font-family: var(--font-mono); font-size: 1.25rem; font-weight: bold; color: #4dd6c9; text-decoration: none; }
+        main { flex: 1; max-width: 1280px; margin: 0 auto; padding: var(--space-lg); width: 100%; }
+        .page-header h1 { font-family: var(--font-mono); font-size: 1.5rem; color: #4dd6c9; margin-bottom: var(--space-lg); }
+        .checkout-layout { display: grid; grid-template-columns: 1.5fr 1fr; gap: var(--space-xl); }
+        .checkout-section { background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-lg); margin-bottom: var(--space-md); }
+        .checkout-section h2 { font-family: var(--font-mono); font-size: 1.1rem; color: #4dd6c9; margin-bottom: var(--space-md); }
+        .cart-items { display: flex; flex-direction: column; gap: var(--space-sm); }
+        .cart-item-row { display: flex; justify-content: space-between; padding: var(--space-sm) 0; border-bottom: 1px solid #1e2530; }
+        .cart-item-row:last-child { border-bottom: none; }
+        .cart-item-name { font-weight: 500; }
+        .cart-item-price { font-family: var(--font-mono); color: #4dd6c9; }
+        .coupon-section { display: flex; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+        .coupon-section input { flex: 1; padding: var(--space-sm); background-color: #0a0e14; border: 1px solid var(--color-border); border-radius: 4px; color: #c7d0dc; font-family: var(--font-mono); }
+        .coupon-message { font-size: 0.85rem; margin-top: var(--space-xs); }
+        .coupon-message.error { color: var(--color-danger); }
+        .coupon-message.success { color: var(--color-success); }
+        .order-summary .row { display: flex; justify-content: space-between; margin-bottom: var(--space-sm); }
+        .order-summary .discount { color: var(--color-success); }
+        .order-summary .total { font-family: var(--font-mono); font-size: 1.25rem; color: #4dd6c9; font-weight: bold; border-top: 1px solid var(--color-border); padding-top: var(--space-sm); margin-top: var(--space-sm); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: var(--space-sm) var(--space-md); font-size: 0.9rem; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; transition: all 0.15s ease; }
+        .btn-primary { background-color: #4dd6c9; color: var(--color-bg); font-weight: 600; }
+        .btn-primary:hover { box-shadow: var(--glow-hover); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { background-color: transparent; border: 1px solid var(--color-border); color: #c7d0dc; }
+        .btn-danger { background-color: var(--color-danger); color: var(--color-bg); }
+        .guest-field { margin-bottom: var(--space-md); }
+        .guest-field label { display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: var(--space-xs); }
+        .guest-field input { width: 100%; padding: var(--space-sm); background-color: #0a0e14; border: 1px solid var(--color-border); border-radius: 4px; color: #c7d0dc; }
+        .crypto-payment { background-color: #0a0e14; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); text-align: center; margin-top: var(--space-md); }
+        .crypto-amount { font-family: var(--font-mono); font-size: 1.5rem; color: #4dd6c9; margin-bottom: var(--space-sm); }
+        .crypto-address { font-family: var(--font-mono); font-size: 0.8rem; word-break: break-all; background-color: #10151d; padding: var(--space-sm); border-radius: 4px; margin-bottom: var(--space-sm); }
+        .payment-status { margin-top: var(--space-md); padding: var(--space-md); border-radius: 4px; text-align: center; }
+        .payment-status.pending { background-color: rgba(224,184,77,0.1); border: 1px solid var(--color-warning); color: var(--color-warning); }
+        .payment-status.paid { background-color: rgba(95,214,138,0.1); border: 1px solid var(--color-success); color: var(--color-success); }
+        .payment-status.failed { background-color: rgba(224,111,111,0.1); border: 1px solid var(--color-danger); color: var(--color-danger); }
+        .modal-overlay { position: fixed; inset: 0; background-color: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal { background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-xl); max-width: 480px; width: 90%; }
+        .modal h2 { font-family: var(--font-mono); color: #4dd6c9; margin-bottom: var(--space-md); }
+        .modal-actions { display: flex; gap: var(--space-sm); margin-top: var(--space-lg); }
+        .empty-state { text-align: center; padding: var(--space-xl); color: var(--color-text-muted); }
+        .download-links { margin-top: var(--space-md); }
+        .download-link { display: block; padding: var(--space-sm) var(--space-md); background-color: #0a0e14; border: 1px solid var(--color-border); border-radius: 4px; margin-bottom: var(--space-xs); color: #4dd6c9; text-decoration: none; font-family: var(--font-mono); font-size: 0.85rem; }
+        .footer { background-color: #10151d; border-top: 1px solid var(--color-border); padding: var(--space-xl) var(--space-lg); margin-top: auto; text-align: center; font-family: var(--font-mono); color: var(--color-text-muted); font-size: 0.8rem; }
+        @media (max-width: 1024px) { .checkout-layout { grid-template-columns: 1fr; } }
+    </style>
+    <!-- CHROME_HEADER -->
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo">/pawradise</a>
+        </div>
+    </header>
+
+    <main x-data="checkoutApp()" x-init="init()">
+        <div class="page-header"><h1>Checkout</h1></div>
+
+        <div class="empty-state" x-show="!loading && (!cart.items || cart.items.length === 0) && !order">
+            <p>Your cart is empty.</p>
+            <a href="/" class="btn btn-primary" style="margin-top:var(--space-md)">Continue Shopping</a>
+        </div>
+
+        <div class="checkout-layout" x-show="cart.items && cart.items.length > 0 && !showPayment">
+            <div>
+                <div class="checkout-section">
+                    <h2>Order Review</h2>
+                    <div class="cart-items">
+                        <template x-for="item in cart.items" :key="item.id">
+                            <div class="cart-item-row">
+                                <div>
+                                    <div class="cart-item-name" x-text="item.product_title"></div>
+                                    <div style="font-family:var(--font-mono);font-size:0.8rem;color:var(--color-text-muted)">Qty: <span x-text="item.quantity"></span></div>
+                                </div>
+                                <div class="cart-item-price" x-text="'$' + (item.unit_price_usd * item.quantity).toFixed(2)"></div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="checkout-section" x-show="!isAuthenticated">
+                    <h2>Guest Email</h2>
+                    <div class="guest-field">
+                        <label>Email (for order confirmation & download link)</label>
+                        <input type="email" x-model="guestEmail" placeholder="you@example.com">
+                    </div>
+                </div>
+
+                <div class="checkout-section">
+                    <h2>Coupon Code</h2>
+                    <div class="coupon-section">
+                        <input type="text" x-model="couponCode" placeholder="Enter coupon code">
+                        <button class="btn btn-secondary" @click="applyCoupon()" :disabled="!couponCode">Apply</button>
+                        <button class="btn btn-danger" @click="removeCoupon()" x-show="appliedCoupon">Remove</button>
+                    </div>
+                    <div class="coupon-message" :class="couponStatus" x-text="couponMessage" x-show="couponMessage"></div>
+                </div>
+            </div>
+
+            <div>
+                <div class="checkout-section order-summary">
+                    <h2>Order Summary</h2>
+                    <div class="row"><span>Subtotal</span><span x-text="'$' + subtotal.toFixed(2)"></span></div>
+                    <div class="row discount" x-show="discount > 0"><span>Discount</span><span x-text="'-$' + discount.toFixed(2)"></span></div>
+                    <div class="row total"><span>Total</span><span x-text="'$' + total.toFixed(2)"></span></div>
+                    <button class="btn btn-primary" style="width:100%;margin-top:var(--space-md)" @click="proceedToPayment()" :disabled="processing">
+                        <span x-show="!processing">Proceed to Payment</span>
+                        <span x-show="processing">Processing...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Section -->
+        <div class="checkout-section" x-show="showPayment && order">
+            <h2>Cryptocurrency Payment</h2>
+            <div class="crypto-payment">
+                <p style="color:var(--color-text-muted);margin-bottom:var(--space-sm)">Send exactly:</p>
+                <div class="crypto-amount" x-text="order?.total_crypto + ' ' + order?.crypto_chain"></div>
+                <p style="color:var(--color-text-muted);margin-bottom:var(--space-sm)">To address:</p>
+                <div class="crypto-address" x-text="order?.payment_address"></div>
+                <p style="font-family:var(--font-mono);font-size:0.8rem;color:var(--color-text-muted)">Memo: <span x-text="order?.payment_memo"></span></p>
+                <button class="btn btn-secondary" style="margin-top:var(--space-sm)" @click="copyAddress()">Copy Address</button>
+            </div>
+            <div class="payment-status" :class="paymentStatus" x-show="paymentStatus">
+                <span x-show="paymentStatus === 'pending'">Waiting for payment confirmation...</span>
+                <span x-show="paymentStatus === 'paid'">Payment confirmed! Your order is complete.</span>
+                <span x-show="paymentStatus === 'failed'">Payment failed. Please try again.</span>
+            </div>
+            <div class="download-links" x-show="paymentStatus === 'paid'">
+                <h3 style="font-family:var(--font-mono);margin-bottom:var(--space-sm)">Download Your Files</h3>
+                <template x-for="item in order?.items || []" :key="item.id">
+                    <a :href="`/api/v1/orders/${order.id}/download/${item.id}`" class="download-link" target="_blank" x-text="'Download: ' + item.product_title"></a>
+                </template>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div class="modal-overlay" x-show="showConfirmModal">
+            <div class="modal">
+                <h2>Confirm Payment</h2>
+                <p style="margin-bottom:var(--space-md)">You are about to pay <strong x-text="'$' + total.toFixed(2)"></strong> for <span x-text="cart.items?.length"></span> item(s).</p>
+                <p style="color:var(--color-text-muted);font-size:0.9rem;margin-bottom:var(--space-md)">This action cannot be undone.</p>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" @click="showConfirmModal = false">Cancel</button>
+                    <button class="btn btn-primary" @click="confirmOrder()" :disabled="processing">Confirm & Pay</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">// pawradise.ir — secure checkout</footer>
+
+    <script src="/assets/alpine.min.js" defer></script>
+    <script src="/assets/api.js"></script>
+    <script>
+        function checkoutApp() {
+            return {
+                cart: { items: [], total: 0 },
+                isAuthenticated: false,
+                guestEmail: '',
+                couponCode: '',
+                appliedCoupon: null,
+                couponMessage: '',
+                couponStatus: '',
+                discount: 0,
+                subtotal: 0,
+                total: 0,
+                processing: false,
+                showConfirmModal: false,
+                showPayment: false,
+                order: null,
+                paymentStatus: '',
+                loading: true,
+                pollInterval: null,
+                async init() {
+                    await this.checkAuth();
+                    await this.loadCart();
+                    this.loading = false;
+                },
+                async checkAuth() {
+                    try {
+                        await window.auth.getProfile();
+                        this.isAuthenticated = true;
+                    } catch(e) { this.isAuthenticated = false; }
+                },
+                async loadCart() {
+                    try {
+                        this.cart = await window.cart.get();
+                        this.subtotal = this.cart.total || 0;
+                        this.total = this.subtotal;
+                    } catch(e) {}
+                },
+                async applyCoupon() {
+                    try {
+                        const data = await window.coupons.validate(this.couponCode, this.subtotal);
+                        if (data.valid) {
+                            this.appliedCoupon = data;
+                            if (data.discount_type === 'percentage') {
+                                this.discount = this.subtotal * (data.discount_value / 100);
+                            } else {
+                                this.discount = data.discount_value;
+                            }
+                            this.total = Math.max(0, this.subtotal - this.discount);
+                            this.couponMessage = `Coupon applied! -$${this.discount.toFixed(2)}`;
+                            this.couponStatus = 'success';
+                        }
+                    } catch(e) {
+                        this.couponMessage = e.message || 'Invalid coupon';
+                        this.couponStatus = 'error';
+                        this.appliedCoupon = null;
+                        this.discount = 0;
+                        this.total = this.subtotal;
+                    }
+                },
+                removeCoupon() {
+                    this.appliedCoupon = null;
+                    this.couponCode = '';
+                    this.discount = 0;
+                    this.total = this.subtotal;
+                    this.couponMessage = '';
+                },
+                proceedToPayment() {
+                    if (!this.isAuthenticated && !this.guestEmail) {
+                        alert('Please enter your email for guest checkout');
+                        return;
+                    }
+                    this.showConfirmModal = true;
+                },
+                async confirmOrder() {
+                    this.showConfirmModal = false;
+                    this.processing = true;
+                    try {
+                        let orderData;
+                        const items = (this.cart.items || []).map(i => ({
+                            product_id: i.product_id,
+                            quantity: i.quantity,
+                            tier_id: i.tier_id || null
+                        }));
+                        if (this.isAuthenticated) {
+                            orderData = await window.orders.create(items, this.appliedCoupon?.code || '');
+                        } else {
+                            orderData = await window.orders.createGuestOrder(this.guestEmail, items);
+                        }
+                        this.order = orderData;
+                        this.showPayment = true;
+                        this.paymentStatus = 'pending';
+                        this.pollPaymentStatus(orderData.id);
+                    } catch(e) {
+                        alert('Order failed: ' + e.message);
+                    } finally {
+                        this.processing = false;
+                    }
+                },
+                async pollPaymentStatus(orderId) {
+                    if (this.pollInterval) clearInterval(this.pollInterval);
+                    this.pollInterval = setInterval(async () => {
+                        try {
+                            const status = await window.orders.getStatus(orderId);
+                            if (status.status === 'paid') {
+                                this.paymentStatus = 'paid';
+                                clearInterval(this.pollInterval);
+                            } else if (status.status === 'failed') {
+                                this.paymentStatus = 'failed';
+                                clearInterval(this.pollInterval);
+                            }
+                        } catch(e) {}
+                    }, 5000);
+                },
+                copyAddress() {
+                    navigator.clipboard.writeText(this.order?.payment_address || '');
+                }
+            };
+        }
+    </script>
+    <!-- CHROME_FOOTER -->
+</body>
+</html>

@@ -1,0 +1,476 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-service
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: identity-service
+  template:
+    metadata:
+      labels:
+        app: identity-service
+    spec:
+      containers:
+      - name: identity-service
+        image: 130.185.123.156:30099/pawradise/identity-service:latest
+        ports:
+        - containerPort: 8081
+        env:
+        - name: PORT
+          value: "8081"
+        - name: DB_HOST
+          value: "130.185.123.156"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: "app"
+        - name: DB_PASSWORD
+          value: "CHANGE_ME_IN_PRODUCTION"
+        - name: DB_NAME
+          value: "appdb_identity_production"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        resources:
+          requests:
+            cpu: 20m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: identity-service
+  namespace: production
+spec:
+  selector:
+    app: identity-service
+  ports:
+  - port: 8081
+    targetPort: 8081
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+    spec:
+      containers:
+      - name: product-service
+        image: 130.185.123.156:30099/pawradise/product-service:latest
+        ports:
+        - containerPort: 8082
+        env:
+        - name: PORT
+          value: "8082"
+        - name: DB_HOST
+          value: "130.185.123.156"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: "app"
+        - name: DB_PASSWORD
+          value: "CHANGE_ME_IN_PRODUCTION"
+        - name: DB_NAME
+          value: "appdb_product_production"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        resources:
+          requests:
+            cpu: 20m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+  namespace: production
+spec:
+  selector:
+    app: product-service
+  ports:
+  - port: 8082
+    targetPort: 8082
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: commerce-service
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: commerce-service
+  template:
+    metadata:
+      labels:
+        app: commerce-service
+    spec:
+      containers:
+      - name: commerce-service
+        image: 130.185.123.156:30099/pawradise/commerce-service:latest
+        ports:
+        - containerPort: 8083
+        env:
+        - name: PORT
+          value: "8083"
+        - name: DB_HOST
+          value: "130.185.123.156"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: "app"
+        - name: DB_PASSWORD
+          value: "CHANGE_ME_IN_PRODUCTION"
+        - name: DB_NAME
+          value: "appdb_commerce_production"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        resources:
+          requests:
+            cpu: 20m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: commerce-service
+  namespace: production
+spec:
+  selector:
+    app: commerce-service
+  ports:
+  - port: 8083
+    targetPort: 8083
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: community-service
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: community-service
+  template:
+    metadata:
+      labels:
+        app: community-service
+    spec:
+      containers:
+      - name: community-service
+        image: 130.185.123.156:30099/pawradise/community-service:latest
+        ports:
+        - containerPort: 8084
+        env:
+        - name: PORT
+          value: "8084"
+        - name: DB_HOST
+          value: "130.185.123.156"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: "app"
+        - name: DB_PASSWORD
+          value: "CHANGE_ME_IN_PRODUCTION"
+        - name: DB_NAME
+          value: "appdb_community_production"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        resources:
+          requests:
+            cpu: 20m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: community-service
+  namespace: production
+spec:
+  selector:
+    app: community-service
+  ports:
+  - port: 8084
+    targetPort: 8084
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: review-service
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: review-service
+  template:
+    metadata:
+      labels:
+        app: review-service
+    spec:
+      containers:
+      - name: review-service
+        image: 130.185.123.156:30099/pawradise/review-service:latest
+        ports:
+        - containerPort: 8085
+        env:
+        - name: PORT
+          value: "8085"
+        - name: DB_HOST
+          value: "130.185.123.156"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: "app"
+        - name: DB_PASSWORD
+          value: "CHANGE_ME_IN_PRODUCTION"
+        - name: DB_NAME
+          value: "appdb_review_production"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        resources:
+          requests:
+            cpu: 20m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: review-service
+  namespace: production
+spec:
+  selector:
+    app: review-service
+  ports:
+  - port: 8085
+    targetPort: 8085
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+      - name: payment-service
+        image: 130.185.123.156:30099/pawradise/payment-service:latest
+        ports:
+        - containerPort: 8086
+        env:
+        - name: PORT
+          value: "8086"
+        - name: DB_HOST
+          value: "130.185.123.156"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: "app"
+        - name: DB_PASSWORD
+          value: "CHANGE_ME_IN_PRODUCTION"
+        - name: DB_NAME
+          value: "appdb_payment_production"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        resources:
+          requests:
+            cpu: 20m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: production
+spec:
+  selector:
+    app: payment-service
+  ports:
+  - port: 8086
+    targetPort: 8086
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-service
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-service
+  template:
+    metadata:
+      labels:
+        app: admin-service
+    spec:
+      containers:
+      - name: admin-service
+        image: 130.185.123.156:30099/pawradise/admin-service:latest
+        ports:
+        - containerPort: 8087
+        env:
+        - name: PORT
+          value: "8087"
+        - name: DB_HOST
+          value: "130.185.123.156"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: "app"
+        - name: DB_PASSWORD
+          value: "CHANGE_ME_IN_PRODUCTION"
+        - name: DB_NAME
+          value: "appdb_admin_production"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        - name: ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: ADMIN_TOKEN
+        resources:
+          requests:
+            cpu: 20m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-service
+  namespace: production
+spec:
+  selector:
+    app: admin-service
+  ports:
+  - port: 8087
+    targetPort: 8087
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: media-service
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: media-service
+  template:
+    metadata:
+      labels:
+        app: media-service
+    spec:
+      containers:
+      - name: media-service
+        image: 130.185.123.156:30099/pawradise/media-service:latest
+        ports:
+        - containerPort: 8088
+        env:
+        - name: PORT
+          value: "8088"
+        - name: DB_HOST
+          value: "130.185.123.156"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: "app"
+        - name: DB_PASSWORD
+          value: "CHANGE_ME_IN_PRODUCTION"
+        - name: DB_NAME
+          value: "appdb_media_production"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        resources:
+          requests:
+            cpu: 20m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: media-service
+  namespace: production
+spec:
+  selector:
+    app: media-service
+  ports:
+  - port: 8088
+    targetPort: 8088
+  type: ClusterIP

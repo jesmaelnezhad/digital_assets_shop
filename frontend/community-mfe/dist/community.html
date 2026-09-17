@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pawradise — Community</title>
+    <meta name="description" content="Community feed">
+    <link rel="stylesheet" href="/assets/theme.css">
+    <script src="/env.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font-sans); background-color: var(--color-bg); color: var(--color-text); min-height: 100vh; display: flex; flex-direction: column; }
+        .header { background-color: var(--color-bg-elevated); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) var(--space-lg); }
+        .header-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); }
+        .logo { font-family: var(--font-mono); font-size: 1.25rem; font-weight: bold; color: var(--color-accent-primary); text-decoration: none; }
+        .nav { display: flex; gap: var(--space-md); }
+        .nav a { color: var(--color-text); text-decoration: none; font-size: 0.9rem; padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); transition: color 0.15s ease; }
+        .nav a:hover, .nav a.active { color: var(--color-accent-primary); }
+        main { flex: 1; max-width: 800px; margin: 0 auto; padding: var(--space-lg); width: 100%; }
+        .page-title { font-family: var(--font-mono); font-size: 1.5rem; margin-bottom: var(--space-lg); }
+        .create-post { background-color: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); margin-bottom: var(--space-lg); }
+        .create-post textarea { width: 100%; padding: var(--space-sm) var(--space-md); background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text); font-size: 0.95rem; resize: vertical; min-height: 80px; font-family: var(--font-sans); }
+        .create-post textarea:focus { outline: none; border-color: var(--color-accent-primary); box-shadow: var(--glow-focus); }
+        .create-post .char-count { font-family: var(--font-mono); font-size: 0.8rem; color: var(--color-text-muted); text-align: right; margin-top: var(--space-xs); }
+        .create-post .char-count.over { color: var(--color-danger); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: var(--space-sm) var(--space-md); font-size: 0.9rem; border: none; border-radius: var(--radius-sm); cursor: pointer; text-decoration: none; transition: all 0.15s ease; }
+        .btn-primary { background-color: var(--color-accent-primary); color: var(--color-bg); font-weight: 600; }
+        .btn-primary:hover { box-shadow: var(--glow-hover); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-ghost { background: transparent; color: var(--color-text); }
+        .btn-ghost:hover { color: var(--color-accent-primary); }
+        .post-card { background-color: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); margin-bottom: var(--space-md); }
+        .post-header { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+        .post-avatar { width: 40px; height: 40px; background-color: var(--color-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 1rem; color: var(--color-accent-primary); }
+        .post-author { font-family: var(--font-mono); font-size: 0.9rem; }
+        .post-date { font-size: 0.8rem; color: var(--color-text-muted); }
+        .post-content { line-height: 1.6; margin-bottom: var(--space-sm); word-wrap: break-word; }
+        .post-actions { display: flex; gap: var(--space-md); font-size: 0.85rem; }
+        .post-actions button { background: none; border: none; color: var(--color-text-muted); cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: var(--space-xs); transition: color 0.15s ease; }
+        .post-actions button:hover { color: var(--color-accent-primary); }
+        .post-actions button.liked { color: var(--color-danger); }
+        .pagination { display: flex; justify-content: center; gap: var(--space-sm); margin-top: var(--space-lg); }
+        .pagination a, .pagination span { padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 0.85rem; }
+        .pagination a { color: var(--color-text); text-decoration: none; }
+        .pagination a:hover { color: var(--color-accent-primary); }
+        .pagination .current { background-color: var(--color-accent-primary); color: var(--color-bg); font-weight: 600; }
+        .empty-state { text-align: center; padding: var(--space-xl); color: var(--color-text-muted); }
+        .footer { background-color: var(--color-bg-elevated); border-top: 1px solid var(--color-border); padding: var(--space-lg); text-align: center; color: var(--color-text-muted); font-size: 0.8rem; font-family: var(--font-mono); }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--color-border); border-top-color: var(--color-accent-primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 640px) { .nav { display: none; } }
+    </style>
+    <!-- CHROME_HEADER -->
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo">/pawradise</a>
+            <nav class="nav">
+                <a href="/">Shop</a>
+                <a href="/category">Categories</a>
+                <a href="/product/bundle.html">Bundles</a>
+                <a href="/product/request.html">Request</a>
+                <a href="/community">Community</a>
+                <a href="/account">Account</a>
+            </nav>
+        </div>
+    </header>
+
+    <main x-data="{
+        posts: [],
+        total: 0,
+        page: 1,
+        perPage: 20,
+        newPost: '',
+        filter: 'recent',
+        loading: true,
+        submitting: false,
+        isAuthed: false,
+        totalPages() { return Math.max(1, Math.ceil(this.total / this.perPage)); },
+        async checkAuth() {
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/me`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                this.isAuthed = res.ok;
+            } catch (e) { this.isAuthed = false; }
+        },
+        async load() {
+            this.loading = true;
+            try {
+                const params = new URLSearchParams({ page: this.page, per_page: this.perPage, filter: this.filter });
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/community/posts?${params}`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!res.ok) throw new Error('Failed to load posts');
+                const data = await res.json();
+                this.posts = data.posts || [];
+                this.total = data.total || 0;
+            } catch (e) {
+                console.error(e);
+            } finally {
+                this.loading = false;
+            }
+        },
+        async createPost() {
+            if (this.newPost.length === 0 || this.newPost.length > 500) return;
+            if (!this.isAuthed) { window.location.href = '/login?next=/community'; return; }
+            this.submitting = true;
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/community/posts`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: this.newPost, type: 'post', is_public: true })
+                });
+                if (!res.ok) throw new Error('Failed to create post');
+                this.newPost = '';
+                this.load();
+            } catch (e) {
+                alert(e.message);
+            } finally {
+                this.submitting = false;
+            }
+        },
+        async likePost(post) {
+            if (!this.isAuthed) { window.location.href = '/login?next=/community'; return; }
+            const wasLiked = post.liked;
+            post.liked = !wasLiked;
+            post.like_count += wasLiked ? -1 : 1;
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/community/posts/${post.id}/like`, {
+                    method: wasLiked ? 'DELETE' : 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!res.ok) throw new Error('Failed');
+            } catch (e) {
+                post.liked = wasLiked;
+                post.like_count += wasLiked ? 1 : -1;
+            }
+        },
+        goToPage(p) { this.page = p; this.load(); window.scrollTo(0, 0); }
+    }" x-init="checkAuth(); load()">
+        
+        <h1 class="page-title">Community</h1>
+
+        <div class="create-post">
+            <textarea x-model="newPost" placeholder="Share something with the community..." maxlength="500"></textarea>
+            <div class="char-count" :class="{ over: newPost.length > 450 }">
+                <span x-text="newPost.length"></span>/500
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:var(--space-sm)">
+                <button class="btn btn-primary" @click="createPost()" :disabled="newPost.length === 0 || newPost.length > 500 || submitting">
+                    <span x-show="!submitting">Post</span>
+                    <span x-show="submitting">Posting...</span>
+                </button>
+            </div>
+        </div>
+
+        <div x-show="loading" class="empty-state"><div class="spinner"></div><p style="margin-top:var(--space-sm)">Loading posts...</p></div>
+
+        <div x-show="!loading && posts.length === 0" class="empty-state">
+            <p>No posts yet. Be the first to share something!</p>
+        </div>
+
+        <template x-for="post in posts" :key="post.id">
+            <div class="post-card">
+                <div class="post-header">
+                    <a :href="`/profile/${post.author.id}`" class="post-avatar" x-text="(post.author.name || '?')[0].toUpperCase()"></a>
+                    <div>
+                        <a :href="`/profile/${post.author.id}`" class="post-author" x-text="post.author.name" style="text-decoration:none;color:inherit"></a>
+                        <div class="post-date" x-text="new Date(post.created_at).toLocaleDateString()"></div>
+                    </div>
+                </div>
+                <a :href="`/post/${post.id}`" style="text-decoration:none;color:inherit">
+                    <p class="post-content" x-text="post.content"></p>
+                </a>
+                <div class="post-actions">
+                    <button :class="{ liked: post.liked }" @click.prevent="likePost(post)">
+                        <span x-text="post.liked ? '♥' : '♡'"></span>
+                        <span x-text="post.like_count"></span>
+                    </button>
+                    <a :href="`/post/${post.id}`" class="btn-ghost" style="font-size:0.85rem">
+                        💬 <span x-text="post.comment_count"></span>
+                    </a>
+                </div>
+            </div>
+        </template>
+
+        <div class="pagination" x-show="!loading && totalPages() > 1">
+            <template x-for="p in totalPages()" :key="p">
+                <template x-if="p === page"><span class="current" x-text="p"></span></template>
+                <template x-if="p !== page"><a href="#" @click.prevent="goToPage(p)" x-text="p"></a></template>
+            </template>
+        </div>
+    </main>
+
+    <footer class="footer">// pawradise.ir — digital assets marketplace</footer>
+
+    <script src="/assets/alpine.min.js" defer></script>
+    <script src="/assets/api.js"></script>
+    <!-- CHROME_FOOTER -->
+</body>
+</html>

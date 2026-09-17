@@ -1,0 +1,74 @@
+# Session State Snapshot
+# Generated: 2026-09-06 (approximate)
+# 
+# This file captures the current state of the Pawradise ecommerce project
+# session so the conversation context can be cleared.
+
+## Goals
+- Have the ecommerce website up and running with all features
+- First complete staging, then move to production
+- Check staging > run comprehensive tests > fix until pass > promote to production
+- Update all documents, create new docs if needed, archive old planning documents
+
+## Completion Contract
+- Outcome: Fully functional ecommerce website, all features implemented/tested/deployed to production
+- Verification: Staging passes comprehensive test suite, production deployment succeeds, docs updated, old plans archived
+- Constraints: No regressions, no data integrity compromise, no secret exposure, no security violations
+- Boundaries: All application code, staging/production environments, test suites, documentation
+
+## Current State (as of session end)
+### Infrastructure
+- RED (194.5.206.106): k3s host, staging + production namespaces, SSH port 2222
+- BLUE: Dev/build box, no k3s, Docker containerd running
+- Registry: 194.5.206.106:5000 (accessible to RED and BLUE only)
+- Domain: pawradise.ir
+
+### Staging (live on RED)
+- Backend pod: running (image: 194.5.206.106:5000/pawradise/backend:latest)
+- Frontend pod: running
+- NodePort: 30083
+- Endpoints responding: /api/v1/products, /api/v1/categories, /api/v1/community/feed
+- Endpoints 404: /health, /api/v1/exchange-rates, /api/v1/settings, /api/v1/admin/*
+- SSH to RED: failing on port 2222 (key permission issues)
+
+### Local Build (BLUE)
+- Go build: passes (BUILD:0)
+- Unit tests: 19 PASS, 45 FAIL
+- 19 passing: health checks, auth (register/login/logout/me), categories, orders (unauth), admin (setSetting/listUsers), community (profile/feed/createPost unauth)
+- 45 failing: mock SQL pattern mismatches in all_features_test.go (not runtime issues)
+- Test file status: fix_v5.py + byte-level COUNT fix applied; backtick conversion done; remaining issues are SQL mock regex patterns not matching handler queries
+
+### Test File State
+- /root/project/backend/handlers/all_features_test.go (788 lines)
+- /root/project/backend/handlers/all_features_test.go.bak (backup of original)
+- Stable baseline: restore .bak → fix_v5.py → byte-level COUNT fix → 19 PASS/45 FAIL
+- Remaining failures: mock SQL patterns use .* wildcards that don't match handler's full JOIN/WHERE/ORDER BY queries
+
+### Key Code Changes (not yet deployed to staging)
+- main.go: JWT middleware on feature routes, exchange-rates + guest-orders on public v1
+- test_helpers.go: R() mirrors main.go route registrations
+- features.go: guest order handlers + RegisterGuestOrderRoutes
+- auth.go: nil-safe NewAuthHandler with database.DB fallback
+- settings.go: public GetSetting handler, GetPaymentAddress() helper
+
+### Documentation
+- /root/PLAN-ecommerce.md - project plan (needs update)
+- /root/release-notes/ - release notes directory (needs files)
+- Old planning documents need archiving
+
+### Blockers
+- SSH to RED port 2222 failing (key permission issues)
+- Can't run kubectl commands on RED to deploy/verify
+- 45 unit test failures (mock SQL mismatches) — not runtime issues but block "all tests pass" criterion
+- Staging endpoints /health, /exchange-rates, /settings, /admin/* returning 404
+
+## Files of Interest
+- /root/project/backend/handlers/all_features_test.go - test file (788 lines, fragile state)
+- /root/project/backend/handlers/all_features_test.go.bak - stable backup
+- /root/project/backend/fix_v5.py - stable converter script (19 PASS/45 FAIL baseline)
+- /root/project/backend/Dockerfile - docker build config
+- /root/project/backend/docker-compose.yml - docker compose
+- /root/project/k8s/ - k8s manifests
+- /root/project/PLAN-ecommerce.md - project plan
+- /root/release-notes/ - release notes
+- /root/active-goal.md - this file (goal snapshot)

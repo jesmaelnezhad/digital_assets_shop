@@ -1,0 +1,570 @@
+# Pawradise Microservices Architecture — Deployment Reference
+
+> **Date**: 2026-09-11 (updated for domain-based routing v2)
+> **Purpose**: Complete reference for the two-server (BLUE/RED) microservice deployment with host-based ingress routing to staging and production namespaces.
+
+---
+
+## 1. Server Roles
+
+| Server | IP | Role | Key Software |
+|--------|-----|------|--------------|
+| **BLUE** | 130.185.121.83 | Build & compile box | Go 1.22.2, Docker, git |
+| **RED** | 130.185.123.156 | Serving cluster | k3s v1.36.4+k3s1, PostgreSQL 16, Docker registry, host nginx (SSL) |
+
+---
+
+## 2. RED Cluster Overview
+
+### 2.1 Namespaces
+
+| Namespace | Purpose |
+|-----------|---------|
+| `ingress-nginx` | Single ingress-nginx controller (the API gateway) |
+| `production` | Production backend pods + services |
+| `staging` | Staging backend pods + services |
+| `database` | PostgreSQL instance with 16 logical databases |
+| `registry` | Docker registry for pushing images from BLUE |
+
+### 2.2 Key Components on RED
+
+#### Ingress Controller (API Gateway)
+
+- **Deployment**: `ingress-nginx-controller` in `ingress-nginx` namespace
+- **Image**: `130.185.123.156:30099/pawradise-ingress-nginx:v1.11.2`
+- **Service**: `ingress-nginx-controller` (NodePort `:30758`)
+- **IngressClass**: `nginx` (controller: `k8s.io/ingress-nginx`)
+- **RBAC**: ClusterRole with permissions for ingresses, services, endpoints, endpointslices, leases, events, configmaps, secrets, nodes, pods
+
+#### Backend Pods (Separate Pod Architecture)
+
+- **Deployments**: One Deployment per service per namespace (16 total)
+- **Image**: `130.185.123.156:30099/pawradise/<service>:latest`
+- **Label selector**: `app: <service-name>` (per-service labels)
+- **Containers per pod**: 1 (each service runs in its own pod)
+
+| Container Name | Port | Service Name |
+|----------------|------|--------------|
+| identity-service | 8081 | identity-service |
+| product-service | 8082 | product-service |
+| commerce-service | 8083 | commerce-service |
+| community-service | 8084 | community-service |
+| review-service | 8085 | review-service |
+| payment-service | 8086 | payment-service |
+| admin-service | 8087 | admin-service |
+| media-service | 8088 | media-service |
+
+#### Per-Service Kubernetes Services
+
+Each service selects pods by label `app: <service-name>` and routes to the correct container port:
+
+| Service | Port | Target Port |
+|---------|------|-------------|
+| identity-service | 80 | 8081 |
+| product-service | 80 | 8082 |
+| commerce-service | 80 | 8083 |
+| community-service | 80 | 8084 |
+| review-service | 80 | 8085 |
+| payment-service | 80 | 8086 |
+| admin-service | 80 | 8087 |
+| media-service | 80 | 8088 |
+
+> **Note**: The legacy `backend-pod` service (with all 8 ports) still exists but is not used by ingress.
+
+#### Database
+
+- **StatefulSet**: `postgres-0` in `database` namespace
+- **Image**: `docker.io/library/postgres:16-alpine`
+- **Service**: `postgres.database.svc.cluster.local:5432`
+- **User**: `app`
+- **16 logical databases**: `appdb_{service}_{environment}` for each of 8 services × 2 environments
+
+#### Registry
+
+- **Deployment**: `registry-85c4cb8d6d-n58c9` in `registry` namespace
+- **Image**: `docker.io/library/registry:2`
+- **Service**: `registry.registry.svc.cluster.local:5000` (NodePort `:30099`)
+- **Access from BLUE**: `130.185.123.156:30099`
+
+---
+
+## 3. Ingress Routing Architecture
+
+### 3.1 Domain-Based Routing (v2, 2026-09-10+)
+
+Environments are separated by **hostname**, not by path prefix. Both environments use identical `/api/v1` paths — no rewriting needed.
+
+```
+                    ┌─────────────────────────────────────┐
+                    │  ingress-nginx-controller (gateway)  │
+                    │  130.185.123.156:30758                 │
+                    └──────────────┬──────────────────────┘
+                                   │
+          Host: staging domain     │    Host: production domain
+          (server-ad5ae8ea...)     │    (pawradise.ir)
+                 │                 │                 │
+                 ▼                 ▼                 ▼
+        ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
+        │ staging/    │   │ (via host   │   │ production/ │
+        │ identity-   │   │  nginx)     │   │ identity-   │
+        │ service:80  │   └─────────────┘   │ service:80  │
+        └─────────────┘                     └─────────────┘
+```
+
+### 3.2 Host Nginx (SSL Terminator on RED)
+
+RED's host nginx (`/etc/nginx/sites-available/pawradise-ssl`) handles:
+
+1. **Port 80**: Redirects HTTP → HTTPS
+2. **Port 443**: SSL termination (Let's Encrypt cert for staging domain)
+   - Proxies `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir` → k3s NodePort 30758 (staging)
+   - Proxies `pawradise.ir` → k3s NodePort 30758 (production)
+   - Serves `/assets/` directly from `/var/www/production/assets/`
+   - Serves `/.well-known/acme-challenge/` for Let's Encrypt renewal
+
+**No port 8080/8081 hosting** — the old config serving static files on port 8080/8081 has been removed.
+
+### 3.3 Ingress Resources
+
+#### Production Ingress (`api-gateway`)
+
+- **Name**: `api-gateway`
+- **Namespace**: `production`
+- **IngressClass**: `nginx`
+- **Host**: `pawradise.ir`
+- **Rewrite**: None (paths forwarded as-is)
+- **Routes**: `/api/v1/*` → production services
+
+#### Staging Ingress (`api-gateway-staging`)
+
+- **Name**: `api-gateway-staging`
+- **Namespace**: `staging`
+- **IngressClass**: `nginx`
+- **Host**: `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir`
+- **Rewrite**: None (paths forwarded as-is) — NO `rewrite-target` annotation
+- **Routes**: `/api/v1/*` → staging services
+
+### 3.4 Routing Matrix
+
+| Ingress Path | Target Service | Namespace | Notes |
+|--------------|----------------|-----------|-------|
+| `/api/v1/register` | identity-service:80 | production | Auth |
+| `/api/v1/login` | identity-service:80 | production | Auth |
+| `/api/v1/logout` | identity-service:80 | production | Auth |
+| `/api/v1/me` | identity-service:80 | production | Auth |
+| `/api/v1/profile` | identity-service:80 | production | Auth (same as above) |
+| `/api/v1/referrals` | identity-service:80 | production | Auth |
+| `/api/v1/commissions` | identity-service:80 | production | Auth |
+| `/api/v1/products` | product-service:80 | production | Public |
+| `/api/v1/categories` | product-service:80 | production | Public |
+| `/api/v1/bundles` | product-service:80 | production | Public |
+| `/api/v1/recommendations` | product-service:80 | production | Public |
+| `/api/v1/guest-orders` | commerce-service:80 | production | Public |
+| `/api/v1/coupons/validate` | commerce-service:80 | production | Public |
+| `/api/v1/orders` | commerce-service:80 | production | Auth |
+| `/api/v1/cart` | commerce-service:80 | production | Auth |
+| `/api/v1/wishlist` | commerce-service:80 | production | Auth |
+| `/api/v1/recently-viewed` | commerce-service:80 | production | Auth |
+| `/api/v1/compare` | commerce-service:80 | production | Auth |
+| `/api/v1/community/posts` | community-service:80 | production | Public + Auth wrapper |
+| `/api/v1/community/users/:id` | community-service:80 | production | Public |
+| `/api/v1/reviews` | review-service:80 | production | Auth |
+| `/api/v1/exchange-rates` | payment-service:80 | production | Public |
+| `/api/v1/payments/` | payment-service:80 | production | Auth |
+| `/api/v1/settings` | payment-service:80 | production | Auth |
+| `/api/v1/admin/` | admin-service:80 | production | Admin token |
+| `/api/v1/media/` | media-service:80 | production | Auth |
+
+> **Wrapper routes on community-service**: `/api/v1/posts`, `/api/v1/posts/:id`, `/api/v1/profile`, `/api/v1/profile/:id`, `/api/v1/users/:id`, `/api/v1/follow/:userId` — these are convenience wrappers that forward to `/api/v1/community/...` endpoints for e2e test compatibility.
+
+> **Staging**: Same routing matrix, but all routes land in the `staging` namespace. The ingress uses `host` field to distinguish: `server-ad5ae8ea-...` → staging, `pawradise.ir` → production.
+
+### 3.5 CORS Configuration
+
+CORS is configured per-namespace via the `ENV_NAME` environment variable on each service pod:
+
+```go
+// middleware/cors.go
+func CORSMiddleware() gin.HandlerFunc {
+    env := os.Getenv("ENV_NAME") // "staging" or "production"
+    allowedOrigins := os.Getenv("CORS_ORIGINS") // Comma-separated origins for this env
+    // ...
+}
+```
+
+| Namespace | ENV_NAME | CORS_ORIGINS |
+|-----------|----------|--------------|
+| `staging` | `staging` | `https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir` |
+| `production` | `production` | `https://pawradise.ir` |
+
+---
+
+## 4. Build & Deploy Workflow (BLUE → RED)
+
+### 4.1 Build Go Binary on BLUE (statically linked)
+
+```bash
+cd /root/project/services/<service-name>
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /tmp/<service-name>-static .
+```
+
+**Important**: Always use `CGO_ENABLED=0` to produce a statically linked binary. Alpine Linux uses musl libc, and dynamically linked glibc binaries (`CGO_ENABLED=1`) will fail with `exec /server: no such file or directory` on Alpine containers.
+
+### 4.2 Build Docker Image on BLUE
+
+```bash
+# Multi-stage Dockerfile (recommended — copies binary from builder stage)
+cat > Dockerfile <<'EOF'
+FROM golang:1.22-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download 2>/dev/null || true
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /server .
+
+FROM alpine:3.19
+RUN apk add --no-cache ca-certificates
+WORKDIR /
+COPY --from=builder /server /server
+EXPOSE <port>
+CMD ["/server"]
+EOF
+
+docker build -t 130.185.123.156:30099/pawradise/<service>:v<N> .
+```
+
+### 4.3 Push to RED's Registry
+
+```bash
+docker push 130.185.123.156:30099/pawradise/<service>:v<N>
+```
+
+### 4.4 Deploy on RED
+
+```bash
+ssh root@130.185.123.156 "k3s kubectl set image deployment/<service> \
+  <service>=130.185.123.156:30099/pawradise/<service>:v<N> -n staging"
+
+ssh root@130.185.123.156 "k3s kubectl set image deployment/<service> \
+  <service>=130.185.123.156:30099/pawradise/<service>:v<N> -n production"
+```
+
+### 4.5 Copy Binary Directly (alternative — bypasses Docker)
+
+When Docker caching issues prevent clean builds:
+
+```bash
+# Build on BLUE
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /tmp/<service>-static .
+
+# Copy to RED
+scp /tmp/<service>-static root@130.185.123.156:/tmp/
+
+# Deploy to running pod
+ssh root@130.185.123.156 "
+  POD=\$(k3s kubectl get pods -n staging -l app=<service> -o jsonpath='{.items[0].metadata.name}')
+  k3s kubectl cp /tmp/<service>-static staging/\$POD:/server
+  k3s kubectl delete pod \$POD -n staging --grace-period=0
+"
+```
+
+---
+
+## 5. Database Migration Workflow
+
+### 5.1 Create Migration File
+
+Write SQL to `/root/project/services/<service>/migrations/NNN_descriptive_name.sql`
+
+### 5.2 Apply to Both Environments
+
+```bash
+scp <migration>.sql root@130.185.123.156:/tmp/migration.sql
+ssh root@130.185.123.156 "k3s kubectl cp /tmp/migration.sql database/postgres-0:/tmp/migration.sql"
+ssh root@130.185.123.156 "k3s kubectl exec -n database postgres-0 -- psql -U app -d appdb_<service>_staging -f /tmp/migration.sql"
+ssh root@130.185.123.156 "k3s kubectl exec -n database postgres-0 -- psql -U app -d appdb_<service>_production -f /tmp/migration.sql"
+```
+
+---
+
+## 6. Registry Configuration
+
+### 6.1 RED's `/etc/rancher/k3s/registries.yaml`
+
+```yaml
+mirrors:
+  130.185.123.156:30099:
+    endpoint:
+      - http://130.185.123.156:30099
+  docker.io:
+    endpoint:
+      - https://registry-1.docker.io
+  registry.k8s.io:
+    endpoint:
+      - https://registry.k8s.io
+configs:
+  130.185.123.156:30099:
+    tls:
+      insecure_skip_verify: true
+```
+
+### 6.2 BLUE's `/etc/docker/daemon.json`
+
+```json
+{
+  "insecure-registries": ["130.185.123.156:30099", "130.185.123.156:5000"],
+  "log-driver": "json-file",
+  "log-opts": {"max-size": "10m", "max-file": "3"}
+}
+```
+
+---
+
+## 7. Image Inventory
+
+### 7.1 Ingress Controller
+
+| Image | Source | Location |
+|-------|--------|----------|
+| `registry.k8s.io/ingress-nginx/controller:v1.11.2` | Tar file provided by user | `130.185.123.156:30099/pawradise-ingress-nginx:v1.11.2` |
+
+### 7.2 Backend Services
+
+| Service | Image | Port |
+|---------|-------|------|
+| identity-service | `130.185.123.156:30099/pawradise/identity-service:latest` | 8081 |
+| product-service | `130.185.123.156:30099/pawradise/product-service:latest` | 8082 |
+| commerce-service | `130.185.123.156:30099/pawradise/commerce-service:latest` | 8083 |
+| community-service | `130.185.123.156:30099/pawradise/community-service:latest` | 8084 |
+| review-service | `130.185.123.156:30099/pawradise/review-service:latest` | 8085 |
+| payment-service | `130.185.123.156:30099/pawradise/payment-service:latest` | 8086 |
+| admin-service | `130.185.123.156:30099/pawradise/admin-service:latest` | 8087 |
+| media-service | `130.185.123.156:30099/pawradise/media-service:latest` | 8088 |
+
+### 7.3 Infrastructure
+
+| Component | Image |
+|-----------|-------|
+| PostgreSQL | `docker.io/library/postgres:16-alpine` |
+| Registry | `docker.io/library/registry:2` |
+
+---
+
+## 8. Environment Variables (Backend Containers)
+
+| Variable | Value |
+|----------|-------|
+| `PORT` | Container-specific (8081-8088) |
+| `DB_HOST` | `postgres.database.svc.cluster.local` |
+| `DB_PORT` | `5432` |
+| `DB_USER` | `app` |
+| `DB_PASSWORD` | (from secret `postgres-secret`) |
+| `DB_NAME` | `appdb_<service>_<environment>` |
+| `JWT_SECRET` | (from secret `pawradise-secrets`) |
+| `ADMIN_TOKEN` | (from secret `pawradise-secrets`) |
+| `ENV_NAME` | `staging` or `production` (controls CORS, env detection) |
+| `CORS_ORIGINS` | Comma-separated origins for this environment |
+
+---
+
+## 9. Verification Commands
+
+### 9.1 Check All Pods
+
+```bash
+ssh root@130.185.123.156 "k3s kubectl get pods -A -o wide"
+```
+
+### 9.2 Check Ingress Routing
+
+```bash
+ssh root@130.185.123.156 "k3s kubectl describe ingress -A"
+```
+
+### 9.3 Test Routing from BLUE (domain-based)
+
+**Always test using the real domain name, not the IP. The ingress routes by Host header.**
+
+```bash
+# Production (placeholder domain — no DNS yet, no testing possible)
+curl -sk https://pawradise.ir/api/v1/health
+
+# Staging (real domain, SSL cert installed)
+curl -sk https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/api/v1/health
+
+# With auth token
+curl -sk https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/api/v1/admin/users \
+  -H "Authorization: Bearer admin_secret_staging_2026"
+
+# POST register
+curl -sk -X POST https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/api/v1/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@test.ir","password":"pass123","first_name":"Test","last_name":"User"}'
+```
+
+**Important**: Direct IP access (e.g., `curl http://130.185.123.156:30758/api/v1/...`) will match the first ingress (production) regardless of which namespace you want. Always use domain names.
+
+### 9.4 Check Ingress Logs
+
+```bash
+ssh root@130.185.123.156 "k3s kubectl logs -n ingress-nginx -l app=ingress-nginx-controller --tail=50"
+```
+
+### 9.5 Check Service Logs
+
+```bash
+ssh root@130.185.123.156 "k3s kubectl logs -n staging -l app=<service> --tail=50"
+ssh root@130.185.123.156 "k3s kubectl logs -n production -l app=<service> --tail=50"
+```
+
+---
+
+## 10. Key Design Decisions
+
+1. **Separate Pod per Service**: Each microservice runs in its own pod, targeting ~40-50MB memory per pod. RED has ~1GB available, so 16 pods (8 services × 2 namespaces) fit comfortably.
+
+2. **Domain-Based Routing (v2)**: Environments are separated by hostname (`server-ad5ae8ea-...` → staging, `pawradise.ir` → production). This allows identical URL paths in both environments — no `/staging/` prefix needed. Frontend links work the same in both environments. Host nginx routes by Host header to k3s ingress, which routes by host match to the correct namespace.
+
+3. **Single Ingress Gateway**: One ingress-nginx controller in `ingress-nginx` namespace watches all namespaces for Ingress resources.
+
+4. **Host Nginx as SSL Terminator**: RED's host nginx handles Let's Encrypt on port 443 and proxies to k3s NodePort 30758 with Host header preserved. This avoids certificate management inside k3s.
+
+5. **Wrapper Routes for e2e Compatibility**: community-service registers both `/api/v1/community/...` (actual routes) and `/api/v1/posts`, `/api/v1/profile`, etc. (wrapper routes) to maintain compatibility with e2e tests that expect those paths.
+
+6. **Registry on RED**: BLUE pushes images to RED's local registry at `130.185.123.156:30099`, then RED's k3s pulls from there. Avoids external registry dependency.
+
+7. **CGO_ENABLED=0 for Alpine**: All Go binaries must be statically linked (CGO_ENABLED=0) to run on Alpine-based containers. Dynamic linking produces glibc binaries that fail with `exec /server: no such file or directory`.
+
+8. **No path rewriting needed**: Domain-based routing eliminates the need for `rewrite-target` annotations. Paths pass through unchanged to services.
+
+---
+
+## 11. Troubleshooting
+
+### 11.1 Ingress Controller Won't Start
+
+- Check RBAC: `k3s kubectl get clusterrole ingress-nginx -o yaml`
+- Check logs: `k3s kubectl logs -n ingress-nginx -l app=ingress-nginx-controller`
+- Common issue: Missing `leases` permission in `coordination.k8s.io` API group
+
+### 11.2 Images Won't Pull
+
+- Verify registry is running: `k3s kubectl get pods -n registry`
+- Check registries.yaml: `cat /etc/rancher/k3s/registries.yaml`
+- Restart k3s: `systemctl restart k3s`
+
+### 11.3 Backend Returns 503
+
+- Check pod status: `k3s kubectl get pods -n <namespace>`
+- Check service endpoints: `k3s kubectl get endpoints -n <namespace> <service>`
+- Check pod logs: `k3s kubectl logs -n <namespace> <pod> -c <container>`
+
+### 11.4 404 Errors on API Endpoints
+
+- Check which ingress matches: `k3s kubectl describe ingress <ingress-name> -n <namespace>`
+- Verify the Host header matches the ingress `host` field
+- Check that the service name in the ingress matches the Kubernetes service
+- Verify the service has endpoints (pods are running and healthy)
+- For community-service: check logs for "duplicate route" panic — the service may have crashed on startup
+
+### 11.5 Binary Fails with "no such file or directory"
+
+- The binary is dynamically linked (glibc) but running on Alpine (musl)
+- Always build with `CGO_ENABLED=0 GOOS=linux GOARCH=amd64`
+- Verify: `file <binary>` should show "statically linked"
+
+### 11.6 Admin Token Rejected
+
+- Verify the token in the pod env: `k3s kubectl get deploy admin-service -n <ns> -o jsonpath="{.spec.template.spec.containers[0].env[?(@.name==\"ADMIN_TOKEN\")].value}"`
+- Test directly: `curl -H "Authorization: Bearer <token>" <domain>/api/v1/admin/users`
+
+### 11.7 Staging Returns 301 (Redirect)
+
+- This happens when the path doesn't match exactly (trailing slash mismatch)
+- Ensure ingress has both `/path` and `/path/` variants if needed
+- With domain-based routing, this should not happen since there's no path rewriting
+
+---
+
+## 12. File Locations
+
+### 12.1 On BLUE
+
+| Path | Purpose |
+|------|---------|
+| `/root/project/services/<service>/` | Go source for each microservice |
+| `/root/project/k8s/` | Kubernetes manifests |
+| `/root/project/k8s/api-gateway-staging.yaml` | Staging ingress (domain-based, no rewrite) |
+| `/root/project/k8s/frontend-ingress-staging.yaml` | Staging frontend ingress (domain-based) |
+| `/root/project/e2e/common.sh` | Bash e2e config (uses staging domain) |
+| `/root/project/e2e/customer-journeys.sh` | Customer journey e2e tests |
+| `/root/project/e2e/admin-ops.sh` | Admin ops e2e tests |
+| `/root/project/e2e/extra-e2e.sh` | Extra e2e tests |
+| `/root/project/tests/e2e-suite.js` | Node.js E2E test suite (1430 lines) |
+| `/root/project/tests/unit/` | Go unit tests |
+| `/root/project/tests/integration/` | Go integration tests |
+
+### 12.2 On RED
+
+| Path | Purpose |
+|------|---------|
+| `/etc/rancher/k3s/registries.yaml` | Registry mirror configuration |
+| `/etc/nginx/sites-available/pawradise-ssl` | Host nginx SSL config (domain routing + SSL) |
+| `/etc/nginx/sites-enabled/pawradise-ssl` | Symlink to above |
+| `/root/k8s/` | Synced copy of K8s manifests |
+| `/root/project/k8s/` | Project K8s manifests |
+| `/tmp/<service>-static` | Temporary binary copy location |
+| `/var/www/production/assets/` | Shared static assets (theme.css, alpine.js, etc.) |
+
+---
+
+## 13. Testing from BLUE
+
+All e2e tests must run from BLUE using the real staging domain. Tests should NOT run from RED or via IP.
+
+### 13.1 Bash E2E Suites
+
+```bash
+cd /root/project/e2e
+export ENV_NAME=staging
+bash customer-journeys.sh staging   # Customer journey tests
+bash admin-ops.sh staging             # Admin operations tests
+bash extra-e2e.sh staging             # Extra e2e tests
+```
+
+### 13.2 Node.js E2E Suite
+
+```bash
+cd /root/project/tests
+node e2e-suite.js
+```
+
+### 13.3 Go Unit Tests
+
+```bash
+cd /root/project/tests/unit
+go test ./... -v
+```
+
+### 13.4 Go Integration Tests
+
+```bash
+cd /root/project/tests/integration
+go test ./... -v
+```
+
+---
+
+## 14. Common Pitfalls
+
+1. **Testing via IP instead of domain**: `curl http://130.185.123.156:30758/api/v1/...` matches the first ingress (production). Always use the domain name: `curl -H "Host: server-ad5ae8ea-..." https://...` or test through the host nginx on port 443.
+
+2. **Using `rewrite-target` with domain-based routing**: This strips path prefixes and breaks routing. Domain-based ingresses should NOT use `rewrite-target` annotations.
+
+3. **Building without CGO_ENABLED=0**: Produces dynamically linked binaries that fail on Alpine. Always use `CGO_ENABLED=0 GOOS=linux GOARCH=amd64`.
+
+4. **Kubernetes caching old image layers**: When rebuilding Docker images, always use a new tag (v1, v2, v3...) to bust the cache. Building with the same tag may reuse cached layers.
+
+5. **Docker COPY using old binary**: The `COPY community-service-binary /server` in the Dockerfile copies whatever is in the build context at build time. If you update the source but forget to rebuild the binary before `docker build`, the old binary gets included. Always `go build` before `docker build`, or use a multi-stage Dockerfile that builds inside Docker.
+
+6. **Community-service route registration order**: Registering `GET /api/v1/profile` in both the public group and auth group causes a panic. Register it only once — in the auth group, and add a public wrapper if needed.

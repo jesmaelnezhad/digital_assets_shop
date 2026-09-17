@@ -1,0 +1,14 @@
+{
+  "name": "pawradise-e2e-tests",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node e2e-suite.js",
+    "test:e2e": "node e2e-suite.js",
+    "test:e2e:playwright": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pawradise — Product</title>
+    <meta name="description" content="Product detail">
+    <link rel="stylesheet" href="/assets/theme.css">
+    <script src="/env.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font-sans); background-color: var(--color-bg); color: var(--color-text); min-height: 100vh; display: flex; flex-direction: column; }
+        .header { background-color: var(--color-bg-elevated); border-bottom: 1px solid var(--color-border); padding: var(--space-sm) var(--space-lg); }
+        .header-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); }
+        .logo { font-family: var(--font-mono); font-size: 1.25rem; font-weight: bold; color: var(--color-accent-primary); text-decoration: none; }
+        .nav { display: flex; gap: var(--space-md); }
+        .nav a { color: var(--color-text); text-decoration: none; font-size: 0.9rem; padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); transition: color 0.15s ease; }
+        .nav a:hover, .nav a.active { color: var(--color-accent-primary); }
+        main { flex: 1; max-width: 1280px; margin: 0 auto; padding: var(--space-lg); width: 100%; }
+        .breadcrumb { font-family: var(--font-mono); font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: var(--space-md); }
+        .breadcrumb a { color: var(--color-text-muted); text-decoration: none; }
+        .breadcrumb a:hover { color: var(--color-accent-primary); }
+        .product-layout { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl); }
+        .gallery { background-color: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+        .gallery-main { width: 100%; aspect-ratio: 1; background: var(--color-bg); display: flex; align-items: center; justify-content: center; }
+        .gallery-main img { width: 100%; height: 100%; object-fit: cover; }
+        .gallery-thumbs { display: flex; gap: var(--space-xs); padding: var(--space-sm); overflow-x: auto; }
+        .gallery-thumbs img { width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius-sm); cursor: pointer; border: 2px solid transparent; }
+        .gallery-thumbs img.active { border-color: var(--color-accent-primary); }
+        .info h1 { font-family: var(--font-mono); font-size: 1.5rem; margin-bottom: var(--space-sm); }
+        .info .category { font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: var(--space-md); }
+        .info .description { line-height: 1.6; margin-bottom: var(--space-lg); }
+        .price-display { font-family: var(--font-mono); font-size: 2rem; color: var(--color-accent-primary); font-weight: 600; margin-bottom: var(--space-md); }
+        .tier-selector { margin-bottom: var(--space-md); }
+        .tier-selector label { display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: var(--space-xs); }
+        .tier-options { display: flex; flex-direction: column; gap: var(--space-sm); }
+        .tier-option { display: flex; justify-content: space-between; align-items: center; padding: var(--space-sm) var(--space-md); background-color: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer; transition: border-color 0.15s ease; }
+        .tier-option:hover, .tier-option.selected { border-color: var(--color-accent-primary); }
+        .tier-option .tier-name { font-family: var(--font-mono); font-size: 0.9rem; }
+        .tier-option .tier-price { font-family: var(--font-mono); color: var(--color-accent-primary); font-weight: 600; }
+        .pwyw-input { margin-bottom: var(--space-md); }
+        .pwyw-input label { display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: var(--space-xs); }
+        .pwyw-input input { width: 100%; padding: var(--space-sm) var(--space-md); background-color: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text); font-size: 1.1rem; font-family: var(--font-mono); }
+        .pwyw-input input:focus { outline: none; border-color: var(--color-accent-primary); box-shadow: var(--glow-focus); }
+        .pwyw-min { font-size: 0.8rem; color: var(--color-text-muted); margin-top: var(--space-xs); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: var(--space-sm) var(--space-md); font-size: 0.9rem; border: none; border-radius: var(--radius-sm); cursor: pointer; text-decoration: none; transition: all 0.15s ease; }
+        .btn-primary { background-color: var(--color-accent-primary); color: var(--color-bg); font-weight: 600; width: 100%; padding: var(--space-md); font-size: 1rem; }
+        .btn-primary:hover { box-shadow: var(--glow-hover); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { background-color: transparent; border: 1px solid var(--color-border); color: var(--color-text); }
+        .btn-secondary:hover { border-color: var(--color-accent-primary); color: var(--color-accent-primary); }
+        .actions { display: flex; gap: var(--space-sm); margin-bottom: var(--space-lg); }
+        .reviews-section { margin-top: var(--space-xl); border-top: 1px solid var(--color-border); padding-top: var(--space-lg); }
+        .reviews-section h2 { font-family: var(--font-mono); font-size: 1.25rem; margin-bottom: var(--space-md); }
+        .review-card { background-color: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); margin-bottom: var(--space-sm); }
+        .review-header { display: flex; justify-content: space-between; margin-bottom: var(--space-xs); }
+        .review-user { font-family: var(--font-mono); font-size: 0.85rem; }
+        .review-rating { color: var(--color-warning); }
+        .review-comment { font-size: 0.9rem; line-height: 1.5; }
+        .empty-state { text-align: center; padding: var(--space-xl); color: var(--color-text-muted); }
+        .footer { background-color: var(--color-bg-elevated); border-top: 1px solid var(--color-border); padding: var(--space-lg); text-align: center; color: var(--color-text-muted); font-size: 0.8rem; font-family: var(--font-mono); }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--color-border); border-top-color: var(--color-accent-primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .related-section { margin-top: var(--space-xl); }
+        .related-section h2 { font-family: var(--font-mono); font-size: 1.25rem; margin-bottom: var(--space-md); }
+        .related-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-md); }
+        .related-card { background-color: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+        .related-card img { width: 100%; height: 120px; object-fit: cover; }
+        .related-card .card-body { padding: var(--space-sm); }
+        .related-card .card-title { font-family: var(--font-mono); font-size: 0.85rem; }
+        .related-card .card-price { font-family: var(--font-mono); color: var(--color-accent-primary); font-size: 0.9rem; }
+        @media (max-width: 640px) { .product-layout { grid-template-columns: 1fr; } .nav { display: none; } }
+    </style>
+    <!-- CHROME_HEADER -->
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo">/pawradise</a>
+            <nav class="nav">
+                <a href="/">Shop</a>
+                <a href="/category">Categories</a>
+                <a href="/product/bundle.html">Bundles</a>
+                <a href="/product/request.html">Request</a>
+                <a href="/community">Community</a>
+                <a href="/account">Account</a>
+            </nav>
+        </div>
+    </header>
+
+    <main x-data="{
+        product: null,
+        reviews: [],
+        related: [],
+        selectedTier: null,
+        pwywPrice: '',
+        loading: true,
+        error: '',
+        notFound: false,
+        activeImage: 0,
+        get currentPrice() {
+            if (this.selectedTier) return this.selectedTier.price_usd;
+            if (this.product?.is_pwyw_enabled) {
+                const p = parseFloat(this.pwywPrice);
+                return isNaN(p) ? 0 : p;
+            }
+            return this.product?.price_usd || 0;
+        },
+        get canBuy() {
+            if (!this.product) return false;
+            if (this.product.is_pwyw_enabled) {
+                const p = parseFloat(this.pwywPrice);
+                return !isNaN(p) && p >= (this.product.pwyw_min_price || 0);
+            }
+            return true;
+        },
+        async load() {
+            this.loading = true;
+            this.error = '';
+            const slug = window.location.pathname.split('/').pop();
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/products/${slug}`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.status === 404) { this.notFound = true; return; }
+                if (!res.ok) throw new Error('Failed to load product');
+                this.product = await res.json();
+                if (this.product.tiers?.length > 0) {
+                    this.selectedTier = this.product.tiers[0];
+                }
+                this.loadReviews();
+                this.loadRelated();
+            } catch (e) {
+                this.error = e.message;
+            } finally {
+                this.loading = false;
+            }
+        },
+        async loadReviews() {
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/reviews/${this.product.id}?page=1&per_page=10`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    this.reviews = data.reviews || [];
+                }
+            } catch (e) {}
+        },
+        async loadRelated() {
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/recommendations/${this.product.id}`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    this.related = data.products || [];
+                }
+            } catch (e) {}
+        },
+        async addToCart() {
+            if (!this.canBuy) return;
+            try {
+                const body = { product_id: this.product.id, quantity: 1 };
+                if (this.selectedTier) body.tier_id = this.selectedTier.id;
+                if (this.product.is_pwyw_enabled) body.pwyw_price = parseFloat(this.pwywPrice);
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/cart/items`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (res.status === 401) {
+                    window.location.href = `/login?next=/product/${this.product.slug}`;
+                    return;
+                }
+                if (!res.ok) throw new Error('Failed to add to cart');
+                window.location.href = '/cart';
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+    }" x-init="load()">
+        
+        <div class="breadcrumb">
+            <a href="/">Shop</a> <template x-if="product?.category_name">/ <a href="#" x-text="product.category_name"></a></template>
+        </div>
+
+        <div x-show="loading" class="empty-state"><div class="spinner"></div><p style="margin-top:var(--space-sm)">Loading product...</p></div>
+        
+        <div x-show="notFound" class="empty-state">
+            <h2 style="font-family:var(--font-mono);margin-bottom:var(--space-sm)">Product Not Found</h2>
+            <p>The product you're looking for doesn't exist.</p>
+            <a href="/" class="btn btn-primary" style="margin-top:var(--space-md)">Browse Products</a>
+        </div>
+
+        <div x-show="error && !loading" class="empty-state">
+            <p x-text="error"></p>
+            <button class="btn btn-primary" @click="load()" style="margin-top:var(--space-sm)">Retry</button>
+        </div>
+
+        <div class="product-layout" x-show="product && !loading">
+            <div class="gallery">
+                <div class="gallery-main">
+                    <template x-if="product.images?.length > 0">
+                        <img :src="product.images[activeImage]?.url" :alt="product.title">
+                    </template>
+                    <template x-if="!product.images?.length">
+                        <span style="font-family:var(--font-mono);color:var(--color-text-muted)">No preview available</span>
+                    </template>
+                </div>
+                <div class="gallery-thumbs" x-show="product.images?.length > 1">
+                    <template x-for="(img, idx) in product.images" :key="idx">
+                        <img :src="img.url" :class="{ active: activeImage === idx }" @click="activeImage = idx">
+                    </template>
+                </div>
+            </div>
+
+            <div class="info">
+                <h1 x-text="product.title"></h1>
+                <p class="category" x-text="product.category_name || ''"></p>
+                <p class="description" x-text="product.description"></p>
+
+                <div class="price-display" x-show="!product.is_pwyw_enabled" x-text="'$' + currentPrice.toFixed(2)"></div>
+
+                <div class="tier-selector" x-show="product.tiers?.length > 0">
+                    <label>Select Tier</label>
+                    <div class="tier-options">
+                        <template x-for="tier in product.tiers" :key="tier.id">
+                            <div class="tier-option" :class="{ selected: selectedTier?.id === tier.id }" @click="selectedTier = tier">
+                                <span class="tier-name" x-text="tier.tier_name"></span>
+                                <span class="tier-price" x-text="'$' + tier.price_usd.toFixed(2)"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="pwyw-input" x-show="product.is_pwyw_enabled">
+                    <label>Pay What You Want</label>
+                    <input type="number" x-model="pwywPrice" :min="product.pwyw_min_price" step="0.01" :placeholder="'Min $' + product.pwyw_min_price">
+                    <p class="pwyw-min">Minimum: $<span x-text="product.pwyw_min_price"></span></p>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary" @click="addToCart()" :disabled="!canBuy">
+                        <span x-show="canBuy">Add to Cart</span>
+                        <span x-show="!canBuy && product.is_pwyw_enabled">Enter valid price</span>
+                    </button>
+                </div>
+
+                <div class="reviews-section" x-show="reviews.length > 0">
+                    <h2>Reviews (<span x-text="reviews.length"></span>)</h2>
+                    <template x-for="review in reviews" :key="review.id">
+                        <div class="review-card">
+                            <div class="review-header">
+                                <span class="review-user" x-text="review.user?.name || 'Anonymous'"></span>
+                                <span class="review-rating" x-text="'★'.repeat(review.rating) + '☆'.repeat(5 - review.rating)"></span>
+                            </div>
+                            <p class="review-comment" x-text="review.comment"></p>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="related-section" x-show="related.length > 0">
+                    <h2>Related Products</h2>
+                    <div class="related-grid">
+                        <template x-for="rp in related" :key="rp.id">
+                            <a :href="`/product/${rp.slug}`" style="text-decoration:none;color:inherit">
+                                <div class="related-card">
+                                    <img :src="rp.preview_image_url" :alt="rp.title" x-show="rp.preview_image_url">
+                                    <div class="card-body">
+                                        <div class="card-title" x-text="rp.title"></div>
+                                        <div class="card-price" x-text="'$' + rp.price_usd.toFixed(2)"></div>
+                                    </div>
+                                </div>
+                            </a>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">// pawradise.ir — digital assets marketplace</footer>
+
+    <script src="/assets/alpine.min.js" defer></script>
+    <script src="/assets/api.js"></script>
+    <!-- CHROME_FOOTER -->
+</body>
+</html>

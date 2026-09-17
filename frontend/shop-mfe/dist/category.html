@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pawradise — Category</title>
+    <meta name="description" content="Browse digital assets by category">
+    <link rel="stylesheet" href="/assets/theme.css">
+    <script src="/env.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: #0a0e14; color: #c7d0dc; min-height: 100vh; display: flex; flex-direction: column; }
+        .header { background-color: #10151d; border-bottom: 1px solid #1e2530; padding: 8px 32px; }
+        .header-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+        .logo { font-family: var(--font-mono); font-size: 1.25rem; font-weight: bold; color: #4dd6c9; text-decoration: none; }
+        .nav { display: flex; gap: 16px; }
+        .nav a { color: #c7d0dc; text-decoration: none; font-size: 0.9rem; padding: var(--space-xs) var(--space-sm); border-radius: 4px; transition: color 0.15s ease; }
+        .nav a:hover, .nav a.active { color: #4dd6c9; }
+        main { flex: 1; max-width: 1280px; margin: 0 auto; padding: var(--space-lg); width: 100%; }
+        .breadcrumb { font-family: var(--font-mono); font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: var(--space-md); }
+        .breadcrumb a { color: var(--color-text-muted); text-decoration: none; }
+        .breadcrumb a:hover { color: #4dd6c9; }
+        .search-bar { display: flex; gap: var(--space-sm); margin-bottom: var(--space-lg); flex-wrap: wrap; }
+        .search-bar input { flex: 1; min-width: 200px; padding: var(--space-sm) var(--space-md); background-color: #10151d; border: 1px solid var(--color-border); border-radius: 4px; color: #c7d0dc; font-size: 0.95rem; }
+        .search-bar input:focus { outline: none; border-color: #4dd6c9; box-shadow: var(--glow-focus); }
+        .search-bar select { padding: var(--space-sm) var(--space-md); background-color: #10151d; border: 1px solid var(--color-border); border-radius: 4px; color: #c7d0dc; font-size: 0.9rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+        .card { background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; transition: border-color 0.15s ease; }
+        .card:hover { border-color: #4dd6c9; }
+        .card-image { width: 100%; height: 180px; background: var(--color-bg); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); color: var(--color-text-muted); font-size: 0.8rem; }
+        .card-image img { width: 100%; height: 100%; object-fit: cover; }
+        .card-body { padding: var(--space-md); }
+        .card-title { font-family: var(--font-mono); font-size: 1rem; margin-bottom: var(--space-xs); }
+        .card-meta { font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: var(--space-sm); }
+        .card-price { font-family: var(--font-mono); font-size: 1.1rem; color: #4dd6c9; font-weight: 600; }
+        .empty-state { text-align: center; padding: var(--space-xl); color: var(--color-text-muted); }
+        .pagination { display: flex; justify-content: center; gap: var(--space-sm); margin-top: var(--space-lg); }
+        .pagination a, .pagination span { padding: var(--space-xs) var(--space-sm); border-radius: 4px; font-family: var(--font-mono); font-size: 0.85rem; }
+        .pagination a { color: #c7d0dc; text-decoration: none; }
+        .pagination a:hover { color: #4dd6c9; }
+        .pagination .current { background-color: #4dd6c9; color: var(--color-bg); font-weight: 600; }
+        .footer { background-color: #10151d; border-top: 1px solid var(--color-border); padding: var(--space-lg); text-align: center; color: var(--color-text-muted); font-size: 0.8rem; font-family: var(--font-mono); }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--color-border); border-top-color: #4dd6c9; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 640px) { .grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); } .nav { display: none; } }
+    </style>
+    <!-- CHROME_HEADER -->
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo">/pawradise</a>
+            <nav class="nav">
+                <a href="/">Shop</a>
+                <a href="/category">Categories</a>
+                <a href="/product/bundle.html">Bundles</a>
+                <a href="/product/request.html">Request</a>
+                <a href="/community">Community</a>
+                <a href="/account">Account</a>
+            </nav>
+        </div>
+    </header>
+
+    <main x-data="{
+        products: [],
+        total: 0,
+        page: 1,
+        perPage: 12,
+        categorySlug: '',
+        categoryName: '',
+        q: '',
+        sort: 'newest',
+        loading: true,
+        error: '',
+        totalPages() { return Math.max(1, Math.ceil(this.total / this.perPage)); },
+        async loadCategory() {
+            const slug = window.location.pathname.split('/').pop();
+            this.categorySlug = slug;
+            try {
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/categories`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const cat = (data.categories || []).find(c => c.slug === slug);
+                    this.categoryName = cat ? cat.name : slug;
+                }
+            } catch (e) {}
+        },
+        async load() {
+            this.loading = true;
+            this.error = '';
+            try {
+                const params = new URLSearchParams({
+                    page: this.page,
+                    per_page: this.perPage,
+                    category: this.categorySlug,
+                    q: this.q,
+                    sort: this.sort,
+                });
+                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/products?${params}`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!res.ok) throw new Error('Failed to load products');
+                const data = await res.json();
+                this.products = data.products || [];
+                this.total = data.total || 0;
+            } catch (e) {
+                this.error = e.message;
+            } finally {
+                this.loading = false;
+            }
+        },
+        applyFilters() { this.page = 1; this.load(); },
+        goToPage(p) { this.page = p; this.load(); window.scrollTo(0, 0); }
+    }" x-init="loadCategory(); load()">
+        
+        <div class="breadcrumb">
+            <a href="/">Shop</a> / <span x-text="categoryName"></span>
+        </div>
+
+        <h1 style="font-family:var(--font-mono);margin-bottom:var(--space-md)" x-text="categoryName"></h1>
+
+        <div class="search-bar">
+            <input type="text" x-model="q" @input.debounce.300ms="applyFilters()" placeholder="Search in category...">
+            <select x-model="sort" @change="applyFilters()">
+                <option value="newest">Newest</option>
+                <option value="price_asc">Price: Low to High</option>
+                <option value="price_desc">Price: High to Low</option>
+                <option value="popular">Most Popular</option>
+            </select>
+        </div>
+
+        <div x-show="loading" class="empty-state"><div class="spinner"></div><p style="margin-top:var(--space-sm)">Loading...</p></div>
+
+        <div x-show="!loading && !error && products.length === 0" class="empty-state">
+            <p>No products found in this category.</p>
+            <a href="/" class="btn btn-secondary" style="margin-top:var(--space-sm)">Browse All Products</a>
+        </div>
+
+        <div class="grid" x-show="!loading && !error && products.length > 0">
+            <template x-for="product in products" :key="product.id">
+                <div class="card">
+                    <a :href="`/product/${product.slug}`">
+                        <div class="card-image">
+                            <template x-if="product.preview_image_url"><img :src="product.preview_image_url" :alt="product.title"></template>
+                            <template x-if="!product.preview_image_url"><span x-text="product.title[0]"></span></template>
+                        </div>
+                    </a>
+                    <div class="card-body">
+                        <a :href="`/product/${product.slug}`" style="text-decoration:none;color:inherit">
+                            <h3 class="card-title" x-text="product.title"></h3>
+                        </a>
+                        <span class="card-price" x-text="'$' + (product.price_usd || 0).toFixed(2)"></span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <div class="pagination" x-show="!loading && !error && totalPages() > 1">
+            <template x-for="p in totalPages()" :key="p">
+                <template x-if="p === page"><span class="current" x-text="p"></span></template>
+                <template x-if="p !== page"><a href="#" @click.prevent="goToPage(p)" x-text="p"></a></template>
+            </template>
+        </div>
+    </main>
+
+    <footer class="footer">// pawradise.ir — digital assets marketplace</footer>
+
+    <script src="/assets/alpine.min.js" defer></script>
+    <script src="/assets/api.js"></script>
+    <!-- CHROME_FOOTER -->
+</body>
+</html>

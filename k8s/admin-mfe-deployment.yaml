@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: admin-mfe-config
+  namespace: pawradise
+data:
+  default.conf: |
+    server {
+      listen 80;
+      server_name _;
+      root /usr/share/nginx/html;
+      index index.html;
+
+      location / {
+        try_files $uri $uri/ /index.html;
+      }
+
+      location = /health {
+        return 200 "OK";
+        add_header Content-Type text/plain;
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-mfe
+  namespace: pawradise
+  labels:
+    app: admin-mfe
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-mfe
+  template:
+    metadata:
+      labels:
+        app: admin-mfe
+    spec:
+      containers:
+      - name: admin-mfe
+        image: registry.local/pawradise-admin-mfe:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/http.d
+          readOnly: true
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "64Mi"
+            cpu: "50m"
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: admin-mfe-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-mfe
+  namespace: pawradise
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: admin-mfe
+  type: ClusterIP
