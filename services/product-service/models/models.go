@@ -28,6 +28,7 @@ type Product struct {
 	IsPwyw             bool      `json:"is_pwyw"`
 	PwywMinPrice       float64   `json:"pwyw_min_price"`
 	PinnedAt           *time.Time `json:"pinned_at,omitempty"`
+	AverageRating      float64   `json:"average_rating"`
 	CreatedAt          time.Time `json:"created_at"`
 	UpdatedAt          time.Time `json:"updated_at"`
 	CategoryName       string    `json:"category_name,omitempty"`

@@ -37,7 +37,7 @@ func (h *Handlers) ListProducts(c *gin.Context) {
 	ratingFilter, _ := strconv.Atoi(c.Query("rating"))
 
 	// Build query dynamically
-	baseQuery := "SELECT id, title, slug, description, price_usd, status, category_id, image_url, stock_count, pinned, sort_order, views, downloads, purchase_count, is_pinned, stock_quantity, max_downloads_per_user, preview_images, download_window_hours, free_download, created_at, updated_at FROM products WHERE status='active'"
+	baseQuery := "SELECT id, title, slug, description, price_usd, status, category_id, image_url, stock_count, pinned, sort_order, views, downloads, purchase_count, is_pinned, stock_quantity, max_downloads_per_user, preview_images, download_window_hours, free_download, digital_formats, average_rating, created_at, updated_at FROM products WHERE status='active'"
 	countQuery := "SELECT count(*) FROM products WHERE status='active'"
 	var args []interface{}
 	var countArgs []interface{}
@@ -143,6 +143,7 @@ func (h *Handlers) ListProducts(c *gin.Context) {
 			&p.Views, &p.Downloads, &p.PurchaseCount, &p.IsPinned,
 			&p.StockQuantity, &p.MaxDownloadsPerUser, &p.PreviewImages,
 			&p.DownloadWindowHours, &p.FreeDownload,
+			&p.DigitalFormats, &p.AverageRating,
 			&p.CreatedAt, &p.UpdatedAt); err != nil {
 			continue
 		}

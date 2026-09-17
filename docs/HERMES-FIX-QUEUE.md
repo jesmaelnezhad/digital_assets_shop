@@ -28,20 +28,6 @@ HTTP 200 on HTML pages is not proof that an item is done.
 
 ---
 
-### FIX-007 — Product list honors `file_type` filter
-
-- **Surface:** product-service
-- **Spec:** §4.3 filter by file type
-- **Expected:** results only include products whose stored mime/extension matches `file_type`.
-- **Observed:** param unused. Add a real file-type field if missing rather than ignoring the param.
-
-### FIX-008 — Product list honors `rating` filter
-
-- **Surface:** product-service
-- **Spec:** §4.3 filter by rating
-- **Expected:** only products whose average rating is ≥ requested rating (or exact, if you document it). Unrated products are excluded when a rating filter is set.
-- **Observed:** param unused. Average may live in review-service — call it or maintain an aggregate without copying the reviews table.
-
 ### FIX-009 — Pagination `total` matches the filtered set
 
 - **Surface:** product-service
