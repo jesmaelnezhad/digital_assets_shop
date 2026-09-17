@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin-app/
+Disallow: /account-mfe/
+Disallow: /checkout-mfe/
+Sitemap: sitemap.xml

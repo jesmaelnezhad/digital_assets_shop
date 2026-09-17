@@ -46,6 +46,20 @@ func main() {
 
 	h := adminhandlers.NewAdminHandler(db, identityDB)
 
+	commerceDBName := os.Getenv("COMMERCE_DB_NAME")
+	if commerceDBName == "" {
+		commerceDBName = "appdb_commerce_staging"
+	}
+	commerceConnStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		host, dbPort, user, password, commerceDBName)
+	if commerceDB, err := sql.Open("postgres", commerceConnStr); err == nil {
+		if err := commerceDB.Ping(); err == nil {
+			h.UseCommerceDB(commerceDB)
+			log.Println("[admin] connected to commerce db")
+			defer commerceDB.Close()
+		}
+	}
+
 	r := gin.New()
 
 	r.Use(gin.Logger())
@@ -53,6 +67,9 @@ func main() {
 	r.Use(gin.Recovery())
 	r.Use(middleware.CORSMiddleware())
 	r.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok", "service": "admin-service"}) })
+
+	r.POST("/api/v1/product-requests", h.CreateProductRequest)
+	r.GET("/api/v1/product-requests", h.ListProductRequests)
 
 	// Admin-only routes
 	admin := r.Group("/api/v1")
@@ -82,6 +99,13 @@ func main() {
 		admin.GET("/admin/orders", h.ListAllOrders)
 		admin.GET("/admin/orders/:id", h.GetOrderDetail)
 		admin.PUT("/admin/orders/:id/status", h.UpdateOrderStatus)
+		admin.GET("/admin/guest-orders", h.ListGuestOrders)
+		admin.GET("/admin/guest-orders/:id", h.GetGuestOrder)
+
+		// Product requests
+		admin.GET("/admin/product-requests", h.ListProductRequests)
+		admin.PUT("/admin/product-requests/:id", h.UpdateProductRequest)
+		admin.GET("/admin/categories", h.ListAdminCategories)
 
 		// Community
 		admin.GET("/admin/community/posts", h.ListCommunityPosts)

@@ -1,150 +1,61 @@
 const { test, expect } = require('@playwright/test');
 
-const PROD = 'http://127.0.0.1';
-const STAGING = 'http://127.0.0.1/staging';
-const ADMIN_TOKEN = 'admin-secret-token-change-in-production';
+const STAGING = process.env.BASE_URL || 'https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir';
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'admin_secret_staging_2026';
 
-// Helper to get unique emails
 let counter = 0;
 function uniqueEmail() {
   counter++;
   return `e2e-${Date.now()}-${counter}@pawradise.ir`;
 }
 
-// ===== PRODUCTION TESTS =====
-
-test.describe('Production Environment', () => {
-  test('homepage loads', async ({ page }) => {
-    await page.goto(`${PROD}/`);
-    await expect(page.locator('h1')).toBeVisible();
+test.describe('Staging shop', () => {
+  test('homepage loads the catalog chrome', async ({ page }) => {
+    await page.goto(`${STAGING}/`);
+    await expect(page.locator('.brand')).toContainText('PAWRADISE');
+    await expect(page.locator('#grid, .hero')).toBeVisible();
   });
 
-  test('register flow works', async ({ page }) => {
-    await page.goto(`${PROD}/`);
-    
-    // Switch to register mode
-    await page.click('#switchLink');
-    await expect(page.locator('#formTitle')).toContainText('Create Account');
-    
+  test('register then login', async ({ page }) => {
     const email = uniqueEmail();
-    await page.fill('#name', 'E2E User');
-    await page.fill('#email', email);
-    await page.fill('#password', 'TestPass123');
-    await page.click('#submitBtn');
-    
-    await expect(page.locator('#profileView')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('#profileName')).toContainText('E2E User');
+    await page.goto(`${STAGING}/register`);
+    await page.fill('input[name="name"]', 'E2E User');
+    await page.fill('input[name="email"]', email);
+    await page.fill('input[name="password"]', 'TestPass123');
+    await page.click('button.btn-accent');
+    await page.waitForURL(/\/($|account|shop)?/, { timeout: 15000 });
+
+    await page.goto(`${STAGING}/login`);
+    await page.fill('input[name="email"]', email);
+    await page.fill('input[name="password"]', 'TestPass123');
+    await page.click('button.btn-accent');
+    await expect(page.locator('.header-nav')).toContainText(/Account|E2E/, { timeout: 10000 });
   });
 
-  test('login flow works', async ({ page }) => {
-    // First register a user
-    const email = uniqueEmail();
-    await page.goto(`${PROD}/`);
-    await page.click('#switchLink');
-    await page.fill('#name', 'Login Test');
-    await page.fill('#email', email);
-    await page.fill('#password', 'TestPass123');
-    await page.click('#submitBtn');
-    await expect(page.locator('#profileView')).toBeVisible({ timeout: 10000 });
-    
-    // Logout
-    await page.click('button:has-text("Logout")');
-    await expect(page.locator('#authForm')).toBeVisible();
-    
-    // Login
-    await page.fill('#email', email);
-    await page.fill('#password', 'TestPass123');
-    await page.click('#submitBtn');
-    await expect(page.locator('#profileView')).toBeVisible({ timeout: 10000 });
-  });
-
-  test('profile update works', async ({ page }) => {
-    const email = uniqueEmail();
-    await page.goto(`${PROD}/`);
-    await page.click('#switchLink');
-    await page.fill('#name', 'Profile Update');
-    await page.fill('#email', email);
-    await page.fill('#password', 'TestPass123');
-    await page.click('#submitBtn');
-    await expect(page.locator('#profileView')).toBeVisible({ timeout: 10000 });
-    
-    // Update profile
-    await page.fill('#profileNameInput', 'Updated Name');
-    await page.fill('#profileEmailInput', uniqueEmail());
-    await page.click('button:has-text("Update Profile")');
-    await expect(page.locator('#profileMessage')).toContainText('Profile updated successfully', { timeout: 5000 });
-  });
-
-  test('logout works', async ({ page }) => {
-    const email = uniqueEmail();
-    await page.goto(`${PROD}/`);
-    await page.click('#switchLink');
-    await page.fill('#name', 'Logout Test');
-    await page.fill('#email', email);
-    await page.fill('#password', 'TestPass123');
-    await page.click('#submitBtn');
-    await expect(page.locator('#profileView')).toBeVisible({ timeout: 10000 });
-    
-    await page.click('button:has-text("Logout")');
-    await expect(page.locator('#authForm')).toBeVisible();
-    await expect(page.locator('#profileView')).not.toBeVisible();
+  test('demo login nia', async ({ page }) => {
+    await page.goto(`${STAGING}/login`);
+    await page.fill('input[name="email"]', 'nia@example.com');
+    await page.fill('input[name="password"]', 'nia');
+    await page.click('button.btn-accent');
+    await expect(page.locator('.header-nav a[href="/account"], .header-nav a.is-on')).toBeVisible({ timeout: 10000 });
   });
 });
 
-test.describe('Staging Environment', () => {
-  test('staging homepage loads', async ({ page }) => {
-    await page.goto(`${STAGING}/`);
-    await expect(page.locator('h1')).toBeVisible();
+test.describe('Staging admin', () => {
+  test('admin unlocks with staging token', async ({ page }) => {
+    await page.goto(`${STAGING}/admin`);
+    await page.fill('input[name="token"]', ADMIN_TOKEN);
+    await page.click('#unlock button, form#unlock button');
+    await expect(page.locator('#desk')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#tabs')).toContainText('Products');
   });
 
-  test('staging register works', async ({ page }) => {
-    await page.goto(`${STAGING}/`);
-    await page.click('#switchLink');
-    const email = uniqueEmail();
-    await page.fill('#name', 'Staging E2E');
-    await page.fill('#email', email);
-    await page.fill('#password', 'StagingPass123');
-    await page.click('#submitBtn');
-    await expect(page.locator('#profileView')).toBeVisible({ timeout: 10000 });
-  });
-
-  test('staging environment badge shows correctly', async ({ page }) => {
-    await page.goto(`${STAGING}/`);
-    await expect(page.locator('#env')).toContainText('ENV: staging');
-  });
-});
-
-test.describe('Admin Panel - Production', () => {
-  test('admin login page loads', async ({ page }) => {
-    await page.goto(`${PROD}/admin`);
-    await expect(page.locator('#adminLogin')).toBeVisible();
-  });
-
-  test('admin login succeeds with correct token', async ({ page }) => {
-    await page.goto(`${PROD}/admin`);
-    await page.fill('#adminToken', ADMIN_TOKEN);
-    await page.click('#loginBtn');
-    await expect(page.locator('#adminPanel')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('table')).toBeVisible();
-  });
-
-  test('admin can view users', async ({ page }) => {
-    await page.goto(`${PROD}/admin`);
-    await page.fill('#adminToken', ADMIN_TOKEN);
-    await page.click('#loginBtn');
-    await expect(page.locator('#adminPanel')).toBeVisible({ timeout: 10000 });
-    
-    // At least the table should be visible
-    await expect(page.locator('table')).toBeVisible();
-  });
-
-  test('admin logout works', async ({ page }) => {
-    await page.goto(`${PROD}/admin`);
-    await page.fill('#adminToken', ADMIN_TOKEN);
-    await page.click('#loginBtn');
-    await expect(page.locator('#adminPanel')).toBeVisible({ timeout: 10000 });
-    
-    await page.click('button:has-text("Logout")');
-    await expect(page.locator('#adminLogin')).toBeVisible();
+  test('admin lock returns to gate', async ({ page }) => {
+    await page.goto(`${STAGING}/admin`);
+    await page.fill('input[name="token"]', ADMIN_TOKEN);
+    await page.click('form#unlock button');
+    await expect(page.locator('#desk')).toBeVisible({ timeout: 10000 });
+    await page.click('#lock');
+    await expect(page.locator('#unlock')).toBeVisible();
   });
 });

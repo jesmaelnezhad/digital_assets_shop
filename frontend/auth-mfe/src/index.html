@@ -1,12 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pawradise — Auth</title>
-    <meta http-equiv="refresh" content="0; url=/login">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Log in — Pawradise</title>
+    <script>window.SITE_PAGE="auth";</script>
+  <link rel="icon" href="/assets/favicon.svg" sizes="any" />
+  <link rel="stylesheet" href="/assets/theme.css" />
+  <script src="/env.js"></script>
 </head>
 <body>
-    <p>Redirecting to <a href="/login">login</a>...</p>
+  <header id="site-header"></header>
+  <form class="auth-card" id="form">
+    <div class="kicker">Identity</div>
+    <h1>Log in</h1>
+    <p style="color:var(--mute);margin-bottom:12px">Demo: nia@example.com / nia · leo@example.com / leo · maya@example.com / maya · owen@example.com / owen</p>
+    <label class="field-col">Email <input name="email" type="email" required /></label>
+    <label class="field-col">Password <input name="password" type="password" required /></label>
+    <p class="form-error"></p>
+    <button class="btn btn-accent" style="width:100%">Log in</button>
+    <p style="margin-top:14px"><a id="reg" href="/register">Create an account</a></p>
+  </form>
+  <footer id="site-footer"></footer>
+    <script src="/assets/api.js"></script>
+  <script src="/assets/ui.js"></script>
+  <script src="/assets/chrome.js"></script>
+  <script>
+    const next = new URLSearchParams(location.search).get("next");
+    if (next) document.getElementById("reg").href = "register.html?next=" + encodeURIComponent(next);
+    document.getElementById("form").onsubmit = async (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      try {
+        await Pawradise.api.auth.login(f.get("email"), f.get("password"));
+        location.href = PawUI.safeNext(next);
+      } catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
+    };
+  </script>
 </body>
 </html>

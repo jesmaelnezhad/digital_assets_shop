@@ -103,3 +103,26 @@ ADMIN_TOKEN=<production-admin-token>
 
 - **Type**: JWT (HS256)
 - **Claims**: `{ user_id: int, email: string, role: string, exp: int }`
+
+---
+
+## Prototype-aligned extras (staging)
+
+These routes exist so the live MFEs match `frontend/prototype`:
+
+| Method | Path | Service |
+|---|---|---|
+| GET | `/products?search=&category=&sort=&file_type=&price_min=&price_max=` | product |
+| GET | `/products/:id/tiers` | product |
+| PUT/DELETE | `/categories/:id` | product (admin) |
+| GET | `/categories?all=1` | product (includes inactive + `product_count`) |
+| POST | `/products/:id/pin` and `/unpin` | product (admin) — shop catalog pin |
+| POST/GET | `/product-requests` | admin |
+| GET/PUT | `/admin/product-requests` | admin |
+| GET | `/admin/guest-orders` | admin (reads commerce_db when connected) |
+| PUT | `/cart/items/:id` | commerce |
+| POST | `/wishlist/toggle` body `{product_id}` | commerce |
+| GET | `/community/users`, `/followers`, `/following`, `/suggestions` | community |
+| GET | `/settings/:key` | payment (public) |
+
+Demo buyers on staging: `nia@example.com` / `nia`, `leo@example.com` / `leo`, `maya@example.com` / `maya`, `owen@example.com` / `owen`. Coupons: `SAVE12`, `WELCOME`, `MARBLE`.

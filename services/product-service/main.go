@@ -43,11 +43,14 @@ func main() {
 
 	// Public
 	r.GET("/api/v1/products", h.ListProducts)
+	r.GET("/api/v1/products/:slug/tiers", h.GetProductTiers)
 	r.GET("/api/v1/products/:slug", h.GetProduct)
 	r.GET("/api/v1/categories", h.ListCategories)
 	r.GET("/api/v1/bundles", h.ListBundles)
 	r.GET("/api/v1/bundles/:id", h.GetBundle)
 	r.GET("/api/v1/recommendations/:productId", h.GetRecommendations)
+	r.POST("/api/v1/product-requests", h.CreateProductRequest)
+	r.GET("/api/v1/product-requests", h.ListProductRequests)
 
 	// Admin
 	admin := r.Group("/api/v1")
@@ -60,13 +63,19 @@ func main() {
 		admin.DELETE("/products/:id/images/:imageId", h.DeleteProductImage)
 		admin.POST("/products/:id/previews", h.GeneratePreviews)
 		admin.POST("/products/:id/pin", h.PinProduct)
+		admin.POST("/products/:id/unpin", h.UnpinProduct)
+		admin.DELETE("/products/:id/pin", h.UnpinProduct)
 		admin.POST("/products/:id/tiers", h.AddProductTier)
 		admin.PUT("/products/:id/tiers/:tierId", h.UpdateProductTier)
 		admin.DELETE("/products/:id/tiers/:tierId", h.DeleteProductTier)
 		admin.POST("/categories", h.CreateCategory)
+		admin.PUT("/categories/:id", h.UpdateCategory)
+		admin.DELETE("/categories/:id", h.DeleteCategory)
 		admin.POST("/bundles", h.CreateBundle)
 		admin.PUT("/bundles/:id", h.UpdateBundle)
 		admin.DELETE("/bundles/:id", h.DeleteBundle)
+		admin.GET("/admin/product-requests", h.ListProductRequests)
+		admin.PUT("/admin/product-requests/:id", h.UpdateProductRequest)
 	}
 
 	log.Printf("[product-service] starting on :%s", port)

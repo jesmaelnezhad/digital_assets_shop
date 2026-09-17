@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Recently viewed — Pawradise</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="account"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page" id="root"></main>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    async function render() {
+      const root = document.getElementById("root");
+      try {
+        await PawUI.catalog.load();
+        const res = await Pawradise.api.recentlyViewed.list();
+        const products = (res.products || []).map((x) => PawUI.catalog.byId[x.product_id]).filter(Boolean);
+        root.innerHTML = PawUI.accountNav("recent") + `<div class="kicker">Account</div><h1 class="page-title">Recently viewed</h1>
+          ${products.length ? `<div class="grid">${products.map((p) => PawUI.card(p)).join("")}</div>` : '<p class="note">Open a product while logged in to record it.</p>'}`;
+        if (products.length) PawUI.bindCards(root.querySelector(".grid"));
+      } catch (e) {
+        root.innerHTML = e.status === 401
+          ? PawUI.authGate("Log in to see recently viewed.")
+          : `<p class="note">${PawUI.esc(e.message)}</p>`;
+      }
+    }
+    render();
+  </script>
+</body>
+</html>

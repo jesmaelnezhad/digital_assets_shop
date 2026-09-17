@@ -63,6 +63,21 @@ func (h *PaymentHandler) DeleteExchangeRate(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "rate deleted"})
 }
 
+func (h *PaymentHandler) GetSetting(c *gin.Context) {
+	key := c.Param("key")
+	if key == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "key required"})
+		return
+	}
+	var value string
+	err := h.db.QueryRow("SELECT value FROM settings WHERE key = $1", key).Scan(&value)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"key": key, "value": value})
+}
+
 func (h *PaymentHandler) GetSettings(c *gin.Context) {
 	rows, err := h.db.Query("SELECT key, value, updated_at FROM settings ORDER BY key")
 	if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"}); return }

@@ -411,7 +411,7 @@ Cross-service consistency is via HTTP or events (`services/shared/events`), not 
 
 ### 5.3 Frontend modules (microfrontends)
 
-Static HTML + Alpine.js per MFE under `frontend/`. Shared chrome lives in `shared/chrome/` but each MFE currently inlines its own header. Target page URLs remain those in §3.
+Static HTML + vanilla JS per MFE under `frontend/`. Shared chrome, theme, and API client live in `shared/`. Target page URLs remain those in §3.
 
 | MFE | Directory | Routes (implemented prefix) |
 |-----|-----------|-------------------------------|

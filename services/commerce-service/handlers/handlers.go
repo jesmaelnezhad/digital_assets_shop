@@ -250,7 +250,8 @@ func (h *CommerceHandler) GetOrder(c *gin.Context) {
 		return
 	}
 	if paidAt.Valid { o.PaidAt = &paidAt.Time }
-	c.JSON(http.StatusOK, gin.H{"order": o})
+	items := h.orderItems(id)
+	c.JSON(http.StatusOK, gin.H{"order": o, "items": items})
 }
 
 func (h *CommerceHandler) GetOrderPayment(c *gin.Context) {
@@ -376,8 +377,11 @@ func (h *CommerceHandler) ToggleWishlist(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	idStr := c.Param("id")
-	productID, _ := strconv.Atoi(idStr)
+	productID := productIDFromRequest(c)
+	if productID < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "product_id required"})
+		return
+	}
 	var existing int
 	h.db.QueryRow("SELECT 1 FROM wishlist_items WHERE user_id = $1 AND product_id = $2", userID, productID).Scan(&existing)
 	if existing == 1 {
@@ -395,8 +399,11 @@ func (h *CommerceHandler) RecordView(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	idStr := c.Param("id")
-	productID, _ := strconv.Atoi(idStr)
+	productID := productIDFromRequest(c)
+	if productID < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "product_id required"})
+		return
+	}
 	h.db.Exec("INSERT INTO recently_viewed (user_id, product_id) VALUES ($1, $2)", userID, productID)
 	c.JSON(http.StatusOK, gin.H{"message": "view recorded"})
 }
@@ -433,8 +440,11 @@ func (h *CommerceHandler) ToggleCompare(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	idStr := c.Param("id")
-	productID, _ := strconv.Atoi(idStr)
+	productID := productIDFromRequest(c)
+	if productID < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "product_id required"})
+		return
+	}
 	var existing int
 	h.db.QueryRow("SELECT 1 FROM product_comparisons WHERE user_id = $1 AND product_id = $2", userID, productID).Scan(&existing)
 	if existing == 1 {

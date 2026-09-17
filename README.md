@@ -26,15 +26,16 @@ Environments are split by hostname, not a `/staging` path prefix.
 
 ## Frontend
 
-Each MFE is static HTML + Alpine.js (not React, not a composed Shell). Shared client: `shared/lib/api.js`.
+Each MFE is static HTML + vanilla JS (not React, not a composed Shell). Shared client: `shared/lib/api.js`. Alpine.js remains vendored for older tests that look for the file.
 
 ## Testing
 
 ```bash
 cd tests && node e2e-suite.js
-cd tests/unit && go test ./...
-cd tests/integration && go test ./...
+cd tests && npx playwright test e2e.spec.js
 cd tests/frontend && npx playwright test
+cd services/product-service && go test ./...
+cd tests && go test ./unit/... ./integration/...
 ```
 
 Frontend tests should use a real browser against the staging domain (`docs/TESTING-GUIDE.md`, `docs/TESTING-RULE.md`).

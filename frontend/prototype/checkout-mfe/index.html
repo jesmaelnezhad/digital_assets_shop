@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checkout — Pawradise</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="cart"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page" id="root"></main>
+  <div class="modal" id="modal"><div class="modal-card" id="modal-card"></div></div>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    const api = Pawradise.api;
+    let coupon = null;
+    async function render() {
+      const root = document.getElementById("root");
+      let user = null;
+      try { user = await api.auth.getProfile(); } catch (e) {}
+      await PawUI.catalog.load();
+      let items = [];
+      try {
+        items = ((await api.cart.get()).items || []).map((i) => {
+          const p = PawUI.catalog.byId[i.product_id];
+          return Object.assign({}, i, { product: p, unit: p ? p.price_usd : 0 });
+        });
+      } catch (e) {
+        if (!user) {
+          root.innerHTML = PawUI.authGate("Log in to check out, or register first. Demo: nia@example.com / nia");
+          return;
+        }
+      }
+      if (!items.length) { root.innerHTML = '<p class="note">Nothing to check out.</p>'; return; }
+      const sub = items.reduce((n, i) => n + i.unit * i.quantity, 0);
+      const discount = PawUI.couponOff(coupon, sub);
+      const total = Math.max(0, sub - discount);
+      root.innerHTML = `<div class="split">
+        <div>
+          <div class="kicker">Commerce</div>
+          <h1 class="page-title">Checkout</h1>
+          <table class="table">${items.map((i) => `<tr><td>${PawUI.esc((i.product&&i.product.title)||("#"+i.product_id))}</td><td>${i.quantity}</td><td>${PawUI.money(i.unit * i.quantity)}</td></tr>`).join("")}</table>
+          <form id="coupon" class="field-col">Coupon
+            <input name="code" placeholder="SAVE12 · WELCOME · MARBLE" value="${coupon && coupon.code || ""}" />
+            <button class="btn">Apply</button>
+            <p class="form-error"></p>
+          </form>
+          ${user ? "" : `<label class="field-col">Guest email <input id="email" type="email" required /></label>`}
+        </div>
+        <aside class="buy">
+          <div>Subtotal ${PawUI.money(sub)}</div>
+          <div>Discount ${PawUI.money(discount)}</div>
+          <div class="price">Total ${PawUI.money(total)}</div>
+          <button class="btn btn-accent" id="pay">Pay</button>
+          <p style="margin-top:12px;color:var(--mute);font-size:12px">BSC address from create-order (or settings for guests).</p>
+        </aside>
+      </div>`;
+      document.getElementById("coupon").onsubmit = async (e) => {
+        e.preventDefault();
+        const code = new FormData(e.target).get("code");
+        try {
+          coupon = await api.coupons.validate(code, sub);
+          coupon.code = code;
+          render();
+        } catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
+      };
+      document.getElementById("pay").onclick = async () => {
+        try {
+          let created, address, totalUsd, chain;
+          if (user) {
+            created = await api.orders.create({ coupon_code: coupon && coupon.valid ? coupon.code : undefined });
+            address = created.payment_address;
+            totalUsd = created.total_usd;
+            chain = created.crypto_chain;
+          } else {
+            const email = document.getElementById("email").value;
+            created = await api.orders.createGuestOrder(email, []);
+            const guest = await api.orders.getGuestOrder(created.id, email);
+            const setting = await api.settings.get("payment_address").catch(() => ({ value: "" }));
+            address = setting.value;
+            totalUsd = guest.total_usd;
+            chain = "BSC";
+          }
+          const id = created.order ? created.order.id : created.id;
+          const modal = document.getElementById("modal");
+          document.getElementById("modal-card").innerHTML = `
+            <h2>Send payment</h2>
+            <p class="mono">${PawUI.esc(address || "")}</p>
+            <p>${PawUI.money(totalUsd)} · ${chain || "BSC"} · memo ${id}</p>
+            <button class="btn btn-accent" id="confirm">I've paid</button>`;
+          modal.classList.add("open");
+          document.getElementById("confirm").onclick = async () => {
+            if (user) await api.orders.confirm(id);
+            modal.classList.remove("open");
+            location.href = user ? "../account-mfe/account.html" : "../shop-mfe/index.html";
+          };
+        } catch (ex) { PawUI.toast(ex.message); }
+      };
+    }
+    render();
+  </script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cart — Pawradise</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="cart"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page" id="root"></main>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    async function render() {
+      const root = document.getElementById("root");
+      try {
+        await PawUI.catalog.load();
+        const cart = await Pawradise.api.cart.get();
+        const items = (cart.items || []).map((i) => {
+          const p = PawUI.catalog.byId[i.product_id];
+          return Object.assign({}, i, { product: p, unit: p ? p.price_usd : 0 });
+        });
+        if (!items.length) {
+          root.innerHTML = PawUI.accountNav("cart") + '<p class="note">Cart is empty. <a href="../shop-mfe/index.html">Browse</a></p>';
+          return;
+        }
+        const sub = items.reduce((n, i) => n + i.unit * (i.quantity || 1), 0);
+        root.innerHTML = PawUI.accountNav("cart") + `<div class="kicker">Account</div><h1 class="page-title">Cart</h1>
+          <table class="table"><thead><tr><th>Asset</th><th>Qty</th><th>Line</th><th></th></tr></thead>
+          <tbody>${items.map((i) => `<tr>
+            <td>${PawUI.esc((i.product && i.product.title) || ("#"+i.product_id))}</td>
+            <td><input class="qty" type="number" min="1" value="${i.quantity}" data-qty="${i.id}" /></td>
+            <td class="price">${PawUI.money(i.unit * i.quantity)}</td>
+            <td><button class="btn" data-rm="${i.id}">Remove</button></td>
+          </tr>`).join("")}</tbody></table>
+          <p style="margin:20px 0;text-align:right" class="price">Subtotal ${PawUI.money(sub)}</p>
+          <a class="btn btn-accent" href="../checkout-mfe/index.html">Checkout</a>`;
+        root.querySelectorAll("[data-rm]").forEach((b) => b.onclick = async () => { await Pawradise.api.cart.remove(b.dataset.rm); PawChrome.mount(); render(); });
+        root.querySelectorAll("[data-qty]").forEach((inp) => inp.onchange = async () => {
+          try { await Pawradise.api.cart.setQty(inp.dataset.qty, Number(inp.value)); PawChrome.mount(); render(); }
+          catch (e) { PawUI.toast(e.message); }
+        });
+      } catch (e) {
+        root.innerHTML = e.status === 401
+          ? PawUI.authGate("Log in to use a cart.")
+          : `<p class="note">${PawUI.esc(e.message)}</p>`;
+      }
+    }
+    render();
+  </script>
+</body>
+</html>

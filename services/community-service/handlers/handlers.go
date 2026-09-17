@@ -28,18 +28,40 @@ func (h *CommunityHandler) GetFeed(c *gin.Context) {
 	if perPage < 1 || perPage > 50 { perPage = 20 }
 	offset := (page - 1) * perPage
 	filter := c.DefaultQuery("filter", "recent")
+	profileUser := c.Query("user_id")
 
 	var rows *sql.Rows
 	var err error
+	var total int
 
 	userID, _ := middleware.GetUserIDFromContext(c)
 
-	if filter == "following" && userID > 0 {
+	if profileUser != "" {
+		uid, _ := strconv.Atoi(profileUser)
+		h.db.QueryRow("SELECT COUNT(*) FROM community_posts WHERE user_id = $1", uid).Scan(&total)
 		rows, err = h.db.Query(
 			`SELECT cp.id, cp.user_id, cp.content, cp.community_type, cp.is_public, cp.is_pinned,
 			cp.like_count, cp.comment_count, cp.created_at, cp.updated_at,
 			COALESCE(u.email, ''), COALESCE(u.name, ''), COALESCE(up.display_name, ''), COALESCE(up.avatar_url, ''),
-			(SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = cp.user_id)) as following
+			(SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = cp.user_id)) as following,
+			(SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = cp.user_id AND following_id = $1)) as follows_you,
+			(SELECT EXISTS(SELECT 1 FROM post_likes WHERE user_id = $1 AND post_id = cp.id)) as liked
+			FROM community_posts cp
+			LEFT JOIN users u ON cp.user_id = u.id
+			LEFT JOIN user_profiles up ON cp.user_id = up.user_id
+			WHERE cp.user_id = $2
+			ORDER BY cp.created_at DESC LIMIT $3 OFFSET $4`,
+			userID, uid, perPage, offset,
+		)
+	} else if filter == "following" && userID > 0 {
+		h.db.QueryRow("SELECT COUNT(*) FROM community_posts WHERE user_id IN (SELECT following_id FROM follows WHERE follower_id = $1)", userID).Scan(&total)
+		rows, err = h.db.Query(
+			`SELECT cp.id, cp.user_id, cp.content, cp.community_type, cp.is_public, cp.is_pinned,
+			cp.like_count, cp.comment_count, cp.created_at, cp.updated_at,
+			COALESCE(u.email, ''), COALESCE(u.name, ''), COALESCE(up.display_name, ''), COALESCE(up.avatar_url, ''),
+			(SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = cp.user_id)) as following,
+			(SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = cp.user_id AND following_id = $1)) as follows_you,
+			(SELECT EXISTS(SELECT 1 FROM post_likes WHERE user_id = $1 AND post_id = cp.id)) as liked
 			FROM community_posts cp
 			LEFT JOIN users u ON cp.user_id = u.id
 			LEFT JOIN user_profiles up ON cp.user_id = up.user_id
@@ -48,18 +70,35 @@ func (h *CommunityHandler) GetFeed(c *gin.Context) {
 			userID, perPage, offset,
 		)
 	} else {
-		rows, err = h.db.Query(
-			`SELECT cp.id, cp.user_id, cp.content, cp.community_type, cp.is_public, cp.is_pinned,
-			cp.like_count, cp.comment_count, cp.created_at, cp.updated_at,
-			COALESCE(u.email, ''), COALESCE(u.name, ''), COALESCE(up.display_name, ''), COALESCE(up.avatar_url, ''),
-			(SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = cp.user_id)) as following
-			FROM community_posts cp
-			LEFT JOIN users u ON cp.user_id = u.id
-			LEFT JOIN user_profiles up ON cp.user_id = up.user_id
-			WHERE cp.is_public = true
-			ORDER BY cp.created_at DESC LIMIT $2 OFFSET $3`,
-			userID, perPage, offset,
-		)
+		if filter == "following" {
+			total = 0
+			rows, err = h.db.Query(
+				`SELECT cp.id, cp.user_id, cp.content, cp.community_type, cp.is_public, cp.is_pinned,
+				cp.like_count, cp.comment_count, cp.created_at, cp.updated_at,
+				COALESCE(u.email, ''), COALESCE(u.name, ''), COALESCE(up.display_name, ''), COALESCE(up.avatar_url, ''),
+				false, false, false
+				FROM community_posts cp
+				LEFT JOIN users u ON cp.user_id = u.id
+				LEFT JOIN user_profiles up ON cp.user_id = up.user_id
+				WHERE false
+				LIMIT 0`)
+		} else {
+			h.db.QueryRow("SELECT COUNT(*) FROM community_posts WHERE is_public = true").Scan(&total)
+			rows, err = h.db.Query(
+				`SELECT cp.id, cp.user_id, cp.content, cp.community_type, cp.is_public, cp.is_pinned,
+				cp.like_count, cp.comment_count, cp.created_at, cp.updated_at,
+				COALESCE(u.email, ''), COALESCE(u.name, ''), COALESCE(up.display_name, ''), COALESCE(up.avatar_url, ''),
+				(SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = cp.user_id)) as following,
+				(SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = cp.user_id AND following_id = $1)) as follows_you,
+				(SELECT EXISTS(SELECT 1 FROM post_likes WHERE user_id = $1 AND post_id = cp.id)) as liked
+				FROM community_posts cp
+				LEFT JOIN users u ON cp.user_id = u.id
+				LEFT JOIN user_profiles up ON cp.user_id = up.user_id
+				WHERE cp.is_public = true
+				ORDER BY cp.created_at DESC LIMIT $2 OFFSET $3`,
+				userID, perPage, offset,
+			)
+		}
 	}
 
 	if err != nil {
@@ -80,33 +119,38 @@ func (h *CommunityHandler) GetFeed(c *gin.Context) {
 		CreatedAt   string `json:"created_at"`
 		UpdatedAt   string `json:"updated_at"`
 		Author      struct {
-			ID       int    `json:"id"`
-			Email    string `json:"email"`
-			Name     string `json:"name"`
-			Display  string `json:"display_name"`
-			Avatar   string `json:"avatar_url"`
-			Following bool  `json:"following"`
+			ID        int    `json:"id"`
+			Email     string `json:"email"`
+			Name      string `json:"name"`
+			Display   string `json:"display_name"`
+			Avatar    string `json:"avatar_url"`
+			Following bool   `json:"following"`
+			FollowsYou bool  `json:"follows_you"`
 		} `json:"author"`
+		Liked bool `json:"liked"`
 	}
 	var posts []postWithAuthor
 	for rows.Next() {
 		var p postWithAuthor
 		var createdAt, updatedAt sql.NullTime
 		var avatar, display sql.NullString
-		var following int
+		var following, followsYou, liked bool
 		if err := rows.Scan(&p.ID, &p.UserID, &p.Content, &p.Type, &p.IsPublic, &p.IsPinned,
 			&p.LikeCount, &p.CommentCount, &createdAt, &updatedAt,
-			&p.Author.Email, &p.Author.Name, &display, &avatar, &following); err != nil { continue }
+			&p.Author.Email, &p.Author.Name, &display, &avatar, &following, &followsYou, &liked); err != nil { continue }
 		if createdAt.Valid { p.CreatedAt = createdAt.Time.Format(time.RFC3339) }
 		if updatedAt.Valid { p.UpdatedAt = updatedAt.Time.Format(time.RFC3339) }
 		if avatar.Valid { p.Author.Avatar = avatar.String }
 		if display.Valid { p.Author.Display = display.String }
-		p.Author.Following = following == 1
+		p.Author.Following = following
+		p.Author.FollowsYou = followsYou
+		p.Liked = liked
+		p.Author.ID = p.UserID
 		posts = append(posts, p)
 	}
 	if posts == nil { posts = []postWithAuthor{} }
 
-	c.JSON(http.StatusOK, gin.H{"posts": posts, "total": len(posts), "page": page, "per_page": perPage})
+	c.JSON(http.StatusOK, gin.H{"posts": posts, "total": total, "page": page, "per_page": perPage})
 }
 
 func (h *CommunityHandler) CreatePost(c *gin.Context) {
@@ -571,22 +615,40 @@ func (h *CommunityHandler) GetPublicProfile(c *gin.Context) {
 	var avatar, bio sql.NullString
 	h.db.QueryRow("SELECT avatar_url, bio FROM user_profiles WHERE user_id = $1", userID).Scan(&avatar, &bio)
 	if avatar.Valid { u.AvatarURL = avatar.String }
+	bioStr := ""
+	if bio.Valid { bioStr = bio.String }
 
 	var postCount, followerCount, followingCount int
 	h.db.QueryRow("SELECT COUNT(*) FROM community_posts WHERE user_id = $1", userID).Scan(&postCount)
 	h.db.QueryRow("SELECT COUNT(*) FROM follows WHERE following_id = $1", userID).Scan(&followerCount)
 	h.db.QueryRow("SELECT COUNT(*) FROM follows WHERE follower_id = $1", userID).Scan(&followingCount)
 
+	viewer, _ := middleware.GetUserIDFromContext(c)
+	following, followsYou, isSelf := false, false, false
+	if viewer > 0 {
+		var n int
+		h.db.QueryRow("SELECT 1 FROM follows WHERE follower_id=$1 AND following_id=$2", viewer, userID).Scan(&n)
+		following = n == 1
+		n = 0
+		h.db.QueryRow("SELECT 1 FROM follows WHERE follower_id=$1 AND following_id=$2", userID, viewer).Scan(&n)
+		followsYou = n == 1
+		isSelf = viewer == userID
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"id":             u.ID,
-		"email":         u.Email,
-		"name":          u.Name,
-		"avatar_url":    u.AvatarURL,
-		"post_count":    postCount,
-		"follower_count": followerCount,
+		"id":              u.ID,
+		"email":           u.Email,
+		"name":            u.Name,
+		"avatar_url":      u.AvatarURL,
+		"bio":             bioStr,
+		"post_count":      postCount,
+		"follower_count":  followerCount,
 		"following_count": followingCount,
-		"created_at":    u.CreatedAt,
-		"updated_at":    u.UpdatedAt,
+		"following":       following,
+		"follows_you":     followsYou,
+		"is_self":         isSelf,
+		"created_at":      u.CreatedAt,
+		"updated_at":      u.UpdatedAt,
 	})
 }
 

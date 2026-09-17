@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pawradise — Shop</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="shop"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <section class="hero" id="hero"></section>
+  <div class="catalog">
+    <aside class="rail" id="rail"></aside>
+    <div>
+      <div class="toolbar">
+        <select id="sort">
+          <option value="newest">Newest</option>
+          <option value="popular">Popular</option>
+          <option value="price_asc">Price · low</option>
+          <option value="price_desc">Price · high</option>
+        </select>
+        <select id="rating">
+          <option value="">Any rating</option>
+          <option value="4">4★ and up</option>
+          <option value="4.5">4.5★ and up</option>
+        </select>
+        <select id="file_type"><option value="">Any file type</option></select>
+        <span class="price-range">
+          <input id="price_min" type="number" min="0" placeholder="Min $" />
+          <span>–</span>
+          <input id="price_max" type="number" min="0" placeholder="Max $" />
+        </span>
+        <span class="result-count" id="count"></span>
+      </div>
+      <div class="grid" id="grid"></div>
+      <div class="pager" id="pager"></div>
+    </div>
+  </div>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const state = {
+      search: params.get("search") || "",
+      category: params.get("category") || "",
+      sort: params.get("sort") || "newest",
+      rating: params.get("rating") || "",
+      file_type: params.get("file_type") || "",
+      price_min: params.get("price_min") || "",
+      price_max: params.get("price_max") || "",
+      page: Number(params.get("page") || 1)
+    };
+    document.getElementById("sort").value = state.sort;
+    document.getElementById("rating").value = state.rating;
+    document.getElementById("price_min").value = state.price_min;
+    document.getElementById("price_max").value = state.price_max;
+    const api = Pawradise.api;
+
+    async function renderHero() {
+      await PawUI.catalog.load();
+      const list = await api.products.list({ sort: "newest", per_page: 12 });
+      const raw = (list.products || []).find((x) => x.is_pinned || x.pinned) || (list.products || [])[0];
+      const p = PawUI.catalog.decorate(raw);
+      if (!p) return;
+      document.getElementById("hero").innerHTML = `
+        <img src="${PawUI.img(p)}" alt="" />
+        <div class="hero-veil"></div>
+        <div class="hero-copy">
+          <div class="kicker">Pinned · ${PawUI.esc(p.category_name || "")}</div>
+          <h1>${PawUI.esc(p.title)}</h1>
+          <p>${PawUI.esc(p.description)}</p>
+          <div class="hero-meta">
+            <span class="price">${PawUI.money(p.price_usd)}</span>
+            <span>${PawUI.esc(p.digital_formats || "")}</span>
+          </div>
+          <a class="btn btn-accent" href="${PawUI.productUrl(p.slug)}">View asset</a>
+        </div>`;
+    }
+
+    async function render() {
+      await PawUI.catalog.load();
+      const categories = PawUI.catalog.cats;
+      document.getElementById("rail").innerHTML = `<h2>Library</h2>
+        <button class="cat ${state.category ? "" : "is-on"}" data-cat="">All assets</button>` +
+        categories.map((c) => `<button class="cat ${state.category === c.slug ? "is-on" : ""}" data-cat="${PawUI.esc(c.slug)}">${PawUI.esc(c.name)}</button>`).join("");
+      const types = [...new Set(PawUI.catalog.products.map((p) => p.digital_formats).filter(Boolean))];
+      const ft = document.getElementById("file_type");
+      ft.innerHTML = `<option value="">Any file type</option>` + types.map((t) => `<option ${t === state.file_type ? "selected" : ""}>${t}</option>`).join("");
+      const res = await api.products.list(state);
+      document.getElementById("count").textContent = res.total + " assets";
+      document.getElementById("grid").innerHTML = (res.products || []).map((p) => PawUI.card(PawUI.catalog.decorate(p))).join("") || "<p class='note'>No assets match.</p>";
+      const pages = Math.max(1, Math.ceil(res.total / (res.per_page || 9)));
+      document.getElementById("pager").innerHTML = Array.from({ length: pages }, (_, i) =>
+        `<button class="${res.page === i + 1 ? "is-on" : ""}" data-page="${i + 1}">${i + 1}</button>`).join("");
+      PawChrome.mount();
+    }
+
+    document.getElementById("rail").onclick = (e) => {
+      const b = e.target.closest("[data-cat]");
+      if (!b) return;
+      state.category = b.dataset.cat; state.page = 1; render();
+    };
+    PawUI.bindCards(document.getElementById("grid"));
+    document.getElementById("grid").addEventListener("paw-refresh", render);
+    document.getElementById("pager").onclick = (e) => {
+      const b = e.target.closest("[data-page]");
+      if (!b) return;
+      state.page = Number(b.dataset.page); render();
+    };
+    document.getElementById("sort").onchange = (e) => { state.sort = e.target.value; state.page = 1; render(); };
+    document.getElementById("rating").onchange = (e) => { state.rating = e.target.value; state.page = 1; render(); };
+    document.getElementById("file_type").onchange = (e) => { state.file_type = e.target.value; state.page = 1; render(); };
+    const bumpPrice = () => {
+      state.price_min = document.getElementById("price_min").value;
+      state.price_max = document.getElementById("price_max").value;
+      state.page = 1;
+      render();
+    };
+    document.getElementById("price_min").onchange = bumpPrice;
+    document.getElementById("price_max").onchange = bumpPrice;
+    renderHero();
+    render();
+  </script>
+</body>
+</html>

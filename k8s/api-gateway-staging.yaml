@@ -88,6 +88,13 @@ spec:
             name: product-service
             port:
               number: 8082
+      - path: /api/v1/product-requests
+        pathType: Prefix
+        backend:
+          service:
+            name: admin-service
+            port:
+              number: 8087
       # === Commerce Service ===
       - path: /api/v1/guest-orders
         pathType: Prefix

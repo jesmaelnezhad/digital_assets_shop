@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Post — Pawradise</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="community"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page" id="root"></main>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    const id = new URLSearchParams(location.search).get("id");
+    const api = Pawradise.api;
+    async function render() {
+      const root = document.getElementById("root");
+      let me = null;
+      try { me = await api.auth.getProfile(); } catch (e) { me = null; }
+      try {
+        const data = await api.community.getPost(id);
+        const p = data.post;
+        const author = data.author || {};
+        const comments = data.comments || [];
+        root.innerHTML = PawUI.communityNav("feed", me && me.id) + `<div class="kicker">Community</div>
+          <article class="post">
+            <div class="post-head">
+              ${PawUI.avatar(author)}
+              <div>
+                <a href="profile.html?id=${p.user_id}">${PawUI.esc(author.name || "User")}</a>
+                ${PawUI.relationPills(author, me && me.id)}
+                <span>${new Date(p.created_at).toLocaleString()}</span>
+              </div>
+              ${PawUI.followControl(author, me && me.id)}
+            </div>
+            <p>${PawUI.esc(p.content)}</p>
+            <div class="post-actions">
+              <button class="btn ${p.liked ? "is-on" : ""}" id="like">${p.like_count || 0} likes</button>
+            </div>
+            ${comments.map((c) => `<div class="comment">
+              ${PawUI.avatar(c.user)}
+              <div>
+                <a href="profile.html?id=${c.user_id}"><b>${PawUI.esc((c.user && c.user.name) || "User")}</b></a>
+                ${PawUI.esc(c.content)}
+                ${me && c.user_id === me.id ? `<button class="btn" data-delc="${c.id}">Delete</button>` : ""}
+              </div>
+            </div>`).join("")}
+            ${me ? `<form id="cmt" class="field-col" style="margin-top:16px">Comment
+              <textarea name="content" maxlength="500"></textarea>
+              <button class="btn">Reply</button>
+              <p class="form-error"></p>
+            </form>` : `<p class="note">Log in to reply.</p>`}
+          </article>`;
+        document.getElementById("like").onclick = async () => {
+          try {
+            if (p.liked) await api.community.unlikePost(p.id);
+            else await api.community.likePost(p.id);
+            render();
+          }
+          catch (e) { if (e.status === 401) location.href = PawUI.loginHref(); else PawUI.toast(e.message); }
+        };
+        const form = document.getElementById("cmt");
+        if (form) form.onsubmit = async (e) => {
+          e.preventDefault();
+          try { await api.community.addComment(p.id, new FormData(e.target).get("content")); render(); }
+          catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
+        };
+        PawUI.bindFollow(root, render);
+        root.querySelectorAll("[data-delc]").forEach((b) => b.onclick = async () => {
+          try { await api.community.deleteComment(p.id, b.dataset.delc); render(); }
+          catch (e) { PawUI.toast(e.message); }
+        });
+      } catch (e) {
+        root.innerHTML = '<p class="note">Post not found.</p>';
+      }
+    }
+    render();
+  </script>
+</body>
+</html>

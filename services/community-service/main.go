@@ -41,15 +41,22 @@ func main() {
 	r.Use(middleware.CORS())
 	r.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok", "service": "community-service"}) })
 
-	// Public routes
-	r.GET("/api/v1/community/posts", h.GetFeed)
-	r.GET("/api/v1/community/feed", h.GetFeed)
-	r.GET("/api/v1/community/posts/:id", h.GetPost)
-	r.GET("/api/v1/community/users/:id", h.GetPublicProfile)
-	// E2E test path aliases (public)
-	r.GET("/api/v1/posts", h.GetFeed)
-	r.GET("/api/v1/posts/:id", h.GetPost)
-	r.GET("/api/v1/users/:id", h.GetPublicProfile)
+	// Public routes (JWT optional so following flags / author.following work)
+	opt := r.Group("/api/v1")
+	opt.Use(middleware.JwtAuthMiddleware())
+	{
+		opt.GET("/community/posts", h.GetFeed)
+		opt.GET("/community/feed", h.GetFeed)
+		opt.GET("/community/posts/:id", h.GetPost)
+		opt.GET("/community/users", h.ListPeople)
+		opt.GET("/community/users/:id/followers", h.ListFollowers)
+		opt.GET("/community/users/:id/following", h.ListFollowing)
+		opt.GET("/community/users/:id", h.GetPublicProfile)
+		opt.GET("/community/suggestions", h.Suggestions)
+		opt.GET("/posts", h.GetFeed)
+		opt.GET("/posts/:id", h.GetPost)
+		opt.GET("/users/:id", h.GetPublicProfile)
+	}
 
 	// Auth group
 	auth := r.Group("/api/v1")

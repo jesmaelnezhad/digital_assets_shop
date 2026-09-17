@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Compare — Pawradise</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="account"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page" id="root"></main>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    async function render() {
+      const root = document.getElementById("root");
+      try {
+        await PawUI.catalog.load();
+        const res = await Pawradise.api.compare.list();
+        const products = PawUI.catalog.byIds((res.products || []).map((x) => x.product_id));
+        if (!products.length) {
+          root.innerHTML = PawUI.accountNav("compare") + '<p class="note">Add assets from the shop to compare.</p>';
+          return;
+        }
+        const rows = [
+          ["Title", (p) => `<a href="${PawUI.productUrl(p.slug)}">${PawUI.esc(p.title)}</a>`],
+          ["Price", (p) => PawUI.money(p.price_usd)],
+          ["Format", (p) => PawUI.esc(p.digital_formats || "—")],
+          ["Category", (p) => PawUI.esc(p.category_name || "—")],
+          ["PWYW", (p) => p.is_pwyw ? "yes, min " + PawUI.money(p.pwyw_min_price) : "no"]
+        ];
+        root.innerHTML = PawUI.accountNav("compare") + `<div class="kicker">Account</div><h1 class="page-title">Compare</h1>
+          <table class="table"><thead><tr><th></th>${products.map((p) => `<th>${PawUI.esc(p.title)}</th>`).join("")}</tr></thead>
+          <tbody>${rows.map(([label, fn]) => `<tr><td>${label}</td>${products.map((p) => `<td>${fn(p)}</td>`).join("")}</tr>`).join("")}
+          <tr><td></td>${products.map((p) => `<td><button class="btn" data-rm="${p.id}">Remove</button></td>`).join("")}</tr>
+          </tbody></table>`;
+        root.querySelectorAll("[data-rm]").forEach((b) => b.onclick = async () => {
+          await Pawradise.api.compare.toggle(Number(b.dataset.rm));
+          PawChrome.mount();
+          render();
+        });
+      } catch (e) {
+        root.innerHTML = e.status === 401
+          ? PawUI.authGate("Log in to compare.")
+          : `<p class="note">${PawUI.esc(e.message)}</p>`;
+      }
+    }
+    render();
+  </script>
+</body>
+</html>

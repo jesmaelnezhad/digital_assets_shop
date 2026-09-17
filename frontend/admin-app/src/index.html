@@ -1,372 +1,702 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pawradise — Admin</title>
-    <link rel="icon" href="/assets/favicon.svg" sizes="any">
-    <script src="/env.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: system-ui, sans-serif; background-color: #0a0e14; color: #c7d0dc; min-height: 100vh; }
-        .admin-shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
-        .sidebar { background-color: #10151d; border-right: 1px solid #1e2530; padding: 20px 0; }
-        .sidebar-header { padding: 0 20px 20px; border-bottom: 1px solid #1e2530; margin-bottom: 12px; }
-        .sidebar-header h1 { font-size: 1.1rem; color: #4dd6c9; font-weight: 600; }
-        .sidebar-header p { font-size: 0.75rem; color: #7c8896; margin-top: 4px; }
-        .nav-item { display: block; padding: 8px 20px; color: #c7d0dc; text-decoration: none; font-size: 0.875rem; border-left: 3px solid transparent; cursor: pointer; }
-        .nav-item:hover { background-color: rgba(77, 214, 201, 0.05); }
-        .nav-item.active { border-left-color: #4dd6c9; color: #4dd6c9; }
-        .main { display: flex; flex-direction: column; }
-        .topbar { background-color: #10151d; border-bottom: 1px solid #1e2530; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
-        .topbar h2 { font-size: 1rem; font-weight: 500; }
-        .topbar-actions { display: flex; gap: 8px; }
-        .btn { padding: 6px 14px; border-radius: 6px; border: 1px solid #1e2530; background-color: #10151d; color: #c7d0dc; cursor: pointer; font-size: 0.8rem; }
-        .btn:hover { border-color: #4dd6c9; }
-        .btn-primary { background-color: #4dd6c9; color: #0a0e14; border-color: #4dd6c9; }
-        .btn-danger { color: #ef5a5a; border-color: #ef5a5a; }
-        .content { flex: 1; padding: 24px; overflow-y: auto; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-        .stat-card { background-color: #10151d; border: 1px solid #1e2530; border-radius: 12px; padding: 20px; }
-        .stat-value { font-size: 2rem; font-weight: 700; color: #4dd6c9; }
-        .stat-label { font-size: 0.8rem; color: #7c8896; margin-top: 4px; }
-        .card { background-color: #10151d; border: 1px solid #1e2530; border-radius: 12px; margin-bottom: 20px; }
-        .card-header { padding: 16px 20px; border-bottom: 1px solid #1e2530; display: flex; align-items: center; justify-content: space-between; }
-        .card-header h3 { font-size: 0.9rem; font-weight: 500; }
-        .card-body { padding: 20px; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th, td { padding: 10px 16px; text-align: left; border-bottom: 1px solid #1e2530; }
-        th { font-size: 0.7rem; text-transform: uppercase; color: #7c8896; font-weight: 500; }
-        tr:hover { background-color: rgba(77, 214, 201, 0.02); }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 500; }
-        .badge-active { background-color: rgba(95, 214, 138, 0.15); color: #5fd68a; }
-        .badge-inactive { background-color: rgba(239, 90, 90, 0.15); color: #ef5a5a; }
-        .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-size: 0.75rem; color: #7c8896; margin-bottom: 6px; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid #1e2530; background-color: #0a0e14; color: #c7d0dc; font-size: 0.85rem; }
-        .form-group textarea { min-height: 80px; resize: vertical; }
-        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
-        .spinner { width: 24px; height: 24px; border: 2px solid #1e2530; border-top-color: #4dd6c9; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .empty { text-align: center; padding: 40px; color: #7c8896; }
-        .modal-overlay { display: none; position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.7); z-index: 100; align-items: center; justify-content: center; }
-        .modal-overlay.active { display: flex; }
-        .modal { background-color: #10151d; border: 1px solid #1e2530; border-radius: 12px; padding: 24px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; }
-        .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-        .modal-close { background: none; border: none; color: #7c8896; cursor: pointer; font-size: 1.5rem; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin — Pawradise</title>
+    <script>window.SITE_PAGE="admin";</script>
+  <link rel="icon" href="/assets/favicon.svg" sizes="any" />
+  <link rel="stylesheet" href="/assets/theme.css" />
+  <script src="/env.js"></script>
 </head>
 <body>
-<div class="admin-shell" x-data="adminApp()" x-init="init()">
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <h1>/admin</h1>
-            <p x-text="adminToken ? 'Authenticated' : 'Not connected'"></p>
-        </div>
-        <nav>
-            <a class="nav-item" :class="{ active: tab === 'stats' }" @click="tab='stats'">Dashboard</a>
-            <a class="nav-item" :class="{ active: tab === 'products' }" @click="tab='products'; loadProducts()">Products</a>
-            <a class="nav-item" :class="{ active: tab === 'bundles' }" @click="tab='bundles'; loadBundles()">Bundles</a>
-            <a class="nav-item" :class="{ active: tab === 'coupons' }" @click="tab='coupons'; loadCoupons()">Coupons</a>
-            <a class="nav-item" :class="{ active: tab === 'orders' }" @click="tab='orders'; loadOrders()">Orders</a>
-            <a class="nav-item" :class="{ active: tab === 'referrals' }" @click="tab='referrals'; loadReferrals()">Referrals</a>
-            <a class="nav-item" :class="{ active: tab === 'community' }" @click="tab='community'; loadCommunityPosts()">Community</a>
-            <a class="nav-item" :class="{ active: tab === 'exchange' }" @click="tab='exchange'; loadExchangeRates()">Exchange Rates</a>
-            <a class="nav-item" :class="{ active: tab === 'settings' }" @click="tab='settings'; loadSettings()">Settings</a>
-        </nav>
-    </aside>
-
-    <main class="main">
-        <div class="topbar">
-            <h2 x-text="tabTitle()"></h2>
-            <div class="topbar-actions">
-                <input type="password" x-model="tokenInput" placeholder="Admin token" style="padding:6px 12px;border-radius:6px;border:1px solid #1e2530;background:#0a0e14;color:#c7d0dc;font-size:0.8rem;width:200px;">
-                <button class="btn btn-primary" @click="setToken()">Connect</button>
-                <button class="btn" @click="reloadCurrent()">Refresh</button>
-            </div>
-        </div>
-
-        <div class="content">
-            <!-- Not connected -->
-            <div x-show="!adminToken" class="empty" style="padding:80px;">
-                <h3>Enter admin token to connect</h3>
-                <p>Use the input in the top-right corner to authenticate.</p>
-            </div>
-
-            <!-- Dashboard -->
-            <div x-show="adminToken && tab === 'stats'">
-                <div class="stats-grid">
-                    <div class="stat-card"><div class="stat-value" x-text="stats.total_revenue || 0"></div><div class="stat-label">Total Revenue (USD)</div></div>
-                    <div class="stat-card"><div class="stat-value" x-text="stats.total_orders || 0"></div><div class="stat-label">Total Orders</div></div>
-                    <div class="stat-card"><div class="stat-value" x-text="stats.total_customers || 0"></div><div class="stat-label">Customers</div></div>
-                    <div class="stat-card"><div class="stat-value" x-text="stats.total_products || 0"></div><div class="stat-label">Products</div></div>
-                </div>
-            </div>
-
-            <!-- Products -->
-            <div x-show="adminToken && tab === 'products'">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Products</h3>
-                        <button class="btn btn-primary" @click="openProductModal()">New Product</button>
-                    </div>
-                    <div class="card-body">
-                        <table>
-                            <thead><tr><th>Title</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead>
-                            <tbody>
-                                <template x-for="p in products" :key="p.id">
-                                    <tr>
-                                        <td x-text="p.title"></td>
-                                        <td x-text="p.category || '—'"></td>
-                                        <td x-text="'$' + (p.price || 0).toFixed(2)"></td>
-                                        <td><span class="badge" :class="p.active ? 'badge-active' : 'badge-inactive'" x-text="p.active ? 'Active' : 'Inactive'"></span></td>
-                                        <td><button class="btn btn-danger" @click="deleteProduct(p)">Del</button></td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                        <div class="empty" x-show="products.length === 0">No products</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bundles -->
-            <div x-show="adminToken && tab === 'bundles'">
-                <div class="card">
-                    <div class="card-header"><h3>Bundles</h3><button class="btn btn-primary">New Bundle</button></div>
-                    <div class="card-body">
-                        <table>
-                            <thead><tr><th>Title</th><th>Items</th><th>Price</th><th>Status</th></tr></thead>
-                            <tbody>
-                                <template x-for="b in bundles" :key="b.id">
-                                    <tr><td x-text="b.title"></td><td x-text="b.item_count || 0"></td><td x-text="'$' + (b.price || 0).toFixed(2)"></td><td><span class="badge" :class="b.active ? 'badge-active' : 'badge-inactive'" x-text="b.active ? 'Active' : 'Inactive'"></span></td></tr>
-                                </template>
-                            </tbody>
-                        </table>
-                        <div class="empty" x-show="bundles.length === 0">No bundles</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Coupons -->
-            <div x-show="adminToken && tab === 'coupons'">
-                <div class="card">
-                    <div class="card-header"><h3>Coupons</h3><button class="btn btn-primary">New Coupon</button></div>
-                    <div class="card-body">
-                        <table>
-                            <thead><tr><th>Code</th><th>Discount</th><th>Uses</th><th>Status</th></tr></thead>
-                            <tbody>
-                                <template x-for="c in coupons" :key="c.id">
-                                    <tr><td x-text="c.code"></td><td x-text="(c.discount_value || 0) + (c.discount_type === 'percent' ? '%' : '$')"></td><td x-text="(c.uses || 0) + '/' + (c.max_uses || '∞')"></td><td><span class="badge" :class="c.active ? 'badge-active' : 'badge-inactive'" x-text="c.active ? 'Active' : 'Inactive'"></span></td></tr>
-                                </template>
-                            </tbody>
-                        </table>
-                        <div class="empty" x-show="coupons.length === 0">No coupons</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Orders -->
-            <div x-show="adminToken && tab === 'orders'">
-                <div class="card">
-                    <div class="card-header"><h3>Orders</h3></div>
-                    <div class="card-body">
-                        <table>
-                            <thead><tr><th>ID</th><th>Customer</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
-                            <tbody>
-                                <template x-for="o in orders" :key="o.id">
-                                    <tr><td x-text="o.id"></td><td x-text="o.customer || 'Guest'"></td><td x-text="'$' + (o.total_amount || 0).toFixed(2)"></td><td><span class="badge" :class="o.status === 'paid' ? 'badge-active' : 'badge-inactive'" x-text="o.status"></span></td><td x-text="o.created_at"></td></tr>
-                                </template>
-                            </tbody>
-                        </table>
-                        <div class="empty" x-show="orders.length === 0">No orders</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Referrals -->
-            <div x-show="adminToken && tab === 'referrals'">
-                <div class="card">
-                    <div class="card-header"><h3>Referrals</h3></div>
-                    <div class="card-body">
-                        <table>
-                            <thead><tr><th>User</th><th>Code</th><th>Signups</th><th>Commission</th></tr></thead>
-                            <tbody>
-                                <template x-for="r in referrals" :key="r.id">
-                                    <tr><td x-text="r.user_id"></td><td x-text="r.code"></td><td x-text="r.signup_count || 0"></td><td x-text="'$' + (r.commission || 0).toFixed(2)"></td></tr>
-                                </template>
-                            </tbody>
-                        </table>
-                        <div class="empty" x-show="referrals.length === 0">No referrals</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Community -->
-            <div x-show="adminToken && tab === 'community'">
-                <div class="card">
-                    <div class="card-header"><h3>Community Posts</h3></div>
-                    <div class="card-body">
-                        <table>
-                            <thead><tr><th>Title</th><th>Author</th><th>Likes</th><th>Comments</th></tr></thead>
-                            <tbody>
-                                <template x-for="p in communityPosts" :key="p.id">
-                                    <tr><td x-text="p.title"></td><td x-text="p.user?.name || 'Unknown'"></td><td x-text="p.like_count || 0"></td><td x-text="p.comment_count || 0"></td></tr>
-                                </template>
-                            </tbody>
-                        </table>
-                        <div class="empty" x-show="communityPosts.length === 0">No posts</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Exchange Rates -->
-            <div x-show="adminToken && tab === 'exchange'">
-                <div class="card">
-                    <div class="card-header"><h3>Exchange Rates</h3></div>
-                    <div class="card-body">
-                        <table>
-                            <thead><tr><th>Chain</th><th>Rate</th><th>Actions</th></tr></thead>
-                            <tbody>
-                                <template x-for="r in exchangeRates" :key="r.chain">
-                                    <tr><td x-text="r.chain"></td><td x-text="r.rate"></td><td><button class="btn btn-danger">Del</button></td></tr>
-                                </template>
-                            </tbody>
-                        </table>
-                        <div class="empty" x-show="exchangeRates.length === 0">No rates</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Settings -->
-            <div x-show="adminToken && tab === 'settings'">
-                <div class="card">
-                    <div class="card-header"><h3>Settings</h3></div>
-                    <div class="card-body">
-                        <table>
-                            <thead><tr><th>Key</th><th>Value</th></tr></thead>
-                            <tbody>
-                                <template x-for="[key, value] in Object.entries(settings || {})" :key="key">
-                                    <tr><td x-text="key"></td><td x-text="value"></td></tr>
-                                </template>
-                            </tbody>
-                        </table>
-                        <div class="empty" x-show="!settings || Object.keys(settings).length === 0">No settings</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Product Modal -->
-    <div class="modal-overlay" :class="{ active: showProductModal }" @click.self="showProductModal = false">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 x-text="editingProduct.id ? 'Edit Product' : 'New Product'"></h3>
-                <button class="modal-close" @click="showProductModal = false">&times;</button>
-            </div>
-            <div class="form-group"><label>Title</label><input x-model="editingProduct.title" placeholder="Product title"></div>
-            <div class="form-row">
-                <div class="form-group"><label>Slug</label><input x-model="editingProduct.slug" placeholder="product-slug"></div>
-                <div class="form-group"><label>Price (USD)</label><input type="number" step="0.01" x-model="editingProduct.price" placeholder="0.00"></div>
-            </div>
-            <div class="form-group"><label>Category</label><input x-model="editingProduct.category" placeholder="graphics, audio, etc."></div>
-            <div class="form-group"><label>Description</label><textarea x-model="editingProduct.description" placeholder="Product description..."></textarea></div>
-            <div class="form-group"><label><input type="checkbox" x-model="editingProduct.active"> Active</label></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end">
-                <button class="btn" @click="showProductModal = false">Cancel</button>
-                <button class="btn btn-primary" @click="saveProduct()">Save</button>
-            </div>
-        </div>
+  <header id="site-header"></header>
+  <main class="page">
+    <div class="kicker">Operator</div>
+    <h1 class="page-title">Admin</h1>
+    <div id="gate"></div>
+    <div id="desk" hidden>
+      <div class="tabs" id="tabs"></div>
+      <div id="panel"></div>
     </div>
-</div>
+  </main>
+  <div class="modal" id="modal"><div class="modal-card wide" id="modal-card"></div></div>
+  <footer id="site-footer"></footer>
+    <script src="/assets/api.js"></script>
+  <script src="/assets/ui.js"></script>
+  <script src="/assets/chrome.js"></script>
+  <script>
+    const api = Pawradise.api;
+    const SEO_KEYS = ["site_title", "site_description", "site_keywords", "og_image", "canonical_host", "robots_index"];
+    const SETTING_KEYS = ["referral_commission_percent", "payment_address", "site_name", "download_policy", "default_currency"];
+    const tabs = ["Stats", "Users", "Products", "Categories", "Bundles", "Coupons", "Orders", "Guest", "Community", "Referrals", "Rates", "Settings", "SEO", "Export", "Requests"];
+    let on = "Stats";
+    let cats = [];
+    let catalog = [];
 
-<script src="/assets/alpine.min.js" defer></script>
-<script>
-function adminApp() {
-    return {
-        adminToken: '', tokenInput: '', tab: 'stats',
-        stats: {}, products: [], bundles: [], coupons: [], orders: [],
-        referrals: [], communityPosts: [], exchangeRates: [], settings: {},
-        showProductModal: false,
-        editingProduct: { title: '', slug: '', price: 0, category: '', description: '', active: true },
+    function token() {
+      return sessionStorage.getItem("admin_token") || localStorage.getItem("pawradise_admin_token") || "";
+    }
+    function setToken(t) {
+      sessionStorage.setItem("admin_token", t);
+      localStorage.setItem("pawradise_admin_token", t);
+    }
+    function clearToken() {
+      sessionStorage.removeItem("admin_token");
+      localStorage.removeItem("pawradise_admin_token");
+    }
+    function openModal(html) {
+      document.getElementById("modal-card").innerHTML = html;
+      document.getElementById("modal").classList.add("open");
+    }
+    function closeModal() { document.getElementById("modal").classList.remove("open"); }
+    document.getElementById("modal").onclick = (e) => { if (e.target.id === "modal") closeModal(); };
 
-        init() {
-            const saved = localStorage.getItem('pawradise_admin_token');
-            if (saved) { this.adminToken = saved; this.loadCurrent(); }
-        },
-        setToken() {
-            if (!this.tokenInput.trim()) return;
-            this.adminToken = this.tokenInput.trim();
-            localStorage.setItem('pawradise_admin_token', this.adminToken);
-            this.loadCurrent();
-        },
-        tabTitle() {
-            const t = { stats: 'Dashboard', products: 'Products', bundles: 'Bundles', coupons: 'Coupons', orders: 'Orders', referrals: 'Referrals', community: 'Community', exchange: 'Exchange Rates', settings: 'Settings' };
-            return t[this.tab] || this.tab;
-        },
-        reloadCurrent() { this.loadCurrent(); },
-        async api(path, opts = {}) {
-            const base = (window.__PAWRADISE_ENV__?.apiBase || '/api/v1') + '/admin';
-            const res = await fetch(base + path, {
-                ...opts,
-                headers: { 'Authorization': 'Bearer ' + this.adminToken, 'Content-Type': 'application/json', ...(opts.headers || {}) }
-            });
-            if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
-            return res.json().catch(() => ({}));
-        },
-        async loadCurrent() {
-            try {
-                if (this.tab === 'stats') this.stats = await this.api('/stats');
-            } catch (e) {}
-        },
-        async loadProducts() {
-            try { this.products = (await this.api('/products')).products || []; }
-            catch (e) { this.products = []; }
-        },
-        async loadBundles() {
-            try { this.bundles = (await this.api('/bundles')).bundles || []; }
-            catch (e) { this.bundles = []; }
-        },
-        async loadCoupons() {
-            try { this.coupons = (await this.api('/coupons')).coupons || []; }
-            catch (e) { this.coupons = []; }
-        },
-        async loadOrders() {
-            try { this.orders = (await this.api('/orders')).orders || []; }
-            catch (e) { this.orders = []; }
-        },
-        async loadReferrals() {
-            try { this.referrals = (await this.api('/referrals')).referrals || []; }
-            catch (e) { this.referrals = []; }
-        },
-        async loadCommunityPosts() {
-            try { this.communityPosts = (await this.api('/community/posts')).posts || []; }
-            catch (e) { this.communityPosts = []; }
-        },
-        async loadExchangeRates() {
-            try { this.exchangeRates = (await this.api('/exchange-rates')).rates || []; }
-            catch (e) { this.exchangeRates = []; }
-        },
-        async loadSettings() {
-            try { this.settings = await this.api('/settings'); }
-            catch (e) { this.settings = {}; }
-        },
-        openProductModal() { this.editingProduct = { title: '', slug: '', price: 0, category: '', description: '', active: true }; this.showProductModal = true; },
-        async saveProduct() {
-            try {
-                if (this.editingProduct.id) { await this.api('/products/' + this.editingProduct.id, { method: 'PUT', body: JSON.stringify(this.editingProduct) }); }
-                else { await this.api('/products', { method: 'POST', body: JSON.stringify(this.editingProduct) }); }
-                this.showProductModal = false; this.loadProducts();
-            } catch (e) { alert(e.message); }
-        },
-        async deleteProduct(p) {
-            if (!confirm('Delete "' + p.title + '"?')) return;
-            try { await this.api('/products/' + p.id, { method: 'DELETE' }); this.loadProducts(); }
-            catch (e) { alert(e.message); }
+    function gateView() {
+      document.getElementById("desk").hidden = true;
+      document.getElementById("gate").innerHTML = `
+        <form id="unlock" class="auth-card">
+          <p class="note" style="margin:0 0 16px">Bearer token. Spec stores it in sessionStorage as <code>admin_token</code>.</p>
+          <label class="field-col">Admin token
+            <input name="token" placeholder="admin_secret_staging_2026" autocomplete="off" />
+          </label>
+          <p class="form-error"></p>
+          <button class="btn btn-accent">Unlock</button>
+        </form>`;
+      document.getElementById("unlock").onsubmit = async (e) => {
+        e.preventDefault();
+        const t = new FormData(e.target).get("token") || "admin_secret_staging_2026";
+        setToken(t);
+        try { await api.admin.stats(); showDesk(); }
+        catch (ex) {
+          clearToken();
+          e.target.querySelector(".form-error").textContent = ex.message || "Invalid token";
         }
+      };
+    }
+
+    function showDesk() {
+      document.getElementById("gate").innerHTML = `<p class="note" style="margin:0 0 16px">Token set. <button class="btn" id="lock">Lock admin</button></p>`;
+      document.getElementById("lock").onclick = () => { clearToken(); gateView(); };
+      document.getElementById("desk").hidden = false;
+      render();
+    }
+
+    async function panel() {
+      try { cats = (await api.admin.categories()).categories || []; }
+      catch (e) { cats = (await api.products.getCategories()).categories || []; }
+      if (on === "Stats") {
+        const s = await api.admin.stats();
+        const days = s.revenue_daily || [];
+        const max = Math.max(1, ...days.map((d) => d.revenue));
+        const conv = s.conversions || {};
+        const funnel = [
+          ["Views", conv.views, conv.views],
+          ["Carts", conv.carts, conv.views],
+          ["Checkouts", conv.checkouts, conv.views],
+          ["Purchases", conv.purchases, conv.views]
+        ];
+        return `<div class="stat-grid">
+          <div class="stat"><span>Users</span><b>${s.total_users}</b></div>
+          <div class="stat"><span>Products</span><b>${s.total_products}</b></div>
+          <div class="stat"><span>Orders</span><b>${s.total_orders}</b></div>
+          <div class="stat"><span>Revenue USD</span><b>${PawUI.money(s.total_revenue)}</b></div>
+          <div class="stat"><span>Active</span><b>${s.active_products}</b></div>
+          <div class="stat"><span>Pinned</span><b>${s.pinned_products}</b></div>
+          <div class="stat"><span>Categories</span><b>${s.total_categories || cats.length}</b></div>
+          <div class="stat"><span>Downloads</span><b>${s.total_downloads || 0}</b></div>
+        </div>
+        <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)">Revenue · 14 days</h2>
+        <div class="spark">${days.map((d) => `<i title="${d.date} ${d.revenue}" style="height:${Math.round((d.revenue / max) * 100)}%"></i>`).join("")}</div>
+        <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-top:20px">Conversion funnel</h2>
+        <div class="funnel">${funnel.map(([l, n, den]) => `<div class="funnel-row"><span>${l}</span><div class="track"><span style="width:${Math.round((n / (den || 1)) * 100)}%"></span></div><b>${n || 0}</b></div>`).join("")}
+          <p class="note" style="margin:8px 0">View→cart ${conv.view_to_cart || 0}% · cart→checkout ${conv.cart_to_checkout || 0}% · checkout→purchase ${conv.checkout_to_purchase || 0}%</p>
+        </div>
+        <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)">Top products</h2>
+        <table class="table"><thead><tr><th>Title</th><th>Units</th><th>Revenue</th></tr></thead>
+        <tbody>${(s.top_products || []).map((p) => `<tr><td>${PawUI.esc(p.title)}</td><td>${p.units}</td><td class="price">${PawUI.money(p.revenue)}</td></tr>`).join("") || "<tr><td colspan='3'>No paid sales yet.</td></tr>"}</tbody></table>`;
+      }
+      if (on === "Users") {
+        const users = (await api.admin.users()).users || [];
+        return `<table class="table"><thead><tr><th>Email</th><th>Name</th><th>Joined</th><th></th></tr></thead><tbody>
+          ${users.map((u) => `<tr><td>${PawUI.esc(u.email)}</td><td>${PawUI.esc(u.name)}</td>
+            <td>${u.created_at ? new Date(u.created_at).toLocaleDateString() : ""}</td>
+            <td><button class="btn" data-reset="${u.id}">Reset pw</button>
+            <button class="btn" data-delu="${u.id}">Delete</button></td></tr>`).join("")}</tbody></table>`;
+      }
+      if (on === "Products") {
+        const res = await api.admin.products();
+        catalog = res.products || [];
+        return `<div class="admin-toolbar">
+          <button class="btn btn-accent" id="np">New product</button>
+          <select id="bulk-status"><option value="">Bulk status…</option><option>active</option><option>draft</option><option>archived</option></select>
+          <select id="bulk-cat"><option value="">Bulk category…</option>${cats.map((c) => `<option value="${c.id}">${PawUI.esc(c.name)}</option>`).join("")}</select>
+          <button class="btn" id="bulk-go">Apply to selected</button>
+        </div>
+        <table class="table"><thead><tr><th></th><th>Title</th><th>Category</th><th>Price</th><th>Status</th><th>PWYW</th><th></th></tr></thead>
+        <tbody>${catalog.map((p) => `<tr>
+          <td><input type="checkbox" data-pick="${p.id}" /></td>
+          <td>${PawUI.esc(p.title)}${p.pinned ? " · pinned" : ""}</td>
+          <td>${PawUI.esc(p.category_name)}</td>
+          <td class="price">${PawUI.money(p.price_usd)}</td>
+          <td>${PawUI.esc(p.status)}</td>
+          <td>${p.pwyw_enabled ? "min " + PawUI.money(p.pwyw_min_price) : ""}</td>
+          <td>
+            <button class="btn" data-editp="${p.id}">Edit</button>
+            <button class="btn" data-pin="${p.id}">${p.pinned ? "Unpin" : "Pin"}</button>
+            <button class="btn" data-prev="${p.id}">Previews</button>
+            <button class="btn" data-delp="${p.id}">Delete</button>
+          </td>
+        </tr>`).join("")}</tbody></table>`;
+      }
+      if (on === "Categories") {
+        const byId = {};
+        cats.forEach((c) => { byId[c.id] = c; });
+        return `<div class="admin-toolbar">
+          <button class="btn btn-accent" id="ncat">New category</button>
+        </div>
+        <p class="note" style="margin:0 0 16px">Public shop and request forms only list active categories. Rename retargets products; delete is blocked while products or child categories remain.</p>
+        <table class="table"><thead><tr><th>Name</th><th>Slug</th><th>Parent</th><th>Sort</th><th>Products</th><th>Public</th><th></th></tr></thead>
+        <tbody>${cats.map((c) => `<tr>
+          <td>${PawUI.esc(c.name)}</td>
+          <td>${PawUI.esc(c.slug)}</td>
+          <td>${c.parent_id && byId[c.parent_id] ? PawUI.esc(byId[c.parent_id].name) : "—"}</td>
+          <td>${c.sort_order || ""}</td>
+          <td>${c.product_count || 0}</td>
+          <td>${c.is_active ? "yes" : "hidden"}</td>
+          <td>
+            <button class="btn" data-editcat="${c.id}">Edit</button>
+            <button class="btn" data-delcat="${c.id}">Delete</button>
+          </td>
+        </tr>`).join("") || "<tr><td colspan='7'>No categories.</td></tr>"}</tbody></table>`;
+      }
+      if (on === "Bundles") {
+        const b = (await api.admin.bundles()).bundles || [];
+        const products = (await api.admin.products()).products || [];
+        catalog = products;
+        return `<button class="btn btn-accent" id="nb" style="margin-bottom:16px">New bundle</button>
+          <table class="table"><thead><tr><th>Title</th><th>Price</th><th>Items</th><th>Status</th><th></th></tr></thead>
+          <tbody>${b.map((x) => `<tr>
+            <td>${PawUI.esc(x.title)}</td>
+            <td class="price">${PawUI.money(x.price_usd)}</td>
+            <td>${PawUI.esc(x.items || "")}</td>
+            <td>${x.status}</td>
+            <td><button class="btn" data-editb="${x.id}">Edit</button>
+                <button class="btn" data-delb="${x.id}">Delete</button></td>
+          </tr>`).join("")}</tbody></table>`;
+      }
+      if (on === "Coupons") {
+        const c = (await api.admin.coupons()).coupons || [];
+        catalog = (await api.admin.products()).products || [];
+        return `<button class="btn btn-accent" id="nc" style="margin-bottom:16px">New coupon</button>
+          <table class="table"><thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Min</th><th>Used</th><th>Expires</th><th>Active</th><th></th></tr></thead>
+          <tbody>${c.map((x) => `<tr>
+            <td>${PawUI.esc(x.code)}</td><td>${x.discount_type}</td><td>${x.discount_value}</td>
+            <td>${x.min_purchase_usd}</td><td>${x.times_used}/${x.usage_limit}</td>
+            <td>${x.expires_at ? String(x.expires_at).slice(0, 10) : ""}</td>
+            <td>${x.is_active ? "yes" : "no"}</td>
+            <td><button class="btn" data-editc="${x.id}">Edit</button>
+                <button class="btn" data-delc="${x.id}">Delete</button></td>
+          </tr>`).join("")}</tbody></table>`;
+      }
+      if (on === "Orders") {
+        const o = (await api.admin.orders()).orders || [];
+        return `<table class="table"><thead><tr><th>ID</th><th>Email</th><th>Status</th><th>Total</th><th></th></tr></thead>
+          <tbody>${o.map((x) => `<tr>
+            <td>#${x.id}</td><td>${PawUI.esc(x.user_email)}</td><td>${x.status}</td>
+            <td class="price">${PawUI.money(x.total_usd)}</td>
+            <td><button class="btn" data-ordo="${x.id}">Detail</button>
+              <select data-st="${x.id}">
+                <option>${x.status}</option>
+                <option>pending</option><option>processing</option><option>paid</option>
+                <option>shipped</option><option>completed</option><option>cancelled</option>
+                <option>refunded</option><option>failed</option>
+              </select></td>
+          </tr>`).join("")}</tbody></table>`;
+      }
+      if (on === "Guest") {
+        const g = (await api.admin.guestOrders()).orders || [];
+        return `<p class="note" style="margin:0 0 16px">Guest checkouts (no JWT). Spec: GET /admin/guest-orders.</p>
+          <table class="table"><thead><tr><th>ID</th><th>Email</th><th>Status</th><th>Total</th></tr></thead>
+          <tbody>${g.map((x) => `<tr><td>#${x.id}</td><td>${PawUI.esc(x.email)}</td><td>${x.status}</td>
+            <td class="price">${PawUI.money(x.total_usd)}</td></tr>`).join("") || "<tr><td colspan='4'>No guest orders yet.</td></tr>"}</tbody></table>`;
+      }
+      if (on === "Community") {
+        const posts = (await api.admin.communityPosts()).posts || [];
+        return `<table class="table"><thead><tr><th>User</th><th>Content</th><th>Likes</th><th></th></tr></thead>
+          <tbody>${posts.map((p) => `<tr><td>${p.user_id}</td><td>${PawUI.esc(p.content)}</td>
+            <td>${p.like_count || 0}</td>
+            <td><button class="btn" data-delpost="${p.id}">Delete</button></td></tr>`).join("")}</tbody></table>`;
+      }
+      if (on === "Referrals") {
+        const r = (await api.admin.referrals()).referrals || [];
+        return `<table class="table"><thead><tr><th>Code</th><th>User</th><th>Count</th><th>Commission</th></tr></thead>
+          <tbody>${r.map((x) => `<tr><td>${PawUI.esc(x.code)}</td><td>${PawUI.esc(x.email)}</td>
+            <td>${x.referral_count}</td><td class="price">${PawUI.money(x.total_commission)}</td></tr>`).join("")}</tbody></table>`;
+      }
+      if (on === "Rates") {
+        const r = (await api.admin.rates()).rates || [];
+        return `<form id="nr" class="split" style="margin-bottom:16px">
+          <div>
+            <label class="field-col">Chain <input name="chain" required /></label>
+            <label class="field-col">Symbol <input name="symbol" required /></label>
+            <label class="field-col">Rate to USD <input name="rate_to_usd" type="number" step="0.0001" required /></label>
+          </div>
+          <div><button class="btn btn-accent">Set rate</button></div>
+        </form>
+        <table class="table"><thead><tr><th>Chain</th><th>Symbol</th><th>USD</th><th></th></tr></thead>
+        <tbody>${r.map((x) => `<tr><td>${x.chain}</td><td>${x.symbol}</td><td>${x.rate_to_usd}</td>
+          <td><button class="btn" data-delr="${PawUI.esc(x.chain)}">Delete</button></td></tr>`).join("")}</tbody></table>`;
+      }
+      if (on === "Settings") {
+        const s = (await api.admin.settings()).settings || [];
+        const map = {};
+        s.forEach((x) => { map[x.key] = x.value; });
+        return `<form id="set-form">
+          ${SETTING_KEYS.map((k) => `<label class="field-col">${k}
+            <input name="${k}" value="${PawUI.esc(map[k] || "")}" /></label>`).join("")}
+          <button class="btn btn-accent">Save settings</button>
+        </form>
+        <p class="note" style="margin-top:16px">SEO fields live in the SEO tab. Other keys still save via PUT /admin/settings/:key.</p>`;
+      }
+      if (on === "SEO") {
+        const s = (await api.admin.settings()).settings || [];
+        const map = {};
+        s.forEach((x) => { map[x.key] = x.value; });
+        return `<p class="note" style="margin:0 0 16px">Site-wide meta, Open Graph defaults, robots, and canonical host. Per-product title/description/OG are on the product editor. Sitemap: <a href="..//sitemap.xml">//sitemap.xml</a> · <a href="../robots.txt">/robots.txt</a></p>
+          <form id="seo-form">
+            ${SEO_KEYS.map((k) => `<label class="field-col">${k}
+              <input name="${k}" value="${PawUI.esc(map[k] || "")}" /></label>`).join("")}
+            <button class="btn btn-accent">Save SEO</button>
+          </form>`;
+      }
+      if (on === "Export") {
+        catalog = (await api.admin.products()).products || [];
+        return `<form id="ex" class="split">
+          <div>
+            <label class="field-col">From <input type="date" name="from" /></label>
+            <label class="field-col">To <input type="date" name="to" /></label>
+            <label class="field-col">Category
+              <select name="category"><option value="">Any</option>${cats.map((c) => `<option value="${c.slug}">${PawUI.esc(c.name)}</option>`).join("")}</select>
+            </label>
+            <label class="field-col">Product
+              <select name="product_id"><option value="">Any</option>${catalog.map((p) => `<option value="${p.id}">${PawUI.esc(p.title)}</option>`).join("")}</select>
+            </label>
+          </div>
+          <div><button class="btn btn-accent">Export JSON</button></div>
+        </form>
+        <div id="ex-out"></div>`;
+      }
+      if (on === "Requests") {
+        const r = (await api.admin.requests()).requests || [];
+        return `<table class="table"><thead><tr><th>Title</th><th>Email</th><th>Budget</th><th>Status</th><th></th></tr></thead>
+          <tbody>${r.map((x) => `<tr>
+            <td>${PawUI.esc(x.title)}<br><span style="color:var(--mute);font-size:12px">${PawUI.esc(x.description || "")}</span></td>
+            <td>${PawUI.esc(x.email)}</td>
+            <td class="price">${PawUI.money(x.budget_usd)}</td>
+            <td>${x.status}</td>
+            <td><select data-req="${x.id}">
+              <option>${x.status}</option><option>open</option><option>reviewed</option><option>quoted</option><option>closed</option>
+            </select></td>
+          </tr>`).join("") || "<tr><td colspan='5'>No custom requests.</td></tr>"}</tbody></table>`;
+      }
+      return "";
+    }
+
+    function categoryForm(c) {
+      c = c || {};
+      const others = cats.filter((x) => x.id !== c.id);
+      return `<form id="catf">
+        <h2 style="margin-bottom:8px">${c.id ? "Edit category" : "Create category"}</h2>
+        <label class="field-col">Name <input name="name" required value="${PawUI.esc(c.name || "")}" /></label>
+        <label class="field-col">Slug <input name="slug" value="${PawUI.esc(c.slug || "")}" placeholder="auto from name" /></label>
+        <label class="field-col">Description <textarea name="description">${PawUI.esc(c.description || "")}</textarea></label>
+        <label class="field-col">Parent
+          <select name="parent_id">
+            <option value="0">None (top level)</option>
+            ${others.map((x) => `<option value="${x.id}" ${Number(c.parent_id) === x.id ? "selected" : ""}>${PawUI.esc(x.name)}</option>`).join("")}
+          </select>
+        </label>
+        <label class="field-col">Sort order <input name="sort_order" type="number" value="${c.sort_order != null ? c.sort_order : (cats.length + 1)}" /></label>
+        <label class="field-col">Image URL <input name="image_url" value="${PawUI.esc(c.image_url || "")}" /></label>
+        <label class="field-col"><input type="checkbox" name="is_active" ${c.is_active !== false ? "checked" : ""} /> Active (shown in shop)</label>
+        <button class="btn btn-accent">${c.id ? "Save" : "Create"}</button>
+        <button type="button" class="btn" id="cancel-m">Cancel</button>
+      </form>`;
+    }
+
+    function productForm(p) {
+      p = p || {};
+      return `<form id="pf">
+        <h2 style="margin-bottom:8px">${p.id ? "Edit product" : "Create product"}</h2>
+        <label class="field-col">Title <input name="title" required value="${PawUI.esc(p.title || "")}" /></label>
+        <label class="field-col">Slug <input name="slug" value="${PawUI.esc(p.slug || "")}" /></label>
+        <label class="field-col">Description <textarea name="description">${PawUI.esc(p.description || "")}</textarea></label>
+        <label class="field-col">Category <select name="category_id">${cats.map((c) => `<option value="${c.id}" ${c.id === p.category_id ? "selected" : ""}>${PawUI.esc(c.name)}</option>`).join("")}</select></label>
+        <label class="field-col">Price USD <input name="price_usd" type="number" step="0.01" value="${p.price_usd || 0}" /></label>
+        <label class="field-col">Status <select name="status"><option ${p.status === "active" ? "selected" : ""}>active</option><option ${p.status === "draft" ? "selected" : ""}>draft</option><option ${p.status === "archived" ? "selected" : ""}>archived</option></select></label>
+        <label class="field-col">File type <input name="digital_formats" value="${PawUI.esc(p.digital_formats || "")}" /></label>
+        <label class="field-col"><input type="checkbox" name="pwyw_enabled" ${p.pwyw_enabled ? "checked" : ""} /> Pay what you want</label>
+        <label class="field-col">PWYW minimum <input name="pwyw_min_price" type="number" step="0.01" value="${p.pwyw_min_price || 0}" /></label>
+        <label class="field-col">SEO title <input name="seo_title" value="${PawUI.esc(p.seo_title || "")}" /></label>
+        <label class="field-col">SEO description <input name="seo_description" value="${PawUI.esc(p.seo_description || "")}" /></label>
+        <label class="field-col">OG image URL <input name="og_image" value="${PawUI.esc(p.og_image || "")}" /></label>
+        <button class="btn btn-accent">${p.id ? "Save" : "Create"}</button>
+        <button type="button" class="btn" id="cancel-m">Cancel</button>
+      </form>`;
+    }
+
+    function bundleForm(b) {
+      b = b || {};
+      const selected = String(b.items || "").split(",").map(Number).filter(Boolean);
+      return `<form id="bf">
+        <h2 style="margin-bottom:8px">${b.id ? "Edit bundle" : "Create bundle"}</h2>
+        <label class="field-col">Title <input name="title" required value="${PawUI.esc(b.title || "")}" /></label>
+        <label class="field-col">Description <textarea name="description">${PawUI.esc(b.description || "")}</textarea></label>
+        <label class="field-col">Bundle price USD <input name="price_usd" type="number" step="0.01" required value="${b.price_usd || 0}" /></label>
+        <label class="field-col">Status <select name="status"><option>active</option><option ${b.status === "draft" ? "selected" : ""}>draft</option></select></label>
+        <p style="font-size:13px;color:var(--mute);margin:8px 0">Included products</p>
+        <div class="check-grid">${catalog.map((p) => `<label><input type="checkbox" name="pid" value="${p.id}" ${selected.indexOf(p.id) >= 0 ? "checked" : ""} /> ${PawUI.esc(p.title)}</label>`).join("")}</div>
+        <button class="btn btn-accent">${b.id ? "Save" : "Create"}</button>
+        <button type="button" class="btn" id="cancel-m">Cancel</button>
+      </form>`;
+    }
+
+    function couponForm(c) {
+      c = c || {};
+      return `<form id="cf">
+        <h2 style="margin-bottom:8px">${c.id ? "Edit coupon" : "Create coupon"}</h2>
+        <label class="field-col">Code <input name="code" required value="${PawUI.esc(c.code || "")}" /></label>
+        <label class="field-col">Type <select name="discount_type"><option value="percentage" ${c.discount_type === "percentage" ? "selected" : ""}>percentage</option><option value="fixed" ${c.discount_type === "fixed" ? "selected" : ""}>fixed</option></select></label>
+        <label class="field-col">Value <input name="discount_value" required value="${c.discount_value || ""}" /></label>
+        <label class="field-col">Min purchase USD <input name="min_purchase_usd" type="number" step="0.01" value="${c.min_purchase_usd || 0}" /></label>
+        <label class="field-col">Usage limit <input name="usage_limit" type="number" value="${c.usage_limit || 100}" /></label>
+        <label class="field-col">Expires <input name="expires_at" type="date" value="${c.expires_at ? String(c.expires_at).slice(0, 10) : ""}" /></label>
+        <label class="field-col">Product (optional)
+          <select name="product_id"><option value="">Cart-wide</option>${catalog.map((p) => `<option value="${p.id}" ${Number(c.product_id) === p.id ? "selected" : ""}>${PawUI.esc(p.title)}</option>`).join("")}</select>
+        </label>
+        <label class="field-col"><input type="checkbox" name="is_active" ${c.is_active !== false ? "checked" : ""} /> Active</label>
+        <button class="btn btn-accent">${c.id ? "Save" : "Create"}</button>
+        <button type="button" class="btn" id="cancel-m">Cancel</button>
+      </form>`;
+    }
+
+    async function productEditor(p) {
+      let tiers = [];
+      let images = [];
+      try { tiers = (await api.products.getTiers(p.id)).tiers || []; } catch (e) {}
+      try { images = ((await api.products.get(p.slug)).images) || []; } catch (e) {}
+      openModal(productForm(p) + `
+        <hr style="margin:18px 0;border-color:var(--line)" />
+        <h3 style="font-size:14px">Tiers</h3>
+        <table class="table">${tiers.map((t) => `<tr><td>${PawUI.esc(t.tier_name)}</td><td>${PawUI.money(t.price_usd)}</td>
+          <td><button class="btn" data-delt="${t.id}">Delete</button></td></tr>`).join("")}</table>
+        <form id="tf" class="admin-toolbar">
+          <input name="tier_name" placeholder="Tier name" required />
+          <input name="price_usd" type="number" step="0.01" placeholder="Price" required />
+          <button class="btn">Add tier</button>
+        </form>
+        <h3 style="font-size:14px">Gallery</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">${images.map((im) => `<div><img src="${im.url}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:8px" /><br><button class="btn" data-deli="${im.id}">Remove</button></div>`).join("")}</div>
+        <form id="imf" class="admin-toolbar">
+          <input name="url" placeholder="Image filename or URL (p12.jpg)" required />
+          <button class="btn">Add image</button>
+        </form>`);
+      bindProductModal(p);
+    }
+
+    function bindProductModal(p) {
+      const card = document.getElementById("modal-card");
+      card.querySelector("#cancel-m").onclick = closeModal;
+      card.querySelector("#pf").onsubmit = async (e) => {
+        e.preventDefault();
+        const f = new FormData(e.target);
+        const body = {
+          title: f.get("title"),
+          slug: f.get("slug"),
+          description: f.get("description"),
+          category_id: Number(f.get("category_id")),
+          price_usd: Number(f.get("price_usd")),
+          status: f.get("status"),
+          digital_formats: f.get("digital_formats"),
+          pwyw_enabled: !!f.get("pwyw_enabled"),
+          pwyw_min_price: Number(f.get("pwyw_min_price")),
+          seo_title: f.get("seo_title"),
+          seo_description: f.get("seo_description"),
+          og_image: f.get("og_image")
+        };
+        if (p && p.id) await api.admin.updateProduct(p.id, body);
+        else await api.admin.createProduct(body);
+        PawUI.catalog.invalidate();
+        closeModal();
+        render();
+      };
+      if (!p || !p.id) return;
+      const tf = card.querySelector("#tf");
+      if (tf) tf.onsubmit = async (e) => {
+        e.preventDefault();
+        const f = new FormData(tf);
+        await api.admin.addTier(p.id, { tier_name: f.get("tier_name"), price_usd: Number(f.get("price_usd")) });
+        const fresh = ((await api.admin.products()).products || []).find((x) => x.id === p.id);
+        productEditor(fresh);
+      };
+      const imf = card.querySelector("#imf");
+      if (imf) imf.onsubmit = async (e) => {
+        e.preventDefault();
+        await api.admin.addImage(p.id, { url: new FormData(imf).get("url") });
+        const fresh = ((await api.admin.products()).products || []).find((x) => x.id === p.id);
+        productEditor(fresh);
+      };
+      card.querySelectorAll("[data-delt]").forEach((b) => b.onclick = async () => {
+        await api.admin.deleteTier(p.id, b.dataset.delt);
+        const fresh = ((await api.admin.products()).products || []).find((x) => x.id === p.id);
+        productEditor(fresh);
+      });
+      card.querySelectorAll("[data-deli]").forEach((b) => b.onclick = async () => {
+        await api.admin.deleteImage(p.id, b.dataset.deli);
+        const fresh = ((await api.admin.products()).products || []).find((x) => x.id === p.id);
+        productEditor(fresh);
+      });
+    }
+
+    async function render() {
+      document.getElementById("tabs").innerHTML = tabs.map((t) =>
+        `<button class="${t === on ? "is-on" : ""}" data-t="${t}">${t}</button>`
+      ).join("");
+      try {
+        document.getElementById("panel").innerHTML = await panel();
+      } catch (e) {
+        if (e.status === 401) { clearToken(); gateView(); return; }
+        document.getElementById("panel").innerHTML = `<p class="note">${PawUI.esc(e.message)}</p>`;
+        return;
+      }
+      bindPanel();
+    }
+
+    function catBody(f) {
+      const name = String(f.get("name") || "").trim();
+      const slug = String(f.get("slug") || "").trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      return {
+        name,
+        slug,
+        description: f.get("description"),
+        parent_id: Number(f.get("parent_id")) || 0,
+        sort_order: Number(f.get("sort_order")) || 0,
+        image_url: f.get("image_url"),
+        is_active: !!f.get("is_active")
+      };
+    }
+
+    function selectedIds() {
+      return [...document.querySelectorAll("[data-pick]:checked")].map((x) => Number(x.dataset.pick));
+    }
+
+    function bindPanel() {
+      const p = document.getElementById("panel");
+      p.querySelectorAll("[data-reset]").forEach((b) => b.onclick = async () => {
+        const r = await api.admin.resetPassword(b.dataset.reset);
+        PawUI.toast(r.new_password);
+      });
+      p.querySelectorAll("[data-delu]").forEach((b) => b.onclick = async () => { await api.admin.deleteUser(b.dataset.delu); render(); });
+      p.querySelectorAll("[data-pin]").forEach((b) => b.onclick = async () => {
+        const row = catalog.find((x) => x.id === Number(b.dataset.pin));
+        if (row && row.pinned) await api.admin.unpin(b.dataset.pin);
+        else await api.admin.pin(b.dataset.pin);
+        PawUI.catalog.invalidate();
+        render();
+      });
+      p.querySelectorAll("[data-delp]").forEach((b) => b.onclick = async () => { await api.admin.deleteProduct(b.dataset.delp); PawUI.catalog.invalidate(); render(); });
+      p.querySelectorAll("[data-prev]").forEach((b) => b.onclick = async () => { await api.admin.generatePreviews(b.dataset.prev); PawUI.toast("Previews generated"); });
+      p.querySelectorAll("[data-editp]").forEach((b) => b.onclick = () => {
+        const row = catalog.find((x) => x.id === Number(b.dataset.editp));
+        productEditor(row);
+      });
+      const np = p.querySelector("#np");
+      if (np) np.onclick = () => { openModal(productForm({})); bindProductModal(null); };
+      const bulk = p.querySelector("#bulk-go");
+      if (bulk) bulk.onclick = async () => {
+        const ids = selectedIds();
+        if (!ids.length) { PawUI.toast("Select products"); return; }
+        const status = document.getElementById("bulk-status").value;
+        const category_id = document.getElementById("bulk-cat").value;
+        const body = { ids };
+        if (status) body.status = status;
+        if (category_id) body.category_id = Number(category_id);
+        await api.admin.bulkProducts(body);
+        PawUI.catalog.invalidate();
+        render();
+      };
+      const ncat = p.querySelector("#ncat");
+      if (ncat) ncat.onclick = () => {
+        openModal(categoryForm({}));
+        document.getElementById("cancel-m").onclick = closeModal;
+        document.getElementById("catf").onsubmit = async (e) => {
+          e.preventDefault();
+          try {
+            await api.admin.createCategory(catBody(new FormData(e.target)));
+            PawUI.catalog.invalidate();
+            closeModal(); render();
+          } catch (ex) { PawUI.toast(ex.message); }
+        };
+      };
+      p.querySelectorAll("[data-editcat]").forEach((b) => b.onclick = () => {
+        const row = cats.find((x) => x.id === Number(b.dataset.editcat));
+        openModal(categoryForm(row));
+        document.getElementById("cancel-m").onclick = closeModal;
+        document.getElementById("catf").onsubmit = async (e) => {
+          e.preventDefault();
+          try {
+            await api.admin.updateCategory(row.id, catBody(new FormData(e.target)));
+            PawUI.catalog.invalidate();
+            closeModal(); render();
+          } catch (ex) { PawUI.toast(ex.message); }
+        };
+      });
+      p.querySelectorAll("[data-delcat]").forEach((b) => b.onclick = async () => {
+        try {
+          await api.admin.deleteCategory(b.dataset.delcat);
+          PawUI.catalog.invalidate();
+          render();
+        } catch (ex) { PawUI.toast(ex.message); }
+      });
+      const nb = p.querySelector("#nb");
+      if (nb) nb.onclick = () => {
+        openModal(bundleForm({}));
+        document.getElementById("cancel-m").onclick = closeModal;
+        document.getElementById("bf").onsubmit = async (e) => {
+          e.preventDefault();
+          const f = new FormData(e.target);
+          await api.admin.createBundle({
+            title: f.get("title"),
+            description: f.get("description"),
+            price_usd: Number(f.get("price_usd")),
+            status: f.get("status"),
+            product_ids: f.getAll("pid").map(Number)
+          });
+          closeModal(); render();
+        };
+      };
+      p.querySelectorAll("[data-editb]").forEach((b) => b.onclick = async () => {
+        const bundles = (await api.admin.bundles()).bundles || [];
+        const row = bundles.find((x) => x.id === Number(b.dataset.editb));
+        openModal(bundleForm(row));
+        document.getElementById("cancel-m").onclick = closeModal;
+        document.getElementById("bf").onsubmit = async (e) => {
+          e.preventDefault();
+          const f = new FormData(e.target);
+          await api.admin.updateBundle(row.id, {
+            title: f.get("title"),
+            description: f.get("description"),
+            price_usd: Number(f.get("price_usd")),
+            status: f.get("status"),
+            product_ids: f.getAll("pid").map(Number)
+          });
+          closeModal(); render();
+        };
+      });
+      p.querySelectorAll("[data-delb]").forEach((b) => b.onclick = async () => { await api.admin.deleteBundle(b.dataset.delb); render(); });
+      const nc = p.querySelector("#nc");
+      if (nc) nc.onclick = () => {
+        openModal(couponForm({}));
+        document.getElementById("cancel-m").onclick = closeModal;
+        document.getElementById("cf").onsubmit = async (e) => {
+          e.preventDefault();
+          const f = new FormData(e.target);
+          await api.admin.createCoupon({
+            code: f.get("code"),
+            discount_type: f.get("discount_type"),
+            discount_value: Number(f.get("discount_value")),
+            min_purchase_usd: Number(f.get("min_purchase_usd")),
+            usage_limit: Number(f.get("usage_limit")),
+            expires_at: f.get("expires_at"),
+            product_id: f.get("product_id") ? Number(f.get("product_id")) : null,
+            is_active: !!f.get("is_active")
+          });
+          closeModal(); render();
+        };
+      };
+      p.querySelectorAll("[data-editc]").forEach((b) => b.onclick = async () => {
+        const coupons = (await api.admin.coupons()).coupons || [];
+        const row = coupons.find((x) => x.id === Number(b.dataset.editc));
+        openModal(couponForm(row));
+        document.getElementById("cancel-m").onclick = closeModal;
+        document.getElementById("cf").onsubmit = async (e) => {
+          e.preventDefault();
+          const f = new FormData(e.target);
+          await api.admin.updateCoupon(row.id, {
+            code: f.get("code"),
+            discount_type: f.get("discount_type"),
+            discount_value: Number(f.get("discount_value")),
+            min_purchase_usd: Number(f.get("min_purchase_usd")),
+            usage_limit: Number(f.get("usage_limit")),
+            expires_at: f.get("expires_at"),
+            product_id: f.get("product_id") ? Number(f.get("product_id")) : null,
+            is_active: !!f.get("is_active")
+          });
+          closeModal(); render();
+        };
+      });
+      p.querySelectorAll("[data-delc]").forEach((b) => b.onclick = async () => { await api.admin.deleteCoupon(b.dataset.delc); render(); });
+      p.querySelectorAll("[data-delpost]").forEach((b) => b.onclick = async () => { await api.admin.deletePost(b.dataset.delpost); render(); });
+      p.querySelectorAll("[data-st]").forEach((s) => s.onchange = async () => {
+        try { await api.admin.setOrderStatus(s.dataset.st, s.value); render(); }
+        catch (e) { PawUI.toast(e.message); }
+      });
+      p.querySelectorAll("[data-ordo]").forEach((b) => b.onclick = async () => {
+        const d = await api.admin.getOrder(b.dataset.ordo);
+        const o = d.order || {};
+        openModal(`<h2>Order #${o.id}</h2>
+          <p>${PawUI.esc(o.user_email || "")} · ${o.status} · ${PawUI.money(o.total_usd)}</p>
+          <table class="table">${(d.items || []).map((it) => `<tr><td>${PawUI.esc(it.product_title)}</td><td>${it.quantity}</td><td>${PawUI.money(it.unit_price_usd)}</td></tr>`).join("")}</table>
+          <button class="btn" id="cancel-m">Close</button>`);
+        document.getElementById("cancel-m").onclick = closeModal;
+      });
+      p.querySelectorAll("[data-delr]").forEach((b) => b.onclick = async () => { await api.admin.deleteRate(b.dataset.delr); render(); });
+      p.querySelectorAll("[data-req]").forEach((s) => s.onchange = async () => { await api.admin.setRequestStatus(s.dataset.req, s.value); render(); });
+      const nr = p.querySelector("#nr");
+      if (nr) nr.onsubmit = async (e) => {
+        e.preventDefault();
+        const f = new FormData(nr);
+        await api.admin.setRate(f.get("chain"), { symbol: f.get("symbol"), rate_to_usd: Number(f.get("rate_to_usd")) });
+        render();
+      };
+      const setForm = p.querySelector("#set-form");
+      if (setForm) setForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const f = new FormData(setForm);
+        for (const [k, v] of f.entries()) await api.admin.setSetting(k, v);
+        PawUI.toast("Saved");
+      };
+      const seoForm = p.querySelector("#seo-form");
+      if (seoForm) seoForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const f = new FormData(seoForm);
+        for (const [k, v] of f.entries()) await api.admin.setSetting(k, v);
+        PawUI.toast("SEO saved");
+      };
+      const ex = p.querySelector("#ex");
+      if (ex) ex.onsubmit = async (e) => {
+        e.preventDefault();
+        const f = new FormData(ex);
+        const data = await api.admin.exportEmails({
+          from: f.get("from"), to: f.get("to"), category: f.get("category"), product_id: f.get("product_id") ? Number(f.get("product_id")) : undefined
+        });
+        document.getElementById("ex-out").innerHTML = `<p class="note" style="margin:16px 0">${data.count} emails</p>
+          <table class="table"><thead><tr><th>Email</th><th>Name</th><th>Purchases</th></tr></thead>
+          <tbody>${(data.users || []).map((u) => `<tr><td>${PawUI.esc(u.email)}</td><td>${PawUI.esc(u.name)}</td><td>${u.total_purchases || ""}</td></tr>`).join("")}</tbody></table>`;
+      };
+    }
+
+    document.getElementById("tabs").onclick = (e) => {
+      const b = e.target.closest("[data-t]");
+      if (!b) return;
+      on = b.dataset.t;
+      render();
     };
-}
-</script>
+
+    if (token()) {
+      api.admin.stats().then(showDesk).catch(() => { clearToken(); gateView(); });
+    } else gateView();
+  </script>
 </body>
 </html>

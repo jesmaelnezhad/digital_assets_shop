@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Product — Pawradise</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="shop"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <div id="root"></div>
+  <div class="lightbox" id="lb"><img alt="" /></div>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    const slug = new URLSearchParams(location.search).get("slug") || "lunar-clay-characters";
+    const api = Pawradise.api;
+    let data, tiers = [], related = [], active = 0, tierIdx = 0, pwyw;
+
+    async function load() {
+      try { data = await api.products.get(slug); }
+      catch (e) { document.getElementById("root").innerHTML = '<p class="note">Asset not found.</p>'; return; }
+      const p = data.product;
+      await PawUI.catalog.load();
+      data.product = PawUI.catalog.decorate(p);
+      try { tiers = (await api.products.getTiers(p.id)).tiers || []; } catch (e) { tiers = []; }
+      try { related = (await api.products.getRecommendations(p.id)).products || []; } catch (e) { related = []; }
+      try { await api.recentlyViewed.record(p.id); } catch (e) { /* 401 ok */ }
+      pwyw = p.pwyw_min_price || p.price_usd;
+      document.title = p.title + " — Pawradise";
+      paint();
+    }
+
+    function paint() {
+      const p = data.product;
+      const images = (data.images || []).map((i) => i.url || i);
+      const tier = tiers[tierIdx] || { price_usd: p.price_usd, tier_name: "Standard" };
+      const share = encodeURIComponent(location.href);
+      const title = encodeURIComponent(p.title);
+      document.title = (p.seo_title || p.title) + " — Pawradise";
+      let desc = document.querySelector('meta[name="description"]');
+      if (!desc) { desc = document.createElement("meta"); desc.name = "description"; document.head.appendChild(desc); }
+      desc.content = p.seo_description || p.description || "";
+      ["og:title", "og:description", "og:image", "og:url"].forEach((k) => {
+        let m = document.querySelector(`meta[property="${k}"]`);
+        if (!m) { m = document.createElement("meta"); m.setAttribute("property", k); document.head.appendChild(m); }
+        m.content = k === "og:title" ? (p.seo_title || p.title)
+          : k === "og:description" ? (p.seo_description || p.description || "")
+          : k === "og:image" ? (p.og_image || images[0] || p.image_url)
+          : location.href;
+      });
+      let ld = document.getElementById("jsonld");
+      if (!ld) { ld = document.createElement("script"); ld.type = "application/ld+json"; ld.id = "jsonld"; document.head.appendChild(ld); }
+      ld.textContent = JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: p.title,
+        description: p.description,
+        image: images[0] || p.image_url,
+        offers: { "@type": "Offer", priceCurrency: "USD", price: String(p.price_usd || 0) }
+      });
+      document.getElementById("root").innerHTML = `
+        <div class="product-layout">
+          <div>
+            <div class="gallery-main"><img id="main-img" src="${images[active] || p.image_url}" alt="" /></div>
+            <div class="thumbs">${images.map((u, i) => `<img class="${i===active?"is-on":""}" data-i="${i}" src="${u}" alt="" />`).join("")}</div>
+            <p class="desc">${PawUI.esc(p.description)}</p>
+            <p class="share-row">Share
+              <a href="https://x.com/intent/tweet?url=${share}&text=${title}" target="_blank" rel="noopener">X</a>
+              <a href="https://www.reddit.com/submit?url=${share}&title=${title}" target="_blank" rel="noopener">Reddit</a>
+              <a href="https://www.instagram.com/" target="_blank" rel="noopener">Instagram</a>
+              <a href="https://www.moltbook.com/" target="_blank" rel="noopener">Moltbook</a>
+              <button type="button" id="copy-link">Copy link</button>
+            </p>
+            <div id="reviews"></div>
+            ${related.length ? `<h2 style="margin:28px 0 12px;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)">Related</h2>
+              <div class="grid">${related.map((x) => PawUI.card(PawUI.catalog.decorate(x))).join("")}</div>` : ""}
+          </div>
+          <aside class="buy">
+            <div class="kicker">${PawUI.esc(p.category_name || "")} · ${PawUI.esc(p.digital_formats || "")}</div>
+            <h1>${PawUI.esc(p.title)}</h1>
+            <div class="price">${PawUI.money(p.is_pwyw ? pwyw : tier.price_usd)}</div>
+            <div class="tiers">${tiers.map((t, i) => `
+              <button class="tier ${i===tierIdx?"is-on":""}" data-i="${i}">
+                <span>${PawUI.esc(t.tier_name)}<br><small style="color:var(--mute)"></small></span>
+                <span class="price">${PawUI.money(t.price_usd)}</span>
+              </button>`).join("")}</div>
+            ${p.is_pwyw ? `<label class="pwyw">Pay what you want <input id="pwyw" type="number" min="${p.pwyw_min_price}" value="${pwyw}" /></label>` : ""}
+            <button class="btn btn-accent" id="add">Add to cart</button>
+            <button class="btn btn-ghost" id="wish">Save to wishlist</button>
+            <button class="btn" id="cmp">Compare</button>
+            <p style="margin-top:14px;color:var(--mute);font-size:12px">Buy once, download forever.</p>
+          </aside>
+        </div>`;
+      document.getElementById("main-img").onclick = () => {
+        document.getElementById("lb").querySelector("img").src = images[active] || p.image_url;
+        document.getElementById("lb").classList.add("open");
+      };
+      document.querySelector(".thumbs").onclick = (e) => { const i = e.target.closest("[data-i]"); if (!i) return; active = Number(i.dataset.i); paint(); };
+      document.querySelectorAll("[data-i]").forEach((b) => { if (b.closest(".tiers")) b.onclick = () => { tierIdx = Number(b.dataset.i); paint(); }; });
+      const pw = document.getElementById("pwyw");
+      if (pw) pw.onchange = () => { pwyw = Number(pw.value); paint(); };
+      document.getElementById("add").onclick = async () => {
+        try {
+          await api.cart.add(p.id, 1, (tiers[tierIdx] || {}).id, p.is_pwyw ? { pwyw_price: pwyw } : {});
+          PawUI.toast("Added to cart");
+          PawChrome.mount();
+        } catch (e) {
+          if (e.status === 401) location.href = PawUI.loginHref();
+          else PawUI.toast(e.message);
+        }
+      };
+      document.getElementById("wish").onclick = async () => { try { await api.wishlist.toggle(p.id); PawUI.toast("Wishlist updated"); } catch (e) { if (e.status === 401) location.href = PawUI.loginHref(); else PawUI.toast(e.message); } };
+      document.getElementById("cmp").onclick = async () => { try { await api.compare.toggle(p.id); PawUI.toast("Compare updated"); PawChrome.mount(); } catch (e) { if (e.status === 401) location.href = PawUI.loginHref(); else PawUI.toast(e.message); } };
+      document.getElementById("copy-link").onclick = () => { navigator.clipboard.writeText(location.href); PawUI.toast("Copied"); };
+      if (related.length) PawUI.bindCards(document.querySelector(".grid"));
+      loadReviews(p.id);
+    }
+
+    async function loadReviews(id) {
+      try {
+        const r = await api.reviews.getForProduct(id);
+        const box = document.getElementById("reviews");
+        if (!box) return;
+        box.innerHTML = `<h2 style="margin:28px 0 12px;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)">Ratings</h2>
+          ${(r.reviews||[]).map((x) => `<p>${x.rating}★ ${PawUI.esc((x.author&&x.author.name)||"Buyer")}</p>`).join("") || "<p class='note'>No ratings yet.</p>"}
+          <form id="rev"><label class="field-col">Your rating (verified purchase)
+            <select name="rating"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select>
+          </label><button class="btn">Submit rating</button><p class="form-error"></p></form>`;
+        box.querySelector("#rev").onsubmit = async (e) => {
+          e.preventDefault();
+          try { await api.reviews.create(id, Number(new FormData(e.target).get("rating"))); loadReviews(id); }
+          catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
+        };
+      } catch (e) { /* ignore */ }
+    }
+
+    document.getElementById("lb").onclick = () => document.getElementById("lb").classList.remove("open");
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bundles — Pawradise</title>
+    <script>window.SITE_PAGE="bundles";</script>
+  <link rel="icon" href="/assets/favicon.svg" sizes="any" />
+  <link rel="stylesheet" href="/assets/theme.css" />
+  <script src="/env.js"></script>
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page" id="root"></main>
+  <footer id="site-footer"></footer>
+    <script src="/assets/api.js"></script>
+  <script src="/assets/ui.js"></script>
+  <script src="/assets/chrome.js"></script>
+  <script>
+    async function render() {
+      await PawUI.catalog.load();
+      const res = await Pawradise.api.products.getBundles();
+      const bundles = res.bundles || [];
+      document.getElementById("root").innerHTML = `<div class="kicker">Shop</div><h1 class="page-title">Bundles</h1>
+        <div class="cat-grid">${bundles.map((b) => {
+          const ids = String(b.items || "").split(",").map(Number).filter(Boolean);
+          const products = PawUI.catalog.byIds(ids);
+          const separate = products.reduce((n, p) => n + p.price_usd, 0);
+          return `<article class="cat-card">
+            <h3>${PawUI.esc(b.title)}</h3>
+            <p>${PawUI.esc(b.description)}</p>
+            <p style="margin:12px 0" class="price">${PawUI.money(b.price_usd)} <span style="color:var(--mute);font-size:13px">save ${PawUI.money(Math.max(0, separate - b.price_usd))}</span></p>
+            <p style="font-size:13px;color:var(--mute);margin-bottom:12px">${products.map((p) => p.title).join(" · ")}</p>
+            <a class="btn" href="/product/bundle.html?id=${encodeURIComponent(b.id || b.slug)}">View bundle</a>
+            <button class="btn btn-accent" data-add="${b.id || b.slug}">Add all to cart</button>
+          </article>`;
+        }).join("")}</div>`;
+      document.querySelectorAll("[data-add]").forEach((btn) => btn.onclick = async () => {
+        try {
+          const b = (await Pawradise.api.products.getBundle(btn.dataset.add)).bundle;
+          const ids = String(b.items || "").split(",").map(Number).filter(Boolean);
+          for (const id of ids) await Pawradise.api.cart.add(id, 1);
+          PawUI.toast("Bundle in cart");
+          PawChrome.mount();
+        } catch (e) {
+          if (e.status === 401) location.href = PawUI.loginHref();
+          else PawUI.toast(e.message);
+        }
+      });
+    }
+    render();
+  </script>
+</body>
+</html>

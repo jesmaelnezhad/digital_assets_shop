@@ -1,250 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pawradise — My Account</title>
-    <meta name="description" content="Manage your Pawradise account">
-    <link rel="stylesheet" href="/assets/theme.css">
-    <script src="/env.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', system-ui, sans-serif; background-color: #0a0e14; color: #c7d0dc; min-height: 100vh; display: flex; flex-direction: column; }
-        .header { background-color: #10151d; border-bottom: 1px solid #1e2530; padding: 8px 32px; }
-        .header-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-        .logo { font-family: var(--font-mono); font-size: 1.25rem; font-weight: bold; color: #4dd6c9; text-decoration: none; }
-        .nav { display: flex; gap: 16px; }
-        .nav a { color: #c7d0dc; text-decoration: none; font-size: 0.9rem; padding: var(--space-xs) var(--space-sm); border-radius: 4px; transition: color 0.15s ease; }
-        .nav a:hover, .nav a.active { color: #4dd6c9; }
-        main { flex: 1; max-width: 1280px; margin: 0 auto; padding: var(--space-lg); width: 100%; }
-        .page-title { font-family: var(--font-mono); font-size: 1.5rem; margin-bottom: var(--space-lg); }
-        .profile-grid { display: grid; grid-template-columns: 300px 1fr; gap: var(--space-lg); }
-        .sidebar { background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); }
-        .sidebar .user-info { text-align: center; padding-bottom: var(--space-md); border-bottom: 1px solid #1e2530; margin-bottom: var(--space-md); }
-        .sidebar .avatar { width: 80px; height: 80px; background-color: #0a0e14; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 2rem; color: #4dd6c9; margin: 0 auto var(--space-sm); }
-        .sidebar .user-name { font-family: var(--font-mono); font-size: 1rem; }
-        .sidebar .user-email { font-size: 0.8rem; color: var(--color-text-muted); }
-        .sidebar-nav { display: flex; flex-direction: column; gap: var(--space-xs); }
-        .sidebar-nav a { display: block; padding: var(--space-sm) var(--space-md); color: #c7d0dc; text-decoration: none; border-radius: 4px; font-size: 0.9rem; transition: background-color 0.15s ease; }
-        .sidebar-nav a:hover, .sidebar-nav a.active { background-color: #0a0e14; color: #4dd6c9; }
-        .content { background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-lg); }
-        .field { margin-bottom: var(--space-md); }
-        .field label { display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: var(--space-xs); }
-        .field input, .field textarea, .field select { width: 100%; padding: var(--space-sm) var(--space-md); background-color: #0a0e14; border: 1px solid var(--color-border); border-radius: 4px; color: #c7d0dc; font-size: 0.95rem; font-family: 'Inter', system-ui, sans-serif; }
-        .field input:focus, .field textarea:focus { outline: none; border-color: #4dd6c9; box-shadow: var(--glow-focus); }
-        .field .error { color: var(--color-danger); font-size: 0.8rem; margin-top: var(--space-xs); }
-        .btn { display: inline-flex; align-items: center; justify-content: center; padding: var(--space-sm) var(--space-md); font-size: 0.9rem; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; transition: all 0.15s ease; }
-        .btn-primary { background-color: #4dd6c9; color: var(--color-bg); font-weight: 600; }
-        .btn-primary:hover { box-shadow: var(--glow-hover); }
-        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-secondary { background-color: transparent; border: 1px solid var(--color-border); color: #c7d0dc; }
-        .btn-secondary:hover { border-color: #4dd6c9; color: #4dd6c9; }
-        .orders-table { width: 100%; border-collapse: collapse; }
-        .orders-table th, .orders-table td { padding: var(--space-sm) var(--space-md); text-align: left; border-bottom: 1px solid #1e2530; font-size: 0.9rem; }
-        .orders-table th { font-family: var(--font-mono); font-size: 0.8rem; color: var(--color-text-muted); }
-        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.75rem; }
-        .status-pending { background-color: rgba(224, 184, 77, 0.15); color: var(--color-warning); }
-        .status-paid { background-color: rgba(95, 214, 138, 0.15); color: var(--color-success); }
-        .status-processing { background-color: rgba(77, 214, 201, 0.15); color: #4dd6c9; }
-        .status-shipped { background-color: rgba(77, 214, 201, 0.15); color: #4dd6c9; }
-        .status-delivered { background-color: rgba(95, 214, 138, 0.15); color: var(--color-success); }
-        .status-cancelled { background-color: rgba(224, 111, 111, 0.15); color: var(--color-danger); }
-        .status-refunded { background-color: rgba(224, 111, 111, 0.15); color: var(--color-danger); }
-        .empty-state { text-align: center; padding: var(--space-xl); color: var(--color-text-muted); }
-        .footer { background-color: #10151d; border-top: 1px solid var(--color-border); padding: var(--space-lg); text-align: center; color: var(--color-text-muted); font-size: 0.8rem; font-family: var(--font-mono); }
-        .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--color-border); border-top-color: #4dd6c9; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .banner { padding: var(--space-sm) var(--space-md); border-radius: 4px; margin-bottom: var(--space-md); font-size: 0.85rem; display: none; }
-        .banner.success { background-color: rgba(95, 214, 138, 0.1); border: 1px solid var(--color-success); color: var(--color-success); }
-        .banner.error { background-color: rgba(224, 111, 111, 0.1); border: 1px solid var(--color-danger); color: var(--color-danger); }
-        .banner.visible { display: block; }
-        @media (max-width: 640px) { .profile-grid { grid-template-columns: 1fr; } .nav { display: none; } }
-    </style>
-    <!-- CHROME_HEADER -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Account — Pawradise</title>
+    <script>window.SITE_PAGE="account";</script>
+  <link rel="icon" href="/assets/favicon.svg" sizes="any" />
+  <link rel="stylesheet" href="/assets/theme.css" />
+  <script src="/env.js"></script>
 </head>
 <body>
-    <header class="header">
-        <div class="header-inner">
-            <a href="/" class="logo">/pawradise</a>
-            <nav class="nav">
-                <a href="/">Shop</a>
-                <a href="/category">Categories</a>
-                <a href="/product/bundle.html">Bundles</a>
-                <a href="/product/request.html">Request</a>
-                <a href="/community">Community</a>
-                <a href="/account">Account</a>
-            </nav>
-        </div>
-    </header>
-
-    <main x-data="{
-        user: null,
-        profile: null,
-        orders: [],
-        loading: true,
-        saving: false,
-        error: '',
-        success: '',
-        activeTab: 'profile',
-        editForm: { name: '', bio: '', wallet_address: '', preferred_currency: 'USD', newsletter_enabled: true },
-        async load() {
-            this.loading = true;
-            try {
-                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/me`, {
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                if (res.status === 401) { window.location.href = '/login?next=/account'; return; }
-                if (!res.ok) throw new Error('Failed to load profile');
-                const data = await res.json();
-                this.user = data;
-                this.profile = data.profile || {};
-                this.editForm = {
-                    name: data.name || '',
-                    bio: this.profile.bio || '',
-                    wallet_address: this.profile.wallet_address || '',
-                    preferred_currency: this.profile.preferred_currency || 'USD',
-                    newsletter_enabled: this.profile.newsletter_enabled !== false
-                };
-                this.loadOrders();
-            } catch (e) {
-                this.error = e.message;
-            } finally {
-                this.loading = false;
-            }
-        },
-        async loadOrders() {
-            try {
-                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/orders?page=1&per_page=20`, {
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    this.orders = data.orders || [];
-                }
-            } catch (e) {}
-        },
-        async saveProfile() {
-            this.saving = true;
-            this.error = '';
-            this.success = '';
-            try {
-                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/me`, {
-                    method: 'PUT',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(this.editForm)
-                });
-                if (!res.ok) {
-                    const body = await res.json().catch(() => ({}));
-                    throw new Error(body.error || 'Failed to save profile');
-                }
-                this.success = 'Profile updated successfully';
-                this.user = { ...this.user, ...this.editForm };
-            } catch (e) {
-                this.error = e.message;
-            } finally {
-                this.saving = false;
-            }
-        }
-    }" x-init="load()">
-        
-        <h1 class="page-title">My Account</h1>
-
-        <div x-show="loading" class="empty-state"><div class="spinner"></div><p style="margin-top:var(--space-sm)">Loading...</p></div>
-
-        <div x-show="!loading && user" class="profile-grid">
-            <div class="sidebar">
-                <div class="user-info">
-                    <div class="avatar" x-text="(user.name || '?')[0].toUpperCase()"></div>
-                    <div class="user-name" x-text="user.name"></div>
-                    <div class="user-email" x-text="user.email"></div>
-                </div>
-                <nav class="sidebar-nav">
-                    <a href="#" :class="{ active: activeTab === 'profile' }" @click.prevent="activeTab = 'profile'">Profile</a>
-                    <a href="#" :class="{ active: activeTab === 'orders' }" @click.prevent="activeTab = 'orders'">Order History</a>
-                    <a href="/cart">Cart</a>
-                    <a href="/wishlist">Wishlist</a>
-                    <a href="/referrals">Referrals</a>
-                </nav>
-            </div>
-
-            <div class="content">
-                <div class="banner success" :class="{ visible: success }" x-text="success"></div>
-                <div class="banner error" :class="{ visible: error }" x-text="error"></div>
-
-                <div x-show="activeTab === 'profile'">
-                    <h2 style="font-family:var(--font-mono);margin-bottom:var(--space-md)">Edit Profile</h2>
-                    <form @submit.prevent="saveProfile">
-                        <div class="field">
-                            <label>Name</label>
-                            <input type="text" x-model="editForm.name" required>
-                        </div>
-                        <div class="field">
-                            <label>Bio</label>
-                            <textarea x-model="editForm.bio" rows="3" placeholder="Tell us about yourself"></textarea>
-                        </div>
-                        <div class="field">
-                            <label>Wallet Address (BSC)</label>
-                            <input type="text" x-model="editForm.wallet_address" placeholder="0x...">
-                        </div>
-                        <div class="field">
-                            <label>Preferred Currency</label>
-                            <select x-model="editForm.preferred_currency">
-                                <option value="USD">USD</option>
-                                <option value="EUR">EUR</option>
-                                <option value="GBP">GBP</option>
-                            </select>
-                        </div>
-                        <div class="field">
-                            <label>
-                                <input type="checkbox" x-model="editForm.newsletter_enabled" style="width:auto;margin-right:var(--space-xs)">
-                                Subscribe to newsletter
-                            </label>
-                        </div>
-                        <button type="submit" class="btn btn-primary" :disabled="saving">
-                            <span x-show="!saving">Save Changes</span>
-                            <span x-show="saving">Saving...</span>
-                        </button>
-                    </form>
-                </div>
-
-                <div x-show="activeTab === 'orders'">
-                    <h2 style="font-family:var(--font-mono);margin-bottom:var(--space-md)">Order History</h2>
-                    <div x-show="orders.length === 0" class="empty-state">
-                        <p>No orders yet.</p>
-                        <a href="/" class="btn btn-primary" style="margin-top:var(--space-sm)">Start Shopping</a>
-                    </div>
-                    <table class="orders-table" x-show="orders.length > 0">
-                        <thead>
-                            <tr>
-                                <th>Order ID</th>
-                                <th>Date</th>
-                                <th>Total</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template x-for="order in orders" :key="order.id">
-                                <tr>
-                                    <td x-text="'#' + order.id"></td>
-                                    <td x-text="new Date(order.created_at).toLocaleDateString()"></td>
-                                    <td x-text="'$' + order.total_usd.toFixed(2)"></td>
-                                    <td><span class="status-badge" :class="'status-' + order.status" x-text="order.status"></span></td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <footer class="footer">// pawradise.ir — digital assets marketplace</footer>
-
-    <script src="/assets/alpine.min.js" defer></script>
+  <header id="site-header"></header>
+  <main class="page" id="root"></main>
+  <footer id="site-footer"></footer>
     <script src="/assets/api.js"></script>
-    <!-- CHROME_FOOTER -->
+  <script src="/assets/ui.js"></script>
+  <script src="/assets/chrome.js"></script>
+  <script>
+    const api = Pawradise.api;
+    async function render() {
+      const root = document.getElementById("root");
+      let me;
+      try { me = await api.auth.getProfile(); }
+      catch (e) { root.innerHTML = PawUI.authGate("Log in to see orders and edit your profile."); return; }
+      const profile = me.profile || {};
+      const avatarUrl = profile.avatar_url || "";
+      const avatarField = avatarUrl.indexOf("data:") === 0 ? "" : avatarUrl;
+      let pub = {};
+      try { pub = await api.community.getProfile(me.id); } catch (e) { pub = {}; }
+      const orders = (await api.orders.list()).orders || [];
+      root.innerHTML = PawUI.accountNav("account") + `
+        <div class="kicker">Account</div>
+        <h1 class="page-title">${PawUI.esc(me.name)}</h1>
+        <p style="margin:-12px 0 18px">
+          <a href="..//profile/${me.id}">Public profile</a>
+          · <a href="..//profile/${me.id}&tab=followers">${pub.follower_count || 0} followers</a>
+          · <a href="..//profile/${me.id}&tab=following">${pub.following_count || 0} following</a>
+        </p>
+        <div class="split">
+          <div>
+            <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:12px">Orders</h2>
+            <table class="table"><thead><tr><th>ID</th><th>Status</th><th>Total</th><th>When</th></tr></thead>
+            <tbody>${orders.map((o) => `<tr>
+              <td class="mono"><a href="/account/order.html?id=${o.id}">#${o.id}</a></td>
+              <td>${PawUI.esc(o.status)}</td>
+              <td class="price">${PawUI.money(o.total_usd)}</td>
+              <td>${new Date(o.created_at).toLocaleDateString()}</td>
+            </tr>`).join("") || '<tr><td colspan="4">No orders yet.</td></tr>'}</tbody></table>
+          </div>
+          <form id="prof" class="buy">
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">${PawUI.avatar({ name: me.name, avatar_url: avatarUrl }, "lg")}</div>
+            <label class="field-col">Name <input name="name" value="${PawUI.esc(me.name)}" /></label>
+            <label class="field-col">Bio <textarea name="bio">${PawUI.esc(profile.bio || "")}</textarea></label>
+            ${PawUI.avatarFields(avatarField)}
+            <label class="field-col">Wallet <input name="wallet_address" value="${PawUI.esc(profile.wallet_address || "")}" /></label>
+            <p class="form-error"></p>
+            <button class="btn btn-accent">Save profile</button>
+            <button type="button" class="btn" id="out" style="margin-top:8px">Log out</button>
+          </form>
+        </div>`;
+      document.getElementById("prof").onsubmit = async (e) => {
+        e.preventDefault();
+        const f = new FormData(e.target);
+        try {
+          const uploaded = await PawUI.readAvatarFromForm(e.target);
+          const payload = { name: f.get("name"), bio: f.get("bio"), wallet_address: f.get("wallet_address") };
+          if (uploaded) payload.avatar_url = uploaded;
+          else if (avatarUrl.indexOf("data:") !== 0) payload.avatar_url = f.get("avatar_url") || "";
+          await api.auth.updateProfile(payload);
+          PawUI.toast("Saved");
+          PawChrome.mount();
+          render();
+        } catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
+      };
+      document.getElementById("out").onclick = async () => { await api.auth.logout(); location.href = "..//"; };
+    }
+    render();
+  </script>
 </body>
 </html>

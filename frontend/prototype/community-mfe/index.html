@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Community — Pawradise</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="community"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page">
+    <div class="kicker">Community</div>
+    <h1 class="page-title">Feed</h1>
+    <div id="nav"></div>
+    <div class="community-layout">
+      <div>
+        <div class="tabs" id="filters">
+          <button class="is-on" data-f="recent">Recent</button>
+          <button data-f="following">Following</button>
+        </div>
+        <form class="post" id="composer" hidden>
+          <textarea name="content" maxlength="500" placeholder="Short update (max 500)"></textarea>
+          <div class="char-count"><span id="cc">0</span>/500</div>
+          <button class="btn btn-accent" style="margin-top:10px">Post</button>
+          <p class="form-error"></p>
+        </form>
+        <p class="note" id="guest-composer" hidden style="margin:0 0 16px">Log in to post, follow, and like. Demo: nia@example.com / nia</p>
+        <div class="feed" id="feed"></div>
+      </div>
+      <aside class="community-side">
+        <div class="side-card" id="following-side"></div>
+        <div class="side-card" id="incoming-side"></div>
+        <div class="side-card" id="suggest-side"></div>
+      </aside>
+    </div>
+  </main>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    const api = Pawradise.api;
+    let filter = "recent";
+    let me = null;
+
+    function setNav() {
+      document.getElementById("nav").innerHTML = PawUI.communityNav("feed", me && me.id);
+    }
+
+    async function sides() {
+      const compact = (u) => PawUI.personRow(u, me && me.id, { compact: true });
+      if (!me) {
+        document.getElementById("following-side").innerHTML = `<h2>You follow</h2><p class="note" style="margin:0"><a href="${PawUI.loginHref()}">Log in</a> to keep a follow graph.</p>`;
+        document.getElementById("incoming-side").innerHTML = "";
+      } else {
+        try {
+          const following = ((await api.community.getFollowing(me.id)).users || []);
+          document.getElementById("following-side").innerHTML = `<h2>You follow · ${following.length}</h2>${following.length ? following.map(compact).join("") : '<p class="note" style="margin:0">Nobody yet. Use suggestions or People.</p>'}`;
+        } catch (e) {
+          document.getElementById("following-side").innerHTML = "<h2>You follow</h2>";
+        }
+        try {
+          const incoming = ((await api.community.getFollowers(me.id)).users || []).filter((u) => !u.following);
+          document.getElementById("incoming-side").innerHTML = incoming.length
+            ? `<h2>Follows you</h2>${incoming.map(compact).join("")}`
+            : "";
+        } catch (e) {
+          document.getElementById("incoming-side").innerHTML = "";
+        }
+      }
+      try {
+        const s = (await api.community.suggestions()).users || [];
+        document.getElementById("suggest-side").innerHTML = `<h2>Suggestions</h2>${s.slice(0, 5).map((u) => PawUI.personRow(u, me && me.id, { compact: true })).join("") || '<p class="note" style="margin:0">You follow everyone in the demo.</p>'}`;
+      } catch (e) {
+        document.getElementById("suggest-side").innerHTML = "";
+      }
+    }
+
+    async function render() {
+      try { me = await api.auth.getProfile(); } catch (e) { me = null; }
+      setNav();
+      document.getElementById("composer").hidden = !me;
+      document.getElementById("guest-composer").hidden = !!me;
+      try {
+        const res = await api.community.getPosts(filter);
+        const posts = res.posts || [];
+        const empty = filter === "following" && !posts.length
+          ? `<p class="note">${me ? "Accounts you follow have not posted yet. Open People and follow someone." : "Log in to see posts from people you follow."}</p>`
+          : '<p class="note">No posts in this feed.</p>';
+        document.getElementById("feed").innerHTML = posts.map((p) => PawUI.postCard(p, me && me.id)).join("") || empty;
+      } catch (e) {
+        document.getElementById("feed").innerHTML = `<p class="note">${PawUI.esc(e.message)}</p>`;
+      }
+      await sides();
+    }
+
+    document.getElementById("filters").onclick = (e) => {
+      const b = e.target.closest("[data-f]");
+      if (!b) return;
+      filter = b.dataset.f;
+      document.querySelectorAll("#filters button").forEach((x) => x.classList.toggle("is-on", x === b));
+      render();
+    };
+    PawUI.bindFollow(document.querySelector(".community-layout"), render);
+    const ta = document.querySelector("#composer textarea");
+    if (ta) ta.oninput = () => { document.getElementById("cc").textContent = ta.value.length; };
+    document.getElementById("composer").onsubmit = async (e) => {
+      e.preventDefault();
+      try { await api.community.createPost(new FormData(e.target).get("content")); e.target.reset(); document.getElementById("cc").textContent = "0"; render(); }
+      catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
+    };
+    render();
+  </script>
+</body>
+</html>

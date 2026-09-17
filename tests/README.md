@@ -16,7 +16,10 @@ tests/
 
 ```bash
 cd tests && node e2e-suite.js
+cd tests && npx playwright test e2e.spec.js
 cd tests/unit && go test ./... -count=1
 cd tests/integration && go test ./... -count=1
 cd tests/frontend && npx playwright test
+# handler tests next to each Go service
+cd ../services/product-service && go test ./... -count=1
 ```

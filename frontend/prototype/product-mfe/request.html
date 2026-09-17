@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Request custom — Pawradise</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="shop"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page">
+    <div class="kicker">Shop</div>
+    <h1 class="page-title">Request a custom asset</h1>
+    <p class="desc">If the library does not have it, describe what you need. Studio reviews these in admin.</p>
+    <form id="req" class="auth-card" style="margin:24px 0;max-width:560px">
+      <label class="field-col">Title <input name="title" required placeholder="Lunar fox, game-ready" /></label>
+      <label class="field-col">Category
+        <select name="category" id="req-cat"></select>
+      </label>
+      <label class="field-col">Description <textarea name="description" required></textarea></label>
+      <label class="field-col">Budget USD <input name="budget_usd" type="number" step="1" min="0" /></label>
+      <label class="field-col">Email <input name="email" type="email" placeholder="For a reply" /></label>
+      <p class="form-error"></p>
+      <p id="ok" class="note" hidden style="margin:8px 0">Request submitted.</p>
+      <button class="btn btn-accent">Submit request</button>
+    </form>
+  </main>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    Pawradise.api.products.getCategories().then((res) => {
+      const sel = document.getElementById("req-cat");
+      sel.innerHTML = (res.categories || []).map((c) =>
+        `<option value="${PawUI.esc(c.slug)}">${PawUI.esc(c.name)}</option>`).join("")
+        || `<option value="">No categories yet</option>`;
+    });
+    document.getElementById("req").onsubmit = async (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      try {
+        await Pawradise.api.requests.create({
+          title: f.get("title"),
+          description: f.get("description"),
+          category: f.get("category"),
+          budget_usd: Number(f.get("budget_usd")) || 0,
+          email: f.get("email")
+        });
+        document.getElementById("ok").hidden = false;
+        e.target.reset();
+      } catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
+    };
+  </script>
+</body>
+</html>

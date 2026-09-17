@@ -20,9 +20,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AdminHandler struct{ db *sql.DB; identityDB *sql.DB }
+type AdminHandler struct {
+	db          *sql.DB
+	identityDB  *sql.DB
+	commerceDB  *sql.DB
+}
 
-func NewAdminHandler(db *sql.DB, identityDB *sql.DB) *AdminHandler { return &AdminHandler{db: db, identityDB: identityDB} }
+func NewAdminHandler(db *sql.DB, identityDB *sql.DB) *AdminHandler {
+	h := &AdminHandler{db: db, identityDB: identityDB, commerceDB: db}
+	h.ensureExtras()
+	return h
+}
 
 // Users
 func (h *AdminHandler) ListUsers(c *gin.Context) {
@@ -548,7 +556,18 @@ func (h *AdminHandler) GetStats(c *gin.Context) {
 
 	h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM products").Scan(&totalProducts)
 	h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM products WHERE status = 'active'").Scan(&activeProducts)
-	h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM products WHERE pinned = true'").Scan(&pinnedProducts)
+	h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM products WHERE pinned = true").Scan(&pinnedProducts)
+
+	var totalCategories, totalDownloads int
+	h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM categories").Scan(&totalCategories)
+	h.db.QueryRow("SELECT COALESCE(SUM(downloads), 0) FROM products").Scan(&totalDownloads)
+
+	revenueDaily := []gin.H{}
+	topProducts := []gin.H{}
+	conversions := gin.H{
+		"views": 0, "carts": 0, "checkouts": 0, "purchases": totalOrders,
+		"visitor_to_view": 0, "view_to_cart": 0, "cart_to_checkout": 0, "checkout_to_purchase": 0,
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"total_users":       totalUsers,
@@ -557,6 +576,11 @@ func (h *AdminHandler) GetStats(c *gin.Context) {
 		"total_products":    totalProducts,
 		"active_products":   activeProducts,
 		"pinned_products":   pinnedProducts,
+		"total_categories":  totalCategories,
+		"total_downloads":   totalDownloads,
+		"revenue_daily":     revenueDaily,
+		"top_products":      topProducts,
+		"conversions":       conversions,
 	})
 }
 
@@ -859,9 +883,15 @@ func (h *AdminHandler) GeneratePreviews(c *gin.Context) {
 }
 
 func (h *AdminHandler) PinProduct(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	h.db.Exec("UPDATE products SET pinned = true, pinned_at = NOW() WHERE id = $1", id)
+	h.db.Exec("UPDATE products SET is_pinned = true WHERE id = $1", id)
 	c.JSON(200, gin.H{"message": "product pinned"})
 }
 
 func (h *AdminHandler) UnpinProduct(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	h.db.Exec("UPDATE products SET pinned = false, pinned_at = NULL WHERE id = $1", id)
+	h.db.Exec("UPDATE products SET is_pinned = false WHERE id = $1", id)
 	c.JSON(200, gin.H{"message": "product unpinned"})
 }

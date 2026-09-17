@@ -65,6 +65,27 @@ spec:
             name: account-mfe
             port:
               number: 80
+      - path: /compare
+        pathType: Prefix
+        backend:
+          service:
+            name: account-mfe
+            port:
+              number: 80
+      - path: /recent
+        pathType: Prefix
+        backend:
+          service:
+            name: account-mfe
+            port:
+              number: 80
+      - path: /guest
+        pathType: Prefix
+        backend:
+          service:
+            name: account-mfe
+            port:
+              number: 80
       - path: /referrals
         pathType: Prefix
         backend:
@@ -94,6 +115,13 @@ spec:
             port:
               number: 80
       - path: /profile
+        pathType: Prefix
+        backend:
+          service:
+            name: community-mfe
+            port:
+              number: 80
+      - path: /people
         pathType: Prefix
         backend:
           service:

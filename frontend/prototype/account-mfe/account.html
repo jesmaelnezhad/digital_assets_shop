@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Account — Pawradise</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="account"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page" id="root"></main>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    const api = Pawradise.api;
+    async function render() {
+      const root = document.getElementById("root");
+      let me;
+      try { me = await api.auth.getProfile(); }
+      catch (e) { root.innerHTML = PawUI.authGate("Log in to see orders and edit your profile."); return; }
+      const profile = me.profile || {};
+      const avatarUrl = profile.avatar_url || "";
+      const avatarField = avatarUrl.indexOf("data:") === 0 ? "" : avatarUrl;
+      let pub = {};
+      try { pub = await api.community.getProfile(me.id); } catch (e) { pub = {}; }
+      const orders = (await api.orders.list()).orders || [];
+      root.innerHTML = PawUI.accountNav("account") + `
+        <div class="kicker">Account</div>
+        <h1 class="page-title">${PawUI.esc(me.name)}</h1>
+        <p style="margin:-12px 0 18px">
+          <a href="../community-mfe/profile.html?id=${me.id}">Public profile</a>
+          · <a href="../community-mfe/profile.html?id=${me.id}&tab=followers">${pub.follower_count || 0} followers</a>
+          · <a href="../community-mfe/profile.html?id=${me.id}&tab=following">${pub.following_count || 0} following</a>
+        </p>
+        <div class="split">
+          <div>
+            <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:12px">Orders</h2>
+            <table class="table"><thead><tr><th>ID</th><th>Status</th><th>Total</th><th>When</th></tr></thead>
+            <tbody>${orders.map((o) => `<tr>
+              <td class="mono"><a href="order.html?id=${o.id}">#${o.id}</a></td>
+              <td>${PawUI.esc(o.status)}</td>
+              <td class="price">${PawUI.money(o.total_usd)}</td>
+              <td>${new Date(o.created_at).toLocaleDateString()}</td>
+            </tr>`).join("") || '<tr><td colspan="4">No orders yet.</td></tr>'}</tbody></table>
+          </div>
+          <form id="prof" class="buy">
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">${PawUI.avatar({ name: me.name, avatar_url: avatarUrl }, "lg")}</div>
+            <label class="field-col">Name <input name="name" value="${PawUI.esc(me.name)}" /></label>
+            <label class="field-col">Bio <textarea name="bio">${PawUI.esc(profile.bio || "")}</textarea></label>
+            ${PawUI.avatarFields(avatarField)}
+            <label class="field-col">Wallet <input name="wallet_address" value="${PawUI.esc(profile.wallet_address || "")}" /></label>
+            <p class="form-error"></p>
+            <button class="btn btn-accent">Save profile</button>
+            <button type="button" class="btn" id="out" style="margin-top:8px">Log out</button>
+          </form>
+        </div>`;
+      document.getElementById("prof").onsubmit = async (e) => {
+        e.preventDefault();
+        const f = new FormData(e.target);
+        try {
+          const uploaded = await PawUI.readAvatarFromForm(e.target);
+          const payload = { name: f.get("name"), bio: f.get("bio"), wallet_address: f.get("wallet_address") };
+          if (uploaded) payload.avatar_url = uploaded;
+          else if (avatarUrl.indexOf("data:") !== 0) payload.avatar_url = f.get("avatar_url") || "";
+          await api.auth.updateProfile(payload);
+          PawUI.toast("Saved");
+          PawChrome.mount();
+          render();
+        } catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
+      };
+      document.getElementById("out").onclick = async () => { await api.auth.logout(); location.href = "../shop-mfe/index.html"; };
+    }
+    render();
+  </script>
+</body>
+</html>

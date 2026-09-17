@@ -46,6 +46,7 @@ func main() {
 	// Public
 	r.GET("/api/v1/exchange-rates", h.GetExchangeRates)
 	r.GET("/api/v1/exchange-rates/:chain", h.GetExchangeRate)
+	r.GET("/api/v1/settings/:key", h.GetSetting)
 
 	// Auth - payment ops
 	authGroup := r.Group("/api/v1")

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wishlist — Pawradise</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="account"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page" id="root"></main>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    async function render() {
+      const root = document.getElementById("root");
+      try {
+        await PawUI.catalog.load();
+        const res = await Pawradise.api.wishlist.get();
+        const products = PawUI.catalog.byIds((res.products || []).map((x) => x.product_id));
+        root.innerHTML = PawUI.accountNav("wishlist") + `<div class="kicker">Account</div><h1 class="page-title">Wishlist</h1>` +
+          (products.length ? `<div class="grid">${products.map(PawUI.card).join("")}</div>` : '<p class="note">Nothing saved yet.</p>');
+        if (products.length) {
+          PawUI.bindCards(root.querySelector(".grid"));
+          root.querySelector(".grid").addEventListener("paw-refresh", render);
+        }
+      } catch (e) {
+        root.innerHTML = e.status === 401
+          ? PawUI.authGate("Log in to keep a wishlist.")
+          : `<p class="note">${PawUI.esc(e.message)}</p>`;
+      }
+    }
+    render();
+  </script>
+</body>
+</html>

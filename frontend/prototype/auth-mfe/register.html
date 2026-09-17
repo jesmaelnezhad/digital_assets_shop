@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Register — Pawradise</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="auth"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <form class="auth-card" id="form">
+    <div class="kicker">Identity</div>
+    <h1>Create account</h1>
+    <label class="field-col">Name <input name="name" required /></label>
+    <label class="field-col">Email <input name="email" type="email" required /></label>
+    <label class="field-col">Password <input name="password" type="password" required /></label>
+    <label class="field-col">Referral code <input name="referral_code" placeholder="NIA-STUDIO" /></label>
+    <p class="form-error"></p>
+    <button class="btn btn-accent" style="width:100%">Register</button>
+    <p style="margin-top:14px"><a href="login.html">Already have an account</a></p>
+  </form>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const ref = params.get("ref");
+    const next = params.get("next");
+    if (ref) document.querySelector("[name=referral_code]").value = ref;
+    document.getElementById("form").onsubmit = async (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      try {
+        await Pawradise.api.auth.register(f.get("email"), f.get("password"), f.get("name"), f.get("referral_code"));
+        location.href = PawUI.safeNext(next);
+      } catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
+    };
+  </script>
+</body>
+</html>

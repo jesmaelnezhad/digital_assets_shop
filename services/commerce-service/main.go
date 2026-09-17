@@ -60,6 +60,7 @@ func main() {
 		auth.POST("/orders/:id/confirm", h.ConfirmPayment)
 		auth.GET("/cart", h.GetCart)
 		auth.POST("/cart/items", h.AddCartItem)
+		auth.PUT("/cart/items/:id", h.UpdateCartItem)
 		auth.DELETE("/cart/items/:id", h.RemoveCartItem)
 		auth.GET("/wishlist", h.GetWishlist)
 		auth.POST("/wishlist/toggle", h.ToggleWishlist)

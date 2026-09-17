@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Guest order — Pawradise</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="account"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page">
+    <div class="kicker">Commerce</div>
+    <h1 class="page-title">Look up a guest order</h1>
+    <form id="f" class="auth-card" style="margin:0">
+      <label class="field-col">Order ID <input name="id" required placeholder="201" /></label>
+      <label class="field-col">Email <input name="email" type="email" required /></label>
+      <p class="form-error"></p>
+      <button class="btn btn-accent">Find order</button>
+    </form>
+    <div id="out"></div>
+  </main>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    document.getElementById("f").onsubmit = async (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      try {
+        const o = await Pawradise.api.orders.getGuestOrder(f.get("id"), f.get("email"));
+        document.getElementById("out").innerHTML = `<div class="note" style="margin-top:20px">
+          Order #${o.id} · ${PawUI.esc(o.status)} · ${PawUI.money(o.total_usd)} · ${PawUI.esc(o.email)}</div>`;
+      } catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
+    };
+  </script>
+</body>
+</html>

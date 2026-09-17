@@ -1,223 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pawradise — My Account</title>
-    <meta name="description" content="Manage your Pawradise account">
-    <link rel="stylesheet" href="/assets/theme.css">
-    <script src="/env.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', system-ui, sans-serif; background-color: #0a0e14; color: #c7d0dc; min-height: 100vh; display: flex; flex-direction: column; }
-        .header { background-color: #10151d; border-bottom: 1px solid #1e2530; padding: 8px 32px; position: sticky; top: 0; z-index: 100; }
-        .header-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-        .logo { font-family: var(--font-mono); font-size: 1.25rem; font-weight: bold; color: #4dd6c9; text-decoration: none; }
-        .nav { display: flex; align-items: center; gap: 16px; }
-        .nav a { color: #c7d0dc; text-decoration: none; font-size: 0.9rem; padding: var(--space-xs) var(--space-sm); border-radius: 4px; }
-        .nav a:hover { color: #4dd6c9; }
-        .header-actions { display: flex; align-items: center; gap: var(--space-sm); }
-        .badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; font-size: 0.7rem; font-family: var(--font-mono); background-color: var(--color-accent-secondary); color: var(--color-bg); border-radius: 999px; }
-        .btn { display: inline-flex; align-items: center; justify-content: center; padding: var(--space-sm) var(--space-md); font-size: 0.9rem; font-family: 'Inter', system-ui, sans-serif; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; transition: all 0.15s ease; }
-        .btn-primary { background-color: #4dd6c9; color: var(--color-bg); font-weight: 600; }
-        .btn-primary:hover { box-shadow: var(--glow-hover); }
-        .btn-secondary { background-color: transparent; border: 1px solid var(--color-border); color: #c7d0dc; }
-        .btn-secondary:hover { border-color: #4dd6c9; color: #4dd6c9; }
-        .btn-danger { background-color: var(--color-danger); color: var(--color-bg); }
-        main { flex: 1; max-width: 1280px; margin: 0 auto; padding: var(--space-lg); width: 100%; }
-        .page-header { margin-bottom: var(--space-xl); }
-        .page-header h1 { font-family: var(--font-mono); font-size: 1.5rem; color: #4dd6c9; }
-        .tabs { display: flex; gap: var(--space-xs); margin-bottom: var(--space-lg); border-bottom: 1px solid #1e2530; overflow-x: auto; }
-        .tab { padding: var(--space-sm) var(--space-md); font-size: 0.9rem; cursor: pointer; border-bottom: 2px solid transparent; color: var(--color-text-muted); white-space: nowrap; }
-        .tab.active { color: #4dd6c9; border-bottom-color: #4dd6c9; }
-        .tab:hover { color: #c7d0dc; }
-        .card { background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-lg); margin-bottom: var(--space-md); }
-        .card h2 { font-family: var(--font-mono); font-size: 1.1rem; color: #4dd6c9; margin-bottom: var(--space-md); }
-        .field { margin-bottom: var(--space-md); }
-        .field label { display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: var(--space-xs); }
-        .field input, .field textarea { width: 100%; padding: var(--space-sm) var(--space-md); background-color: #0a0e14; border: 1px solid var(--color-border); border-radius: 4px; color: #c7d0dc; font-size: 0.95rem; }
-        .field input:focus, .field textarea:focus { outline: none; border-color: #4dd6c9; box-shadow: var(--glow-focus); }
-        .field .error { color: var(--color-danger); font-size: 0.8rem; margin-top: var(--space-xs); }
-        .banner { padding: var(--space-sm) var(--space-md); border-radius: 4px; margin-bottom: var(--space-md); font-size: 0.85rem; display: none; }
-        .banner.error { background-color: rgba(224,111,111,0.1); border: 1px solid var(--color-danger); color: var(--color-danger); }
-        .banner.success { background-color: rgba(95,214,138,0.1); border: 1px solid var(--color-success); color: var(--color-success); }
-        .banner.visible { display: block; }
-        .order-list { display: flex; flex-direction: column; gap: var(--space-sm); }
-        .order-card { background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-        .order-info { flex: 1; }
-        .order-id { font-family: var(--font-mono); font-size: 0.85rem; color: var(--color-text-muted); }
-        .order-total { font-family: var(--font-mono); font-size: 1rem; color: #4dd6c9; font-weight: bold; }
-        .order-status { font-family: var(--font-mono); font-size: 0.8rem; padding: 2px 8px; border-radius: 4px; }
-        .order-status.paid { background-color: rgba(95,214,138,0.1); color: var(--color-success); border: 1px solid var(--color-success); }
-        .order-status.pending { background-color: rgba(224,184,77,0.1); color: var(--color-warning); border: 1px solid var(--color-warning); }
-        .order-status.failed { background-color: rgba(224,111,111,0.1); color: var(--color-danger); border: 1px solid var(--color-danger); }
-        .empty-state { text-align: center; padding: var(--space-xl); color: var(--color-text-muted); }
-        .footer { background-color: #10151d; border-top: 1px solid var(--color-border); padding: var(--space-xl) var(--space-lg); margin-top: auto; }
-        .footer-inner { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-xl); }
-        .footer h4 { font-family: var(--font-mono); font-size: 0.85rem; color: #4dd6c9; margin-bottom: var(--space-sm); }
-        .footer a { display: block; color: var(--color-text-muted); text-decoration: none; font-size: 0.85rem; padding: 2px 0; }
-        .footer a:hover { color: #c7d0dc; }
-        .footer-bottom { max-width: 1280px; margin: var(--space-lg) auto 0; padding-top: var(--space-lg); border-top: 1px solid var(--color-border); text-align: center; color: var(--color-text-muted); font-size: 0.8rem; font-family: var(--font-mono); }
-        @media (max-width: 640px) { .header-inner { flex-wrap: wrap; } .nav { display: none; } .order-card { flex-direction: column; align-items: flex-start; } }
-    </style>
-    <!-- CHROME_HEADER -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Account — Pawradise</title>
+    <script>window.SITE_PAGE="account";</script>
+  <link rel="icon" href="/assets/favicon.svg" sizes="any" />
+  <link rel="stylesheet" href="/assets/theme.css" />
+  <script src="/env.js"></script>
 </head>
 <body>
-    <header class="header">
-        <div class="header-inner">
-            <a href="/" class="logo">/pawradise</a>
-            <nav class="nav">
-                <a href="/">Shop</a>
-                <a href="/category">Categories</a>
-                <a href="/product/bundle.html">Bundles</a>
-                <a href="/product/request.html">Request</a>
-                <a href="/community">Community</a>
-                <a href="/account">Account</a>
-            </nav>
-            <div class="header-actions">
-                <a href="/cart" class="btn btn-secondary">Cart</a>
-                <a href="/auth/login.html" class="btn btn-secondary" id="authBtn">Login</a>
-            </div>
-        </div>
-    </header>
-
-    <main x-data="accountApp()" x-init="init()">
-        <div class="page-header">
-            <h1>My Account</h1>
-        </div>
-
-        <div class="tabs">
-            <div class="tab" :class="{ active: tab === 'profile' }" @click="tab = 'profile'">Profile</div>
-            <div class="tab" :class="{ active: tab === 'orders' }" @click="tab = 'orders'">Orders</div>
-        </div>
-
-        <div x-show="tab === 'profile'">
-            <div class="banner" :class="{ error: profileError, success: profileSuccess, visible: profileError || profileSuccess }" x-text="profileError || profileSuccess"></div>
-            <div class="card">
-                <h2>Profile Information</h2>
-                <div class="field">
-                    <label>Name</label>
-                    <input type="text" x-model="user.name" placeholder="Your name">
-                </div>
-                <div class="field">
-                    <label>Bio</label>
-                    <textarea x-model="user.bio" rows="3" placeholder="Tell us about yourself"></textarea>
-                </div>
-                <div class="field">
-                    <label>Wallet Address (BSC)</label>
-                    <input type="text" x-model="user.wallet_address" placeholder="0x...">
-                    <div class="error" x-show="walletError" x-text="walletError"></div>
-                </div>
-                <div class="field">
-                    <label>Preferred Currency</label>
-                    <select x-model="user.preferred_currency" style="width:100%;padding:var(--space-sm);background-color:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-sm);color:var(--color-text)">
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="GBP">GBP</option>
-                    </select>
-                </div>
-                <button class="btn btn-primary" @click="saveProfile()" :disabled="savingProfile">
-                    <span x-show="!savingProfile">Save Changes</span>
-                    <span x-show="savingProfile">Saving...</span>
-                </button>
-            </div>
-        </div>
-
-        <div x-show="tab === 'orders'">
-            <div class="card">
-                <h2>Purchase History</h2>
-                <div class="empty-state" x-show="!loadingOrders && orders.length === 0">
-                    <p>No orders yet.</p>
-                    <a href="/" class="btn btn-primary" style="margin-top:var(--space-md)">Start Shopping</a>
-                </div>
-                <div class="order-list" x-show="orders.length > 0">
-                    <template x-for="order in orders" :key="order.id">
-                        <div class="order-card">
-                            <div class="order-info">
-                                <div class="order-id" x-text="'Order #' + order.id"></div>
-                                <div style="font-size:0.85rem;color:var(--color-text-muted)" x-text="new Date(order.created_at).toLocaleDateString()"></div>
-                            </div>
-                            <div class="order-total" x-text="'$' + order.total_usd.toFixed(2)"></div>
-                            <div class="order-status" :class="order.status" x-text="order.status"></div>
-                            <button class="btn btn-secondary" @click="viewOrder(order.id)">View</button>
-                        </div>
-                    </template>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <footer class="footer">
-        <div class="footer-inner">
-            <div><h4>Account</h4><a href="/account">Profile</a><a href="/wishlist">Wishlist</a><a href="/referrals">Referrals</a></div>
-            <div><h4>Support</h4></div>
-        </div>
-        <div class="footer-bottom">// pawradise.ir</div>
-    </footer>
-
-    <script src="/assets/alpine.min.js" defer></script>
+  <header id="site-header"></header>
+  <main class="page" id="root"></main>
+  <footer id="site-footer"></footer>
     <script src="/assets/api.js"></script>
-    <script src="/assets/app.js"></script>
-    <script>
-        function accountApp() {
-            return {
-                tab: 'profile',
-                user: { name: '', bio: '', wallet_address: '', preferred_currency: 'USD' },
-                orders: [],
-                loadingOrders: true,
-                savingProfile: false,
-                profileError: '',
-                profileSuccess: '',
-                walletError: '',
-                async init() {
-                    await this.loadProfile();
-                    await this.loadOrders();
-                },
-                async loadProfile() {
-                    try {
-                        const data = await window.auth.getProfile();
-                        this.user = {
-                            name: data.name || '',
-                            bio: data.profile?.bio || '',
-                            wallet_address: data.profile?.wallet_address || '',
-                            preferred_currency: data.profile?.preferred_currency || 'USD'
-                        };
-                    } catch(e) { window.location.href = '/login'; }
-                },
-                async saveProfile() {
-                    this.walletError = '';
-                    if (this.user.wallet_address && !/^0x[a-fA-F0-9]{40}$/.test(this.user.wallet_address)) {
-                        this.walletError = 'Invalid BSC address format';
-                        return;
-                    }
-                    this.savingProfile = true;
-                    this.profileError = '';
-                    this.profileSuccess = '';
-                    try {
-                        await window.auth.updateProfile({
-                            name: this.user.name,
-                            bio: this.user.bio,
-                            wallet_address: this.user.wallet_address,
-                            preferred_currency: this.user.preferred_currency
-                        });
-                        this.profileSuccess = 'Profile saved successfully';
-                    } catch(e) {
-                        this.profileError = e.message || 'Failed to save profile';
-                    } finally {
-                        this.savingProfile = false;
-                    }
-                },
-                async loadOrders() {
-                    try {
-                        const data = await window.orders.list();
-                        this.orders = data.orders || [];
-                    } catch(e) { this.orders = []; }
-                    this.loadingOrders = false;
-                },
-                viewOrder(id) { window.location.href = `/account?order=${id}`; }
-            };
-        }
-    </script>
-    <!-- CHROME_FOOTER -->
+  <script src="/assets/ui.js"></script>
+  <script src="/assets/chrome.js"></script>
+  <script>
+    const api = Pawradise.api;
+    async function render() {
+      const root = document.getElementById("root");
+      let me;
+      try { me = await api.auth.getProfile(); }
+      catch (e) { root.innerHTML = PawUI.authGate("Log in to see orders and edit your profile."); return; }
+      const profile = me.profile || {};
+      const avatarUrl = profile.avatar_url || "";
+      const avatarField = avatarUrl.indexOf("data:") === 0 ? "" : avatarUrl;
+      let pub = {};
+      try { pub = await api.community.getProfile(me.id); } catch (e) { pub = {}; }
+      const orders = (await api.orders.list()).orders || [];
+      root.innerHTML = PawUI.accountNav("account") + `
+        <div class="kicker">Account</div>
+        <h1 class="page-title">${PawUI.esc(me.name)}</h1>
+        <p style="margin:-12px 0 18px">
+          <a href="..//profile/${me.id}">Public profile</a>
+          · <a href="..//profile/${me.id}&tab=followers">${pub.follower_count || 0} followers</a>
+          · <a href="..//profile/${me.id}&tab=following">${pub.following_count || 0} following</a>
+        </p>
+        <div class="split">
+          <div>
+            <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:12px">Orders</h2>
+            <table class="table"><thead><tr><th>ID</th><th>Status</th><th>Total</th><th>When</th></tr></thead>
+            <tbody>${orders.map((o) => `<tr>
+              <td class="mono"><a href="/account/order.html?id=${o.id}">#${o.id}</a></td>
+              <td>${PawUI.esc(o.status)}</td>
+              <td class="price">${PawUI.money(o.total_usd)}</td>
+              <td>${new Date(o.created_at).toLocaleDateString()}</td>
+            </tr>`).join("") || '<tr><td colspan="4">No orders yet.</td></tr>'}</tbody></table>
+          </div>
+          <form id="prof" class="buy">
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">${PawUI.avatar({ name: me.name, avatar_url: avatarUrl }, "lg")}</div>
+            <label class="field-col">Name <input name="name" value="${PawUI.esc(me.name)}" /></label>
+            <label class="field-col">Bio <textarea name="bio">${PawUI.esc(profile.bio || "")}</textarea></label>
+            ${PawUI.avatarFields(avatarField)}
+            <label class="field-col">Wallet <input name="wallet_address" value="${PawUI.esc(profile.wallet_address || "")}" /></label>
+            <p class="form-error"></p>
+            <button class="btn btn-accent">Save profile</button>
+            <button type="button" class="btn" id="out" style="margin-top:8px">Log out</button>
+          </form>
+        </div>`;
+      document.getElementById("prof").onsubmit = async (e) => {
+        e.preventDefault();
+        const f = new FormData(e.target);
+        try {
+          const uploaded = await PawUI.readAvatarFromForm(e.target);
+          const payload = { name: f.get("name"), bio: f.get("bio"), wallet_address: f.get("wallet_address") };
+          if (uploaded) payload.avatar_url = uploaded;
+          else if (avatarUrl.indexOf("data:") !== 0) payload.avatar_url = f.get("avatar_url") || "";
+          await api.auth.updateProfile(payload);
+          PawUI.toast("Saved");
+          PawChrome.mount();
+          render();
+        } catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
+      };
+      document.getElementById("out").onclick = async () => { await api.auth.logout(); location.href = "..//"; };
+    }
+    render();
+  </script>
 </body>
 </html>

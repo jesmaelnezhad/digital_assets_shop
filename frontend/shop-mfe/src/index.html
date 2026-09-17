@@ -1,221 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pawradise — Digital Assets Marketplace</title>
-    <meta name="description" content="Discover and download premium digital assets">
-    <link rel="icon" href="/assets/favicon.svg" sizes="any">
-    <link rel="stylesheet" href="/assets/theme.css">
-    <script src="/env.js"></script>
-    <script src="/assets/api.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', system-ui, sans-serif; background-color: #0a0e14; color: #c7d0dc; min-height: 100vh; display: flex; flex-direction: column; }
-        .header { background-color: #10151d; border-bottom: 1px solid #1e2530; padding: 12px 20px; }
-        .header-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
-        .logo { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: bold; color: #4dd6c9; text-decoration: none; }
-        .nav { display: flex; gap: 20px; }
-        .nav a { color: #c7d0dc; text-decoration: none; font-size: 0.9rem; padding: 6px 12px; border-radius: 6px; transition: color 0.15s ease; }
-        .nav a:hover { color: #4dd6c9; }
-        .header-actions { display: flex; gap: 12px; align-items: center; }
-        .btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.15s ease; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
-        .btn-primary { background-color: #4dd6c9; color: #0a0e14; }
-        .btn-primary:hover { background-color: #5ee6d9; }
-        .btn-ghost { background-color: transparent; color: #c7d0dc; border: 1px solid #1e2530; }
-        .btn-ghost:hover { border-color: #4dd6c9; color: #4dd6c9; }
-        main { flex: 1; max-width: 1280px; margin: 0 auto; padding: 32px 20px; width: 100%; }
-        .hero { text-align: center; padding: 80px 20px; }
-        .hero h1 { font-size: 3rem; font-weight: 700; margin-bottom: 16px; color: #ffffff; }
-        .hero p { font-size: 1.25rem; color: #7c8896; max-width: 600px; margin: 0 auto 32px; }
-        .hero-actions { display: flex; gap: 16px; justify-content: center; }
-        .filters { display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; align-items: center; }
-        .filters select, .filters input { padding: 8px 12px; border-radius: 8px; border: 1px solid #1e2530; background-color: #10151d; color: #c7d0dc; font-size: 0.875rem; }
-        .filters label { font-size: 0.8rem; color: #7c8896; display: flex; align-items: center; gap: 6px; }
-        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
-        .product-card { background-color: #10151d; border: 1px solid #1e2530; border-radius: 12px; overflow: hidden; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
-        .product-card:hover { border-color: #4dd6c9; box-shadow: 0 0 20px rgba(77, 214, 201, 0.1); }
-        .product-card-image { aspect-ratio: 16/10; background-color: #0a0e14; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .product-card-image img { max-width: 100%; height: auto; }
-        .product-card-body { padding: 16px; }
-        .product-card-title { font-weight: 600; font-size: 1rem; margin-bottom: 4px; }
-        .product-card-cat { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #7c8896; margin-bottom: 8px; }
-        .product-card-footer { display: flex; align-items: center; justify-content: space-between; }
-        .product-card-price { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; color: #4dd6c9; font-weight: bold; }
-        .product-card-rating { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #d4a84b; }
-        .pinned-badge { background-color: #c988d4; color: #0a0e14; font-size: 0.7rem; font-family: 'JetBrains Mono', monospace; padding: 2px 6px; border-radius: 4px; margin-right: 6px; }
-        .pagination { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 40px; }
-        .pagination button { padding: 8px 16px; background-color: #10151d; border: 1px solid #1e2530; border-radius: 6px; color: #c7d0dc; cursor: pointer; font-family: 'JetBrains Mono', monospace; }
-        .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
-        .pagination button.active { border-color: #4dd6c9; color: #4dd6c9; }
-        .empty-state { text-align: center; padding: 80px 20px; }
-        .empty-state-icon { font-size: 3rem; margin-bottom: 16px; }
-        .empty-state h3 { font-size: 1.25rem; margin-bottom: 8px; }
-        .empty-state p { color: #7c8896; }
-        .footer { background-color: #10151d; border-top: 1px solid #1e2530; padding: 32px 20px; text-align: center; color: #7c8896; font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; }
-        .footer-inner { max-width: 1280px; margin: 0 auto; }
-        @media (max-width: 640px) {
-            .product-grid { grid-template-columns: 1fr; }
-            .nav { display: none; }
-            .hero h1 { font-size: 2rem; }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pawradise — Shop</title>
+    <script>window.SITE_PAGE="shop";</script>
+  <link rel="icon" href="/assets/favicon.svg" sizes="any" />
+  <link rel="stylesheet" href="/assets/theme.css" />
+  <script src="/env.js"></script>
 </head>
 <body>
-    <header class="header">
-        <div class="header-inner">
-            <a href="/" class="logo">/pawradise</a>
-            <nav class="nav">
-                <a href="/">Shop</a>
-                <a href="/category">Categories</a>
-                <a href="/product/bundle.html">Bundles</a>
-                <a href="/product/request.html">Request</a>
-                <a href="/community">Community</a>
-                <a href="/account">Account</a>
-            </nav>
-            <div class="header-actions">
-                <a href="/login" class="btn btn-ghost">Sign in</a>
-                <a href="/register" class="btn btn-primary">Get Started</a>
-            </div>
-        </div>
-    </header>
+  <header id="site-header"></header>
+  <section class="hero" id="hero"></section>
+  <div class="catalog">
+    <aside class="rail" id="rail"></aside>
+    <div>
+      <div class="toolbar">
+        <select id="sort">
+          <option value="newest">Newest</option>
+          <option value="popular">Popular</option>
+          <option value="price_asc">Price · low</option>
+          <option value="price_desc">Price · high</option>
+        </select>
+        <select id="rating">
+          <option value="">Any rating</option>
+          <option value="4">4★ and up</option>
+          <option value="4.5">4.5★ and up</option>
+        </select>
+        <select id="file_type"><option value="">Any file type</option></select>
+        <span class="price-range">
+          <input id="price_min" type="number" min="0" placeholder="Min $" />
+          <span>–</span>
+          <input id="price_max" type="number" min="0" placeholder="Max $" />
+        </span>
+        <span class="result-count" id="count"></span>
+      </div>
+      <div class="grid" id="grid"></div>
+      <div class="pager" id="pager"></div>
+    </div>
+  </div>
+  <footer id="site-footer"></footer>
+    <script src="/assets/api.js"></script>
+  <script src="/assets/ui.js"></script>
+  <script src="/assets/chrome.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const state = {
+      search: params.get("search") || "",
+      category: params.get("category") || "",
+      sort: params.get("sort") || "newest",
+      rating: params.get("rating") || "",
+      file_type: params.get("file_type") || "",
+      price_min: params.get("price_min") || "",
+      price_max: params.get("price_max") || "",
+      page: Number(params.get("page") || 1)
+    };
+    document.getElementById("sort").value = state.sort;
+    document.getElementById("rating").value = state.rating;
+    document.getElementById("price_min").value = state.price_min;
+    document.getElementById("price_max").value = state.price_max;
+    const api = Pawradise.api;
 
-    <main x-data="shopApp()" x-init="init()">
-        <section class="hero">
-            <h1>Digital Assets, Simplified</h1>
-            <p>Discover and download premium digital assets from independent creators worldwide.</p>
-            <div class="hero-actions">
-                <a href="#products" class="btn btn-primary">Browse Assets</a>
-                <a href="/product/request" class="btn btn-ghost">Request Custom</a>
-            </div>
-        </section>
+    async function renderHero() {
+      await PawUI.catalog.load();
+      const list = await api.products.list({ sort: "newest", per_page: 12 });
+      const raw = (list.products || []).find((x) => x.is_pinned || x.pinned) || (list.products || [])[0];
+      const p = PawUI.catalog.decorate(raw);
+      if (!p) return;
+      document.getElementById("hero").innerHTML = `
+        <img src="${PawUI.img(p)}" alt="" />
+        <div class="hero-veil"></div>
+        <div class="hero-copy">
+          <div class="kicker">Pinned · ${PawUI.esc(p.category_name || "")}</div>
+          <h1>${PawUI.esc(p.title)}</h1>
+          <p>${PawUI.esc(p.description)}</p>
+          <div class="hero-meta">
+            <span class="price">${PawUI.money(p.price_usd)}</span>
+            <span>${PawUI.esc(p.digital_formats || "")}</span>
+          </div>
+          <a class="btn btn-accent" href="${PawUI.productUrl(p.slug)}">View asset</a>
+        </div>`;
+    }
 
-        <section id="products" style="margin-top: 60px;">
-            <div class="filters">
-                <label>Category:
-                    <select x-model="filters.category" @change="loadProducts()">
-                        <option value="">All</option>
-                        <template x-for="cat in categories" :key="cat.id">
-                            <option :value="cat.slug" x-text="cat.name"></option>
-                        </template>
-                    </select>
-                </label>
-                <label>Sort:
-                    <select x-model="filters.sort" @change="loadProducts()">
-                        <option value="newest">Newest</option>
-                        <option value="price_asc">Price: Low to High</option>
-                        <option value="price_desc">Price: High to Low</option>
-                        <option value="popular">Popular</option>
-                    </select>
-                </label>
-                <label>Search:
-                    <input type="text" x-model="filters.search" @input.debounce.500ms="loadProducts()" placeholder="Search assets...">
-                </label>
-            </div>
+    async function render() {
+      await PawUI.catalog.load();
+      const categories = PawUI.catalog.cats;
+      document.getElementById("rail").innerHTML = `<h2>Library</h2>
+        <button class="cat ${state.category ? "" : "is-on"}" data-cat="">All assets</button>` +
+        categories.map((c) => `<button class="cat ${state.category === c.slug ? "is-on" : ""}" data-cat="${PawUI.esc(c.slug)}">${PawUI.esc(c.name)}</button>`).join("");
+      const types = [...new Set(PawUI.catalog.products.map((p) => p.digital_formats).filter(Boolean))];
+      const ft = document.getElementById("file_type");
+      ft.innerHTML = `<option value="">Any file type</option>` + types.map((t) => `<option ${t === state.file_type ? "selected" : ""}>${t}</option>`).join("");
+      const res = await api.products.list(state);
+      document.getElementById("count").textContent = res.total + " assets";
+      document.getElementById("grid").innerHTML = (res.products || []).map((p) => PawUI.card(PawUI.catalog.decorate(p))).join("") || "<p class='note'>No assets match.</p>";
+      const pages = Math.max(1, Math.ceil(res.total / (res.per_page || 9)));
+      document.getElementById("pager").innerHTML = Array.from({ length: pages }, (_, i) =>
+        `<button class="${res.page === i + 1 ? "is-on" : ""}" data-page="${i + 1}">${i + 1}</button>`).join("");
+      PawChrome.mount();
+    }
 
-            <div x-show="loading" class="empty-state">
-                <div class="spinner" style="width: 40px; height: 40px; border: 3px solid #1e2530; border-top-color: #4dd6c9; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto;"></div>
-                <p style="margin-top: 12px;">Loading products...</p>
-            </div>
-
-            <div x-show="!loading && products.length === 0" class="empty-state">
-                <div class="empty-state-icon">📦</div>
-                <h3>No products found</h3>
-                <p>Try adjusting your filters or search terms.</p>
-            </div>
-
-            <div class="product-grid" x-show="!loading && products.length > 0">
-                <template x-for="product in products" :key="product.id">
-                    <div class="product-card">
-                        <a :href="`/product/${product.slug}`">
-                            <div class="product-card-image">
-                                <img :src="product.image_url || '/assets/placeholder.png'" :alt="product.title" loading="lazy">
-                            </div>
-                        </a>
-                        <div class="product-card-body">
-                            <div class="product-card-title">
-                                <span class="pinned-badge" x-show="product.is_pinned">PIN</span>
-                                <a :href="`/product/${product.slug}`" style="color:inherit;text-decoration:none" x-text="product.title"></a>
-                            </div>
-                            <div class="product-card-cat" x-text="product.category_name || 'Uncategorized'"></div>
-                            <div class="product-card-footer">
-                                <span class="product-card-price" x-text="'$' + (product.price || 0).toFixed(2)"></span>
-                                <span class="product-card-rating" x-show="product.rating > 0" x-text="'★ ' + (product.rating || 0).toFixed(1)"></span>
-                            </div>
-                        </div>
-                    </div>
-                </template>
-            </div>
-
-            <div class="pagination" x-show="!loading && totalPages > 1">
-                <button @click="filters.page--; loadProducts()" :disabled="filters.page <= 1">← Prev</button>
-                <span x-text="`Page ${filters.page} of ${totalPages}`" style="color: #7c8896; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem;"></span>
-                <button @click="filters.page++; loadProducts()" :disabled="filters.page >= totalPages">Next →</button>
-            </div>
-        </section>
-    </main>
-
-    <footer class="footer">
-        <div class="footer-inner">
-            <p>// pawradise.ir — Digital Assets Marketplace</p>
-        </div>
-    </footer>
-
-    <script src="/assets/alpine.min.js" defer></script>
-    <script>
-        function shopApp() {
-            return {
-                products: [],
-                categories: [],
-                loading: true,
-                total: 0,
-                totalPages: 0,
-                filters: {
-                    page: 1,
-                    per_page: 12,
-                    category: '',
-                    sort: 'newest',
-                    search: ''
-                },
-                init() {
-                    this.loadCategories();
-                    this.loadProducts();
-                },
-                async loadCategories() {
-                    try {
-                        const api = window.Pawradise?.api;
-                        if (!api) return;
-                        const data = await api.products.getCategories();
-                        this.categories = data.categories || data || [];
-                    } catch (e) {
-                        console.error('Failed to load categories:', e);
-                    }
-                },
-                async loadProducts() {
-                    this.loading = true;
-                    try {
-                        const api = window.Pawradise?.api;
-                        if (!api) return;
-                        const params = {
-                            page: this.filters.page,
-                            per_page: this.filters.per_page,
-                            sort: this.filters.sort
-                        };
-                        if (this.filters.category) params.category = this.filters.category;
-                        if (this.filters.search) params.search = this.filters.search;
-                        const data = await api.products.list(params);
-                        this.products = data.products || [];
-                        this.total = data.total || 0;
-                        this.totalPages = Math.ceil(this.total / this.filters.per_page);
-                    } catch (e) {
-                        console.error('Failed to load products:', e);
-                        this.products = [];
-                    } finally {
-                        this.loading = false;
-                    }
-                }
-            };
-        }
-    </script>
+    document.getElementById("rail").onclick = (e) => {
+      const b = e.target.closest("[data-cat]");
+      if (!b) return;
+      state.category = b.dataset.cat; state.page = 1; render();
+    };
+    PawUI.bindCards(document.getElementById("grid"));
+    document.getElementById("grid").addEventListener("paw-refresh", render);
+    document.getElementById("pager").onclick = (e) => {
+      const b = e.target.closest("[data-page]");
+      if (!b) return;
+      state.page = Number(b.dataset.page); render();
+    };
+    document.getElementById("sort").onchange = (e) => { state.sort = e.target.value; state.page = 1; render(); };
+    document.getElementById("rating").onchange = (e) => { state.rating = e.target.value; state.page = 1; render(); };
+    document.getElementById("file_type").onchange = (e) => { state.file_type = e.target.value; state.page = 1; render(); };
+    const bumpPrice = () => {
+      state.price_min = document.getElementById("price_min").value;
+      state.price_max = document.getElementById("price_max").value;
+      state.page = 1;
+      render();
+    };
+    document.getElementById("price_min").onchange = bumpPrice;
+    document.getElementById("price_max").onchange = bumpPrice;
+    renderHero();
+    render();
+  </script>
 </body>
 </html>

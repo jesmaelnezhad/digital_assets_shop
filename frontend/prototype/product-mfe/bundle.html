@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bundle — Pawradise</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="bundles"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page" id="root"></main>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    const id = new URLSearchParams(location.search).get("id") || "studio-kit";
+    async function render() {
+      const root = document.getElementById("root");
+      await PawUI.catalog.load();
+      let wrap;
+      try { wrap = await Pawradise.api.products.getBundle(id); }
+      catch (e) { root.innerHTML = '<p class="note">Bundle not found. <a href="bundles.html">All bundles</a></p>'; return; }
+      const b = wrap.bundle || wrap;
+      const ids = String(b.items || "").split(",").map(Number).filter(Boolean);
+      const products = PawUI.catalog.byIds(ids);
+      const separate = products.reduce((n, p) => n + p.price_usd, 0);
+      const save = Math.max(0, separate - b.price_usd);
+      document.title = (b.title || "Bundle") + " — Pawradise";
+      root.innerHTML = `<div class="kicker">Shop · Bundle</div>
+        <h1 class="page-title">${PawUI.esc(b.title)}</h1>
+        <p class="desc">${PawUI.esc(b.description)}</p>
+        <p style="margin:18px 0"><span class="strike">${PawUI.money(separate)}</span>
+          <span class="price" style="margin-left:10px">${PawUI.money(b.price_usd)}</span>
+          ${save ? `<span style="margin-left:10px;color:var(--mute)">save ${PawUI.money(save)}</span>` : ""}</p>
+        <button class="btn btn-accent" id="buy">Add bundle to cart</button>
+        <h2 style="margin:28px 0 12px;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)">Included</h2>
+        <div class="included">${products.map((p) => `
+          <a href="${PawUI.productUrl(p.slug)}">
+            <img src="${PawUI.img(p)}" alt="" />
+            <div><strong>${PawUI.esc(p.title)}</strong><div style="color:var(--mute);font-size:13px">${PawUI.esc(p.category_name || "")}</div></div>
+            <span class="price">${PawUI.money(p.price_usd)}</span>
+          </a>`).join("")}</div>`;
+      document.getElementById("buy").onclick = async () => {
+        try {
+          for (const p of products) await Pawradise.api.cart.add(p.id, 1);
+          PawUI.toast("Bundle in cart");
+          PawChrome.mount();
+        } catch (e) {
+          if (e.status === 401) location.href = PawUI.loginHref();
+          else PawUI.toast(e.message);
+        }
+      };
+    }
+    render();
+  </script>
+</body>
+</html>

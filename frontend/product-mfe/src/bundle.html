@@ -1,178 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pawradise — Bundle</title>
-    <meta name="description" content="Bundle detail">
-    <link rel="stylesheet" href="/assets/theme.css">
-    <script src="/env.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', system-ui, sans-serif; background-color: #0a0e14; color: #c7d0dc; min-height: 100vh; display: flex; flex-direction: column; }
-        .header { background-color: #10151d; border-bottom: 1px solid #1e2530; padding: 8px 32px; }
-        .header-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-        .logo { font-family: var(--font-mono); font-size: 1.25rem; font-weight: bold; color: #4dd6c9; text-decoration: none; }
-        .nav { display: flex; gap: 16px; }
-        .nav a { color: #c7d0dc; text-decoration: none; font-size: 0.9rem; padding: var(--space-xs) var(--space-sm); border-radius: 4px; transition: color 0.15s ease; }
-        .nav a:hover, .nav a.active { color: #4dd6c9; }
-        main { flex: 1; max-width: 1280px; margin: 0 auto; padding: var(--space-lg); width: 100%; }
-        .breadcrumb { font-family: var(--font-mono); font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: var(--space-md); }
-        .breadcrumb a { color: var(--color-text-muted); text-decoration: none; }
-        .breadcrumb a:hover { color: #4dd6c9; }
-        .bundle-header { background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-xl); margin-bottom: var(--space-lg); }
-        .bundle-header h1 { font-family: var(--font-mono); font-size: 1.75rem; margin-bottom: var(--space-sm); }
-        .bundle-header .description { color: var(--color-text-muted); margin-bottom: var(--space-md); }
-        .price-comparison { display: flex; gap: var(--space-lg); align-items: center; flex-wrap: wrap; }
-        .price-box { text-align: center; }
-        .price-box .label { font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: var(--space-xs); }
-        .price-box .value { font-family: var(--font-mono); font-size: 1.5rem; }
-        .price-box .value.original { text-decoration: line-through; color: var(--color-text-muted); }
-        .price-box .value.bundle { color: #4dd6c9; font-weight: 600; }
-        .savings { background-color: var(--color-success); color: var(--color-bg); padding: var(--space-xs) var(--space-sm); border-radius: 4px; font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; }
-        .btn { display: inline-flex; align-items: center; justify-content: center; padding: var(--space-sm) var(--space-md); font-size: 0.9rem; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; transition: all 0.15s ease; }
-        .btn-primary { background-color: #4dd6c9; color: var(--color-bg); font-weight: 600; padding: var(--space-md) var(--space-xl); font-size: 1rem; }
-        .btn-primary:hover { box-shadow: var(--glow-hover); }
-        .included-products h2 { font-family: var(--font-mono); font-size: 1.25rem; margin-bottom: var(--space-md); }
-        .product-list { display: flex; flex-direction: column; gap: var(--space-sm); }
-        .product-item { display: flex; align-items: center; gap: 16px; background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); }
-        .product-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
-        .product-item .info { flex: 1; }
-        .product-item .title { font-family: var(--font-mono); font-size: 0.95rem; }
-        .product-item .price { font-family: var(--font-mono); color: var(--color-text-muted); font-size: 0.85rem; }
-        .empty-state { text-align: center; padding: var(--space-xl); color: var(--color-text-muted); }
-        .footer { background-color: #10151d; border-top: 1px solid var(--color-border); padding: var(--space-lg); text-align: center; color: var(--color-text-muted); font-size: 0.8rem; font-family: var(--font-mono); }
-        .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--color-border); border-top-color: #4dd6c9; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 640px) { .nav { display: none; } }
-    </style>
-    <!-- CHROME_HEADER -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bundle — Pawradise</title>
+    <script>window.SITE_PAGE="bundles";</script>
+  <link rel="icon" href="/assets/favicon.svg" sizes="any" />
+  <link rel="stylesheet" href="/assets/theme.css" />
+  <script src="/env.js"></script>
 </head>
 <body>
-    <header class="header">
-        <div class="header-inner">
-            <a href="/" class="logo">/pawradise</a>
-            <nav class="nav">
-                <a href="/">Shop</a>
-                <a href="/category">Categories</a>
-                <a href="/product/bundle.html">Bundles</a>
-                <a href="/product/request.html">Request</a>
-                <a href="/community">Community</a>
-                <a href="/account">Account</a>
-            </nav>
-        </div>
-    </header>
-
-    <main x-data="{
-        bundle: null,
-        loading: true,
-        error: '',
-        notFound: false,
-        get savings() {
-            if (!this.bundle) return 0;
-            const sum = this.bundle.products?.reduce((acc, p) => acc + (p.price_usd || 0), 0) || 0;
-            return Math.max(0, sum - this.bundle.price_usd);
-        },
-        get savingsPercent() {
-            if (!this.bundle) return 0;
-            const sum = this.bundle.products?.reduce((acc, p) => acc + (p.price_usd || 0), 0) || 0;
-            if (sum === 0) return 0;
-            return Math.round((this.savings / sum) * 100);
-        },
-        async load() {
-            this.loading = true;
-            this.error = '';
-            const id = window.location.pathname.split('/').pop();
-            try {
-                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/bundles/${id}`, {
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                if (res.status === 404) { this.notFound = true; return; }
-                if (!res.ok) throw new Error('Failed to load bundle');
-                this.bundle = await res.json();
-            } catch (e) {
-                this.error = e.message;
-            } finally {
-                this.loading = false;
-            }
-        },
-        async buyBundle() {
-            try {
-                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/cart/items`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ bundle_id: this.bundle.id, quantity: 1 })
-                });
-                if (res.status === 401) {
-                    window.location.href = `/login?next=/bundle/${this.bundle.id}`;
-                    return;
-                }
-                if (!res.ok) throw new Error('Failed to add bundle to cart');
-                window.location.href = '/cart';
-            } catch (e) {
-                alert(e.message);
-            }
-        }
-    }" x-init="load()">
-        
-        <div class="breadcrumb">
-            <a href="/">Shop</a> / Bundle
-        </div>
-
-        <div x-show="loading" class="empty-state"><div class="spinner"></div><p style="margin-top:var(--space-sm)">Loading bundle...</p></div>
-        
-        <div x-show="notFound" class="empty-state">
-            <h2 style="font-family:var(--font-mono);margin-bottom:var(--space-sm)">Bundle Not Found</h2>
-            <a href="/" class="btn btn-primary" style="margin-top:var(--space-md)">Browse Products</a>
-        </div>
-
-        <div x-show="bundle && !loading">
-            <div class="bundle-header">
-                <h1 x-text="bundle.title"></h1>
-                <p class="description" x-text="bundle.description"></p>
-                <div class="price-comparison">
-                    <div class="price-box">
-                        <div class="label">Individual Total</div>
-                        <div class="value original" x-text="'$' + (bundle.products?.reduce((a,p) => a + p.price_usd, 0) || 0).toFixed(2)"></div>
-                    </div>
-                    <div class="price-box">
-                        <div class="label">Bundle Price</div>
-                        <div class="value bundle" x-text="'$' + bundle.price_usd.toFixed(2)"></div>
-                    </div>
-                    <div class="savings" x-show="savings > 0">
-                        Save $<span x-text="savings.toFixed(2)"></span> (<span x-text="savingsPercent"></span>%)
-                    </div>
-                </div>
-                <div style="margin-top:var(--space-lg)">
-                    <button class="btn btn-primary" @click="buyBundle()">Buy Bundle</button>
-                </div>
-            </div>
-
-            <div class="included-products">
-                <h2>Included Products (<span x-text="bundle.products?.length || 0"></span>)</h2>
-                <div class="product-list">
-                    <template x-for="product in bundle.products" :key="product.id">
-                        <a :href="`/product/${product.slug}`" style="text-decoration:none;color:inherit">
-                            <div class="product-item">
-                                <img :src="product.preview_image_url" :alt="product.title" x-show="product.preview_image_url">
-                                <div class="info">
-                                    <div class="title" x-text="product.title"></div>
-                                    <div class="price" x-text="'$' + product.price_usd.toFixed(2)"></div>
-                                </div>
-                            </div>
-                        </a>
-                    </template>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <footer class="footer">// pawradise.ir — digital assets marketplace</footer>
-
-    <script src="/assets/alpine.min.js" defer></script>
+  <header id="site-header"></header>
+  <main class="page" id="root"></main>
+  <footer id="site-footer"></footer>
     <script src="/assets/api.js"></script>
-    <!-- CHROME_FOOTER -->
+  <script src="/assets/ui.js"></script>
+  <script src="/assets/chrome.js"></script>
+  <script>
+    const id = new URLSearchParams(location.search).get("id") || "studio-kit";
+    async function render() {
+      const root = document.getElementById("root");
+      await PawUI.catalog.load();
+      let wrap;
+      try { wrap = await Pawradise.api.products.getBundle(id); }
+      catch (e) { root.innerHTML = '<p class="note">Bundle not found. <a href="/product/bundles.html">All bundles</a></p>'; return; }
+      const b = wrap.bundle || wrap;
+      const ids = String(b.items || "").split(",").map(Number).filter(Boolean);
+      const products = PawUI.catalog.byIds(ids);
+      const separate = products.reduce((n, p) => n + p.price_usd, 0);
+      const save = Math.max(0, separate - b.price_usd);
+      document.title = (b.title || "Bundle") + " — Pawradise";
+      root.innerHTML = `<div class="kicker">Shop · Bundle</div>
+        <h1 class="page-title">${PawUI.esc(b.title)}</h1>
+        <p class="desc">${PawUI.esc(b.description)}</p>
+        <p style="margin:18px 0"><span class="strike">${PawUI.money(separate)}</span>
+          <span class="price" style="margin-left:10px">${PawUI.money(b.price_usd)}</span>
+          ${save ? `<span style="margin-left:10px;color:var(--mute)">save ${PawUI.money(save)}</span>` : ""}</p>
+        <button class="btn btn-accent" id="buy">Add bundle to cart</button>
+        <h2 style="margin:28px 0 12px;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)">Included</h2>
+        <div class="included">${products.map((p) => `
+          <a href="${PawUI.productUrl(p.slug)}">
+            <img src="${PawUI.img(p)}" alt="" />
+            <div><strong>${PawUI.esc(p.title)}</strong><div style="color:var(--mute);font-size:13px">${PawUI.esc(p.category_name || "")}</div></div>
+            <span class="price">${PawUI.money(p.price_usd)}</span>
+          </a>`).join("")}</div>`;
+      document.getElementById("buy").onclick = async () => {
+        try {
+          for (const p of products) await Pawradise.api.cart.add(p.id, 1);
+          PawUI.toast("Bundle in cart");
+          PawChrome.mount();
+        } catch (e) {
+          if (e.status === 401) location.href = PawUI.loginHref();
+          else PawUI.toast(e.message);
+        }
+      };
+    }
+    render();
+  </script>
 </body>
 </html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>People — Pawradise</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="community"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page">
+    <div class="kicker">Community</div>
+    <h1 class="page-title">People</h1>
+    <div id="nav"></div>
+    <p class="desc">Follow collectors to fill your Following feed. Mutual follows show as Mutual; incoming edges as Follows you.</p>
+    <form class="header-search" id="search" style="max-width:420px;margin:16px 0" onsubmit="return false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
+      <input name="q" placeholder="Search name or bio" />
+    </form>
+    <div class="tabs" id="filters">
+      <button class="is-on" data-f="all">All</button>
+      <button data-f="following">Following</button>
+      <button data-f="followers">Followers</button>
+      <button data-f="suggested">Suggested</button>
+    </div>
+    <div class="feed" id="list" style="max-width:720px;margin-top:20px"></div>
+  </main>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    const api = Pawradise.api;
+    let me = null;
+    let filter = "all";
+    let query = "";
+    let people = [];
+
+    function setNav() {
+      document.getElementById("nav").innerHTML = PawUI.communityNav("people", me && me.id);
+    }
+
+    function paint() {
+      const q = query.trim().toLowerCase();
+      let rows = people.slice();
+      if (q) rows = rows.filter((u) => ((u.name || "") + " " + (u.bio || "") + " " + (u.email || "")).toLowerCase().includes(q));
+      if (filter === "following") rows = rows.filter((u) => u.following);
+      else if (filter === "followers") rows = rows.filter((u) => u.follows_you);
+      else if (filter === "suggested") rows = rows.filter((u) => me && u.id !== me.id && !u.following);
+      const empty = !rows.length
+        ? (!me && (filter === "following" || filter === "followers" || filter === "suggested")
+          ? `<p class="note"><a href="${PawUI.loginHref()}">Log in</a> to see your follow graph.</p>`
+          : '<p class="note">Nobody in this list.</p>')
+        : "";
+      document.getElementById("list").innerHTML = rows.map((u) => PawUI.personRow(u, me && me.id)).join("") || empty;
+    }
+
+    async function render() {
+      try { me = await api.auth.getProfile(); } catch (e) { me = null; }
+      setNav();
+      people = (await api.community.listPeople()).users || [];
+      paint();
+    }
+
+    document.getElementById("filters").onclick = (e) => {
+      const b = e.target.closest("[data-f]");
+      if (!b) return;
+      filter = b.dataset.f;
+      document.querySelectorAll("#filters button").forEach((x) => x.classList.toggle("is-on", x === b));
+      paint();
+    };
+    document.querySelector("#search input").oninput = (e) => { query = e.target.value; paint(); };
+    PawUI.bindFollow(document.getElementById("list"), render);
+    render();
+  </script>
+</body>
+</html>

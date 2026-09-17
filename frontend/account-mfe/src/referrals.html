@@ -1,140 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pawradise — Referrals</title>
-    <meta name="description" content="Your referral dashboard">
-    <link rel="stylesheet" href="/assets/theme.css">
-    <script src="/env.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', system-ui, sans-serif; background-color: #0a0e14; color: #c7d0dc; min-height: 100vh; display: flex; flex-direction: column; }
-        .header { background-color: #10151d; border-bottom: 1px solid #1e2530; padding: 8px 32px; }
-        .header-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-        .logo { font-family: var(--font-mono); font-size: 1.25rem; font-weight: bold; color: #4dd6c9; text-decoration: none; }
-        .nav { display: flex; gap: 16px; }
-        .nav a { color: #c7d0dc; text-decoration: none; font-size: 0.9rem; padding: var(--space-xs) var(--space-sm); border-radius: 4px; transition: color 0.15s ease; }
-        .nav a:hover, .nav a.active { color: #4dd6c9; }
-        main { flex: 1; max-width: 1280px; margin: 0 auto; padding: var(--space-lg); width: 100%; }
-        .page-title { font-family: var(--font-mono); font-size: 1.5rem; margin-bottom: var(--space-lg); }
-        .referral-card { background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-xl); margin-bottom: var(--space-lg); }
-        .referral-card h2 { font-family: var(--font-mono); font-size: 1.1rem; margin-bottom: var(--space-md); }
-        .referral-link-box { display: flex; gap: var(--space-sm); margin-bottom: var(--space-md); }
-        .referral-link-box input { flex: 1; padding: var(--space-sm) var(--space-md); background-color: #0a0e14; border: 1px solid var(--color-border); border-radius: 4px; color: #c7d0dc; font-family: var(--font-mono); font-size: 0.9rem; }
-        .btn { display: inline-flex; align-items: center; justify-content: center; padding: var(--space-sm) var(--space-md); font-size: 0.9rem; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; transition: all 0.15s ease; }
-        .btn-primary { background-color: #4dd6c9; color: var(--color-bg); font-weight: 600; }
-        .btn-primary:hover { box-shadow: var(--glow-hover); }
-        .btn-secondary { background-color: transparent; border: 1px solid var(--color-border); color: #c7d0dc; }
-        .btn-secondary:hover { border-color: #4dd6c9; color: #4dd6c9; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: var(--space-lg); }
-        .stat-card { background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); text-align: center; }
-        .stat-card .value { font-family: var(--font-mono); font-size: 2rem; color: #4dd6c9; font-weight: 600; }
-        .stat-card .label { font-size: 0.85rem; color: var(--color-text-muted); margin-top: var(--space-xs); }
-        .referred-list { background-color: #10151d; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); }
-        .referred-list h3 { font-family: var(--font-mono); font-size: 1rem; margin-bottom: var(--space-md); }
-        .referred-item { display: flex; justify-content: space-between; align-items: center; padding: var(--space-sm) 0; border-bottom: 1px solid #1e2530; }
-        .referred-item:last-child { border-bottom: none; }
-        .referred-item .name { font-family: var(--font-mono); font-size: 0.9rem; }
-        .referred-item .date { font-size: 0.8rem; color: var(--color-text-muted); }
-        .empty-state { text-align: center; padding: var(--space-xl); color: var(--color-text-muted); }
-        .footer { background-color: #10151d; border-top: 1px solid var(--color-border); padding: var(--space-lg); text-align: center; color: var(--color-text-muted); font-size: 0.8rem; font-family: var(--font-mono); }
-        .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--color-border); border-top-color: #4dd6c9; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @media (max-width: 640px) { .nav { display: none; } }
-    </style>
-    <!-- CHROME_HEADER -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Referrals — Pawradise</title>
+    <script>window.SITE_PAGE="account";</script>
+  <link rel="icon" href="/assets/favicon.svg" sizes="any" />
+  <link rel="stylesheet" href="/assets/theme.css" />
+  <script src="/env.js"></script>
 </head>
 <body>
-    <header class="header">
-        <div class="header-inner">
-            <a href="/" class="logo">/pawradise</a>
-            <nav class="nav">
-                <a href="/">Shop</a>
-                <a href="/category">Categories</a>
-                <a href="/product/bundle.html">Bundles</a>
-                <a href="/product/request.html">Request</a>
-                <a href="/community">Community</a>
-                <a href="/account">Account</a>
-            </nav>
-        </div>
-    </header>
-
-    <main x-data="{
-        referralData: null,
-        loading: true,
-        copied: false,
-        get referralLink() {
-            if (!this.referralData?.code) return '';
-            return `${window.location.origin}/register?ref=${this.referralData.code}`;
-        },
-        async load() {
-            this.loading = true;
-            try {
-                const res = await fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/referrals`, {
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                if (res.status === 401) { window.location.href = '/login?next=/referrals'; return; }
-                if (!res.ok) throw new Error('Failed to load referrals');
-                this.referralData = await res.json();
-            } catch (e) {
-                console.error(e);
-            } finally {
-                this.loading = false;
-            }
-        },
-        copyLink() {
-            navigator.clipboard.writeText(this.referralLink);
-            this.copied = true;
-            setTimeout(() => this.copied = false, 2000);
-        }
-    }" x-init="load()">
-        
-        <h1 class="page-title">Referrals</h1>
-
-        <div x-show="loading" class="empty-state"><div class="spinner"></div><p style="margin-top:var(--space-sm)">Loading...</p></div>
-
-        <div x-show="!loading && referralData">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="value" x-text="referralData.referral_count || 0"></div>
-                    <div class="label">Referred Users</div>
-                </div>
-                <div class="stat-card">
-                    <div class="value" x-text="'$' + (referralData.total_commission || 0).toFixed(2)"></div>
-                    <div class="label">Total Earnings</div>
-                </div>
-            </div>
-
-            <div class="referral-card">
-                <h2>Your Referral Link</h2>
-                <div class="referral-link-box">
-                    <input type="text" :value="referralLink" readonly>
-                    <button class="btn btn-primary" @click="copyLink()">
-                        <span x-show="!copied">Copy</span>
-                        <span x-show="copied">Copied!</span>
-                    </button>
-                </div>
-                <p style="font-size:0.85rem;color:var(--color-text-muted)">Share this link with friends. You'll earn commission on their purchases.</p>
-            </div>
-
-            <div class="referred-list" x-show="referralData.referred_users?.length > 0">
-                <h3>Referred Users</h3>
-                <template x-for="user in referralData.referred_users" :key="user.id">
-                    <div class="referred-item">
-                        <span class="name" x-text="user.name"></span>
-                        <span class="date" x-text="new Date(user.created_at).toLocaleDateString()"></span>
-                    </div>
-                </template>
-            </div>
-        </div>
-    </main>
-
-    <footer class="footer">// pawradise.ir — digital assets marketplace</footer>
-
-    <script src="/assets/alpine.min.js" defer></script>
+  <header id="site-header"></header>
+  <main class="page" id="root"></main>
+  <footer id="site-footer"></footer>
     <script src="/assets/api.js"></script>
-    <!-- CHROME_FOOTER -->
+  <script src="/assets/ui.js"></script>
+  <script src="/assets/chrome.js"></script>
+  <script>
+    async function render() {
+      const root = document.getElementById("root");
+      try {
+        const r = await Pawradise.api.referrals.get();
+        const earn = await Pawradise.api.referrals.getEarnings();
+        const code = r.referral_link || r.code || "";
+        const link = location.origin + location.pathname.replace(/[^/]+$/, "") + "..//register?ref=" + encodeURIComponent(code);
+        const people = r.referrals || r.referred_users || [];
+        const rows = earn.earnings || [];
+        root.innerHTML = PawUI.accountNav("referrals") + `
+          <div class="kicker">Account</div>
+          <h1 class="page-title">Referrals</h1>
+          <p class="desc">Share your link. When someone registers with it and later buys, you earn the site commission percent on that order.</p>
+          <div class="stats" style="display:flex;gap:12px;flex-wrap:wrap;margin:18px 0">
+            <div class="stat"><span>Referred</span><b>${r.total_referrals || people.length || 0}</b></div>
+            <div class="stat"><span>Earned</span><b>${PawUI.money(r.total_earnings || 0)}</b></div>
+          </div>
+          <p class="note">Code <span class="mono">${PawUI.esc(code)}</span></p>
+          <p style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input id="share" readonly value="${PawUI.esc(link)}" style="flex:1;min-width:220px;height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg)" />
+            <button class="btn btn-accent" id="copy" type="button">Copy link</button>
+          </p>
+          <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:24px 0 12px">Referred people</h2>
+          <table class="table"><thead><tr><th>User</th><th>When</th></tr></thead>
+          <tbody>${people.map((x) => `<tr>
+            <td>${x.referred_user_id ? `<a href="..//profile/${x.referred_user_id}">${PawUI.esc(x.name || ("User #" + x.referred_user_id))}</a>` : PawUI.esc(x.name || x.email || "—")}</td>
+            <td>${x.created_at ? new Date(x.created_at).toLocaleDateString() : "—"}</td>
+          </tr>`).join("") || "<tr><td colspan=2>Nobody has used your link yet. Copy it above.</td></tr>"}</tbody></table>
+          <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:24px 0 12px">Earnings</h2>
+          <table class="table"><thead><tr><th>Order</th><th>Amount</th></tr></thead>
+          <tbody>${rows.map((e) => `<tr><td>#${e.order_id}</td><td class="price">${PawUI.money(e.amount)}</td></tr>`).join("") || "<tr><td colspan=2>None yet. Earnings appear after a referred buyer pays.</td></tr>"}</tbody></table>`;
+        document.getElementById("copy").onclick = async () => {
+          try { await navigator.clipboard.writeText(link); PawUI.toast("Copied"); }
+          catch (e) { PawUI.toast("Copy failed"); }
+        };
+      } catch (e) {
+        root.innerHTML = (e.status === 401)
+          ? PawUI.authGate("Log in to see your referral link, referred people, and earnings.")
+          : `<p class="note">${PawUI.esc(e.message)}</p>`;
+      }
+    }
+    render();
+  </script>
 </body>
 </html>

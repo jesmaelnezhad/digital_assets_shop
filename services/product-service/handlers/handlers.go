@@ -12,7 +12,11 @@ import (
 
 type Handlers struct{ db *sql.DB }
 
-func NewHandlers(db *sql.DB) *Handlers { return &Handlers{db: db} }
+func NewHandlers(db *sql.DB) *Handlers {
+	h := &Handlers{db: db}
+	h.ensureExtras()
+	return h
+}
 
 // ====== Health ======
 func (h *Handlers) Health(c *gin.Context) {
@@ -21,43 +25,7 @@ func (h *Handlers) Health(c *gin.Context) {
 
 // ====== Products (public) ======
 func (h *Handlers) ListProducts(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "20"))
-	if page < 1 { page = 1 }
-	if perPage < 1 || perPage > 100 { perPage = 20 }
-	offset := (page - 1) * perPage
-
-	rows, err := h.db.Query(
-		"SELECT id, title, slug, description, price_usd, status, category_id, image_url, stock_count, pinned, sort_order, views, downloads, purchase_count, is_pinned, stock_quantity, max_downloads_per_user, preview_images, download_window_hours, free_download, created_at, updated_at FROM products WHERE status='active' ORDER BY pinned DESC, sort_order ASC, created_at DESC LIMIT $1 OFFSET $2",
-		perPage, offset)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	defer rows.Close()
-
-	products := []models.Product{}
-	for rows.Next() {
-		var p models.Product
-		var catID sql.NullInt64
-		if err := rows.Scan(&p.ID, &p.Title, &p.Slug, &p.Description, &p.PriceUSD, &p.Status,
-			&catID, &p.ImageURL, &p.StockCount, &p.Pinned, &p.SortOrder,
-			&p.Views, &p.Downloads, &p.PurchaseCount, &p.IsPinned,
-			&p.StockQuantity, &p.MaxDownloadsPerUser, &p.PreviewImages,
-			&p.DownloadWindowHours, &p.FreeDownload,
-			&p.CreatedAt, &p.UpdatedAt); err != nil {
-			continue
-		}
-		if catID.Valid { p.CategoryID = int(catID.Int64) }
-		p.CreatedAt = p.CreatedAt.UTC()
-		p.UpdatedAt = p.UpdatedAt.UTC()
-		products = append(products, p)
-	}
-
-	var total int
-	h.db.QueryRow("SELECT count(*) FROM products WHERE status='active'").Scan(&total)
-
-	c.JSON(http.StatusOK, gin.H{"products": products, "total": total, "page": page, "per_page": perPage})
+	h.listProductsFiltered(c)
 }
 
 func (h *Handlers) GetProduct(c *gin.Context) {
@@ -142,18 +110,34 @@ func (h *Handlers) SearchProducts(c *gin.Context) {
 
 // ====== Categories ======
 func (h *Handlers) ListCategories(c *gin.Context) {
-	rows, _ := h.db.Query("SELECT id,name,slug,description,parent_id,image_url,is_active,created_at,updated_at FROM categories WHERE is_active=true ORDER BY name ASC")
+	q := "SELECT id,name,slug,description,parent_id,image_url,is_active,created_at,updated_at FROM categories"
+	if c.Query("all") != "1" {
+		q += " WHERE is_active=true"
+	}
+	q += " ORDER BY name ASC"
+	rows, _ := h.db.Query(q)
 	defer rows.Close()
-	cats := []models.Category{}
+	type catJSON struct {
+		models.Category
+		ProductCount int `json:"product_count,omitempty"`
+	}
+	cats := []catJSON{}
 	for rows.Next() {
-		var c models.Category
+		var cat catJSON
 		var pid sql.NullInt64
-		if rows.Scan(&c.ID, &c.Name, &c.Slug, &c.Description, &pid, &c.ImageURL, &c.IsActive, &c.CreatedAt, &c.UpdatedAt) == nil {
-			if pid.Valid { c.ParentID = int(pid.Int64) }
-			cats = append(cats, c)
+		if rows.Scan(&cat.ID, &cat.Name, &cat.Slug, &cat.Description, &pid, &cat.ImageURL, &cat.IsActive, &cat.CreatedAt, &cat.UpdatedAt) == nil {
+			if pid.Valid {
+				cat.ParentID = int(pid.Int64)
+			}
+			if c.Query("all") == "1" {
+				h.db.QueryRow("SELECT COUNT(*) FROM products WHERE category_id=$1", cat.ID).Scan(&cat.ProductCount)
+			}
+			cats = append(cats, cat)
 		}
 	}
-	if cats == nil { cats = []models.Category{} }
+	if cats == nil {
+		cats = []catJSON{}
+	}
 	c.JSON(http.StatusOK, gin.H{"categories": cats})
 }
 
@@ -190,8 +174,17 @@ func (h *Handlers) ListTags(c *gin.Context) {
 
 // ====== Tiers ======
 func (h *Handlers) GetProductTiers(c *gin.Context) {
-	pid, err := strconv.Atoi(c.Param("productId"))
-	if err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"}); return }
+	key := c.Param("productId")
+	if key == "" {
+		key = c.Param("slug")
+	}
+	pid, err := strconv.Atoi(key)
+	if err != nil {
+		if h.db.QueryRow("SELECT id FROM products WHERE slug=$1", key).Scan(&pid) != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			return
+		}
+	}
 	rows, _ := h.db.Query("SELECT id,product_id,tier_name,price_usd,download_count,download_limit,is_active,created_at,updated_at FROM product_tiers WHERE product_id=$1 AND is_active=true ORDER BY price_usd ASC", pid)
 	defer rows.Close()
 	tiers := []models.ProductTier{}
@@ -258,7 +251,7 @@ func (h *Handlers) GetBundle(c *gin.Context) {
 }
 
 func (h *Handlers) GetRecommendations(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"products": []models.Product{}})
+	h.GetRelatedProducts(c)
 }
 
 // ====== Admin: Products ======
@@ -341,7 +334,7 @@ func (h *Handlers) GeneratePreviews(c *gin.Context) {
 func (h *Handlers) PinProduct(c *gin.Context) {
 	idStr := c.Param("id")
 	id, _ := strconv.Atoi(idStr)
-	h.db.Exec("UPDATE products SET pinned = true, pinned_at = NOW() WHERE id = $1", id)
+	h.db.Exec("UPDATE products SET pinned = true, is_pinned = true, pinned_at = NOW() WHERE id = $1", id)
 	c.JSON(http.StatusOK, gin.H{"message": "product pinned"})
 }
 
@@ -390,15 +383,32 @@ func (h *Handlers) DeleteProductTier(c *gin.Context) {
 func (h *Handlers) CreateCategory(c *gin.Context) {
 	var req struct {
 		Name        string `json:"name" binding:"required"`
-		Slug        string `json:"slug" binding:"required"`
+		Slug        string `json:"slug"`
 		Description string `json:"description"`
 		ParentID    int    `json:"parent_id"`
+		SortOrder   int    `json:"sort_order"`
+		ImageURL    string `json:"image_url"`
+		IsActive    *bool  `json:"is_active"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	_, err := h.db.Exec("INSERT INTO categories (name, slug, description, parent_id) VALUES ($1, $2, $3, $4)", req.Name, req.Slug, req.Description, req.ParentID)
+	if req.Slug == "" {
+		req.Slug = slugify(req.Name)
+	}
+	active := true
+	if req.IsActive != nil {
+		active = *req.IsActive
+	}
+	var parent interface{}
+	if req.ParentID > 0 {
+		parent = req.ParentID
+	}
+	_, err := h.db.Exec(
+		"INSERT INTO categories (name, slug, description, parent_id, sort_order, image_url, is_active) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+		req.Name, req.Slug, req.Description, parent, req.SortOrder, req.ImageURL, active,
+	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
 		return

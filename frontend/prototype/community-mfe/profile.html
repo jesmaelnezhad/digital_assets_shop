@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Profile — Pawradise</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="community"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <link rel="stylesheet" href="../shared/theme.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="page" id="root"></main>
+  <footer id="site-footer"></footer>
+  <script src="../shared/store.js"></script>
+  <script src="../shared/mock-api.js"></script>
+  <script src="../shared/api-client.js"></script>
+  <script src="../shared/ui.js"></script>
+  <script src="../shared/chrome.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    let tab = params.get("tab") || "posts";
+    const api = Pawradise.api;
+
+    async function render() {
+      const root = document.getElementById("root");
+      let me = null;
+      try { me = await api.auth.getProfile(); } catch (e) { me = null; }
+      let id = params.get("id");
+      if (!id) {
+        if (me) { location.replace("profile.html?id=" + me.id + (tab !== "posts" ? "&tab=" + encodeURIComponent(tab) : "")); return; }
+        root.innerHTML = PawUI.communityNav("people") + '<p class="note">Pick someone in <a href="people.html">People</a>, or <a href="' + PawUI.loginHref() + '">log in</a> to open your profile.</p>';
+        return;
+      }
+      let u;
+      try { u = await api.community.getProfile(id); }
+      catch (e) { root.innerHTML = PawUI.communityNav("people", me && me.id) + '<p class="note">Profile not found. <a href="people.html">People</a></p>'; return; }
+      document.title = u.name + " — Pawradise";
+      const self = !!(me && me.id === u.id);
+      const followBtn = self || !me
+        ? (me ? `<a class="btn" href="../account-mfe/account.html">Account settings</a>` : `<a class="btn btn-accent" href="${PawUI.loginHref()}">Log in to follow</a>`)
+        : PawUI.followControl(u, me.id);
+      let body = "";
+      if (tab === "followers") {
+        const list = (await api.community.getFollowers(id)).users || [];
+        body = list.map((x) => PawUI.personRow(x, me && me.id)).join("") || '<p class="note">No followers yet.</p>';
+      } else if (tab === "following") {
+        const list = (await api.community.getFollowing(id)).users || [];
+        body = list.map((x) => PawUI.personRow(x, me && me.id)).join("") || '<p class="note">Not following anyone.</p>';
+      } else {
+        const feed = await api.community.getPosts({ user_id: id, per_page: 50 });
+        const posts = feed.posts || [];
+        body = `<div class="feed">${posts.map((p) => PawUI.postCard(p, me && me.id)).join("") || '<p class="note">No posts yet.</p>'}</div>`;
+      }
+      const avatarUrl = u.avatar_url || "";
+      const avatarField = avatarUrl.indexOf("data:") === 0 ? "" : avatarUrl;
+      const photoForm = self ? `<form id="photo" class="buy" style="margin-top:16px;max-width:360px">
+          ${PawUI.avatarFields(avatarField)}
+          <p class="form-error"></p>
+          <button class="btn">Save picture</button>
+        </form>` : "";
+      root.innerHTML = PawUI.communityNav(self ? "profile" : "people", me && me.id) + `
+        <div class="profile-hero">
+          ${PawUI.avatar(u, "lg")}
+          <div>
+            <div class="kicker">Community</div>
+            <h1 class="page-title" style="margin:4px 0 8px">${PawUI.esc(u.name)} ${PawUI.relationPills(u, me && me.id)}</h1>
+            <p>${PawUI.esc(u.bio || "")}</p>
+            ${u.wallet_address ? `<p style="color:var(--mute);font-size:13px;margin-top:8px">Wallet ${PawUI.esc(u.wallet_address)}</p>` : ""}
+            ${photoForm}
+          </div>
+          <div>${followBtn}</div>
+        </div>
+        <nav class="profile-tabs" aria-label="Profile sections">
+          <a class="${tab === "posts" ? "is-on" : ""}" href="profile.html?id=${u.id}&tab=posts"><b>${u.post_count || 0}</b> Posts</a>
+          <a class="${tab === "followers" ? "is-on" : ""}" href="profile.html?id=${u.id}&tab=followers"><b>${u.follower_count || 0}</b> Followers</a>
+          <a class="${tab === "following" ? "is-on" : ""}" href="profile.html?id=${u.id}&tab=following"><b>${u.following_count || 0}</b> Following</a>
+        </nav>
+        ${body}`;
+      PawUI.bindFollow(root, render);
+      const photo = document.getElementById("photo");
+      if (photo) photo.onsubmit = async (e) => {
+        e.preventDefault();
+        try {
+          const uploaded = await PawUI.readAvatarFromForm(e.target);
+          const payload = {};
+          if (uploaded) payload.avatar_url = uploaded;
+          else if (avatarUrl.indexOf("data:") !== 0) payload.avatar_url = new FormData(e.target).get("avatar_url") || "";
+          if (payload.avatar_url === undefined) { PawUI.toast("Choose a file or paste a URL"); return; }
+          await api.auth.updateProfile(payload);
+          PawUI.toast("Picture saved");
+          PawChrome.mount();
+          render();
+        } catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
+      };
+    }
+    render();
+  </script>
+</body>
+</html>

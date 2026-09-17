@@ -26,6 +26,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		Name     string `json:"name" binding:"required"`
 		Email    string `json:"email" binding:"required"`
 		Password string `json:"password" binding:"required"`
+		ReferralCode string `json:"referral_code"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -46,6 +47,12 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	h.db.Exec("INSERT INTO user_profiles (user_id) VALUES ($1)", id)
 	code := auth.HashToken(req.Email+time.Now().String())[:8]
 	h.db.Exec("INSERT INTO referral_links (user_id,code,is_active) VALUES ($1,$2,true)", id, code)
+	if req.ReferralCode != "" {
+		var linkID, referrerID int
+		if h.db.QueryRow("SELECT id, user_id FROM referral_links WHERE code=$1 AND is_active=true", req.ReferralCode).Scan(&linkID, &referrerID) == nil && referrerID != id {
+			h.db.Exec("INSERT INTO user_referrals (user_id, referral_link_id) VALUES ($1,$2) ON CONFLICT DO NOTHING", id, linkID)
+		}
+	}
 	tok, _ := auth.GenerateJWT(id, req.Email, "user")
 	now := time.Now().UTC()
 	
@@ -171,12 +178,13 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	id, ok := middleware.GetUserIDFromContext(c)
 	if !ok { c.JSON(http.StatusUnauthorized, gin.H{"error":"unauthorized"}); return }
 	var req struct {
-		Name      string  `json:"name"`
-		Wallet    string  `json:"wallet_address"`
-		Bio       string  `json:"bio"`
-		Social    string  `json:"social_links"`
-		Currency  string  `json:"preferred_currency"`
-		Newsletter *bool  `json:"newsletter_enabled"`
+		Name       string  `json:"name"`
+		Wallet     string  `json:"wallet_address"`
+		Bio        string  `json:"bio"`
+		Social     string  `json:"social_links"`
+		Currency   string  `json:"preferred_currency"`
+		Newsletter *bool   `json:"newsletter_enabled"`
+		AvatarURL  string  `json:"avatar_url"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -189,17 +197,18 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	h.db.QueryRow("SELECT user_id FROM user_profiles WHERE user_id=$1", id).Scan(&exists)
 	if exists == 0 {
 		h.db.Exec(
-			"INSERT INTO user_profiles (user_id,wallet_address,bio,social_links,preferred_currency,newsletter_enabled) VALUES ($1,$2,$3,$4,$5,$6)",
-			id, req.Wallet, req.Bio, req.Social, req.Currency, req.Newsletter)
+			"INSERT INTO user_profiles (user_id,wallet_address,bio,social_links,preferred_currency,newsletter_enabled,avatar_url) VALUES ($1,$2,$3,$4,$5,$6,$7)",
+			id, req.Wallet, req.Bio, req.Social, req.Currency, req.Newsletter, req.AvatarURL)
 	} else {
 		h.db.Exec(
-			"UPDATE user_profiles SET wallet_address=$1,bio=$2,social_links=$3,preferred_currency=$4,newsletter_enabled=$5,updated_at=NOW() WHERE user_id=$6",
-			req.Wallet, req.Bio, req.Social, req.Currency, req.Newsletter, id)
+			"UPDATE user_profiles SET wallet_address=$1,bio=$2,social_links=$3,preferred_currency=$4,newsletter_enabled=$5,avatar_url=COALESCE(NULLIF($6,''), avatar_url),updated_at=NOW() WHERE user_id=$7",
+			req.Wallet, req.Bio, req.Social, req.Currency, req.Newsletter, req.AvatarURL, id)
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"name":         req.Name,
-		"bio":          req.Bio,
+		"name":           req.Name,
+		"bio":            req.Bio,
 		"wallet_address": req.Wallet,
+		"avatar_url":     req.AvatarURL,
 	})
 }
 
