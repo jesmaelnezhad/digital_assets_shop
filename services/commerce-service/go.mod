@@ -3,10 +3,10 @@ module github.com/pawradise/commerce-service
 go 1.22
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/lib/pq v1.10.9
 	github.com/pawradise/shared v0.1.0
-	github.com/DATA-DOG/go-sqlmock v1.5.0
 )
 
 require (

@@ -24,7 +24,7 @@ These are **not** in the wired Go `main.go` files. The prototype implements them
 | POST | `/api/v1/admin/bundles` `product_ids` | Live `CreateBundle` does **not** bind `product_ids` (title/description/price/status only) | Prototype **accepts** `product_ids: number[]` and stores them. Response still `{ id, message: "bundle created" }`. |
 | GET | `/api/v1/community/users/:id/followers` | Spec follow graph; no list handler live | `{ users: [Member], total }` — Member has `id, name, email, avatar_url, bio, follower_count, following_count, following, follows_you` |
 | GET | `/api/v1/community/users/:id/following` | Same | Same shape |
-| GET | `/api/v1/community/users` | Member directory | `{ users: [Member], total }`. Optional `q` filters name/bio/email. Sorted by `follower_count`. |
+| GET | `/api/v1/community/users` | Member directory | `{ users: [Member], total, page, per_page }`. Optional `q` filters name/bio/email. Sorted by `follower_count`. Default `per_page` 12. |
 | GET | `/api/v1/community/suggestions` | People you don't follow yet | `{ users: [Member] }` |
 | GET | `/api/v1/admin/categories` | Live public `GET /categories` is active-only; no admin list | `{ categories }` including inactive. Extra key `product_count`. |
 | PUT | `/api/v1/categories/:id` | Live wires `POST /categories` only | `{ name, slug, description, parent_id, sort_order, image_url, is_active }` → `{ message: "category updated" }`. Renaming `slug` retargets products. |
@@ -45,7 +45,8 @@ Per-product SEO fields `seo_title`, `seo_description`, `og_image` are extra on `
 | `GET /community/users/:id` | `id, email, name, avatar_url, post_count, follower_count, following_count, created_at, updated_at` | Same keys **plus** spec fields `bio`, `wallet_address` and relationship flags `following`, `follows_you`, `is_self` (live profile UI already reads `following`). |
 | `POST /community/follow/:id` | 400 `cannot follow yourself`, 409 `already following` | Same errors; mock no longer toggles on POST. |
 | `DELETE /community/follow/:id` | 404 `not following` | Same. |
-| `POST /admin/products/:id/pin` | Returns `{ "message": "product pinned" }` and does not update the DB | Same message; actually sets `pinned`. |
+| `POST /admin/products/:id/pin` | Returns `{ "message": "product pinned" }` and does not update the DB | Same message; actually sets `pinned` and appends to `banner` if missing. |
+| `PUT /products/banner` | Shop catalog slider order | `{ product_ids }` → `{ message: "banner updated", product_ids }`. `GET /products?banner=1` returns that order. |
 | `GET /admin/stats` | `{ total_users, total_orders, total_revenue, total_products, active_products, pinned_products }` | Same six keys **plus** spec analytics: `total_categories`, `total_downloads`, `revenue_daily: [{ date, revenue }]`, `top_products: [{ id, title, units, revenue }]`, `conversions: { views, carts, checkouts, purchases, visitor_to_view, view_to_cart, cart_to_checkout, checkout_to_purchase }`. |
 | `POST /admin/export/emails` | Lists all users; ignores filters; optional `?format=csv` | Accepts JSON `{ from, to, category, product_id }` (spec §6.10) and extra user keys `total_purchases`, `first_purchase_date`, `last_purchase_date`. Still `{ users, count }` for JSON. |
 | `POST /admin/products/bulk` | Wired admin body is `{ ids, status, category_id }` → `{ message: "bulk update applied" }`. Unwired product-service variant uses `{ product_ids, action }`. | Accepts **both**. Response `{ message, action, rows_affected }`. |
@@ -84,7 +85,7 @@ These are **not** on the wire (they used to be in an earlier mock):
 - Create post: `{ id, user_id, content, type }` (201). Get post: `{ post, author, comments, total_comments }` with comment field `user`, not `author`.
 - Like / unlike: `{ message: "post liked" | "post unliked" }`.
 - Create review: `{ review: { id, product_id, rating } }`. Average: `{ product_id, average_rating, total_reviews, total_rating, distribution }`.
-- Admin users: `{ users: [ id, email, name, created_at, updated_at ] }` (the `order_count` variant in `users.go` is not the wired handler).
+- Admin users: `{ users: [ id, email, name, role, staff_tabs, created_at, updated_at ] }` (the `order_count` variant in `users.go` is not the wired handler).
 - Bundles: `items` is a **string** (comma-separated product ids in the prototype). Live SELECT does not populate it, so it is usually `""`.
 - `GET /orders/:id/download/:itemId` is `{ message: "download endpoint" }` (live), not a file.
 - Admin CUD messages match handlers: `product created` / `product updated` / `product deleted`, `tier added` / `tier updated` / `tier deleted`, `image added` / `image deleted`, `previews generated`, `bundle created` / `bundle updated` / `bundle deleted`, `coupon created` / `coupon updated` / `coupon deleted`, `exchange rate updated` / `exchange rate deleted`.

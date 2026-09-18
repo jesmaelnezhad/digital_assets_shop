@@ -10,7 +10,7 @@
 <body>
   <header id="site-header"></header>
   <main class="page">
-    <div class="kicker">Operator</div>
+    <div class="kicker">Desk</div>
     <h1 class="page-title">Admin</h1>
     <div id="gate"></div>
     <div id="desk" hidden>
@@ -24,15 +24,19 @@
   <script src="../shared/mock-api.js"></script>
   <script src="../shared/api-client.js"></script>
   <script src="../shared/ui.js"></script>
+  <script src="../shared/events.js"></script>
   <script src="../shared/chrome.js"></script>
   <script>
     const api = Pawradise.api;
     const SEO_KEYS = ["site_title", "site_description", "site_keywords", "og_image", "canonical_host", "robots_index"];
     const SETTING_KEYS = ["referral_commission_percent", "payment_address", "site_name", "download_policy", "default_currency"];
-    const tabs = ["Stats", "Users", "Products", "Categories", "Bundles", "Coupons", "Orders", "Guest", "Community", "Referrals", "Rates", "Settings", "SEO", "Export", "Requests"];
+    const ALL_TABS = ["Stats", "Users", "Products", "Banner", "Categories", "Bundles", "Coupons", "Orders", "Steps", "Guest", "Community", "Referrals", "Rates", "Settings", "SEO", "Export", "Requests", "Appearance"];
     let on = "Stats";
     let cats = [];
     let catalog = [];
+    let meUser = null;
+    let orderFilter = "";
+    let orderQ = "";
 
     function token() {
       return sessionStorage.getItem("admin_token") || localStorage.getItem("pawradise_admin_token") || "";
@@ -45,6 +49,17 @@
       sessionStorage.removeItem("admin_token");
       localStorage.removeItem("pawradise_admin_token");
     }
+    function staffTabsOf(u) {
+      const raw = u && (u.staff_tabs || u.staffTabs);
+      if (Array.isArray(raw)) return raw;
+      return String(raw || "").split(",").map((s) => s.trim()).filter(Boolean);
+    }
+    function deskTabs() {
+      if (!meUser) return [];
+      if (meUser.role === "admin") return ALL_TABS.concat(["Access"]);
+      const allow = staffTabsOf(meUser);
+      return ALL_TABS.filter((t) => allow.indexOf(t) >= 0);
+    }
     function openModal(html) {
       document.getElementById("modal-card").innerHTML = html;
       document.getElementById("modal").classList.add("open");
@@ -52,33 +67,28 @@
     function closeModal() { document.getElementById("modal").classList.remove("open"); }
     document.getElementById("modal").onclick = (e) => { if (e.target.id === "modal") closeModal(); };
 
-    function gateView() {
+    function gateView(kind) {
       document.getElementById("desk").hidden = true;
-      document.getElementById("gate").innerHTML = `
-        <form id="unlock" class="auth-card">
-          <p class="note" style="margin:0 0 16px">Bearer token. Spec stores it in sessionStorage as <code>admin_token</code>.</p>
-          <label class="field-col">Admin token
-            <input name="token" placeholder="admin_secret_staging_2026" autocomplete="off" />
-          </label>
-          <p class="form-error"></p>
-          <button class="btn btn-accent">Unlock</button>
-        </form>`;
-      document.getElementById("unlock").onsubmit = async (e) => {
-        e.preventDefault();
-        const t = new FormData(e.target).get("token") || "admin_secret_staging_2026";
-        setToken(t);
-        try { await api.admin.stats(); showDesk(); }
-        catch (ex) {
-          clearToken();
-          e.target.querySelector(".form-error").textContent = ex.message || "Invalid token";
-        }
-      };
+      const login = PawUI.loginHref(location.pathname + location.search);
+      let body = "";
+      if (kind === "customer") {
+        body = `<p class="note">This desk is for staff and admins. You are signed in as a customer.</p>
+          <p><a class="btn" href="/account">Back to account</a></p>`;
+      } else if (kind === "empty") {
+        body = `<p class="note">Your staff account has no admin sections yet. Ask an admin to assign tabs.</p>`;
+      } else {
+        body = `<p class="note" style="margin:0 0 16px">Log in as staff or admin to open the desk. Staff only need an account. Admins also enter the operator token on the Access tab to change roles.</p>
+          <p><a class="btn btn-accent" href="${login}">Log in</a></p>
+          <p class="note" style="margin-top:16px">Demo admin: nia@example.com / nia · staff: leo@example.com / leo</p>`;
+      }
+      document.getElementById("gate").innerHTML = `<div class="auth-card">${body}</div>`;
     }
 
     function showDesk() {
-      document.getElementById("gate").innerHTML = `<p class="note" style="margin:0 0 16px">Token set. <button class="btn" id="lock">Lock admin</button></p>`;
-      document.getElementById("lock").onclick = () => { clearToken(); gateView(); };
+      const vis = deskTabs();
+      document.getElementById("gate").innerHTML = `<p class="note" style="margin:0 0 16px">${PawUI.esc(meUser.role)} desk${meUser.role === "admin" && token() ? " · operator unlocked" : ""}.</p>`;
       document.getElementById("desk").hidden = false;
+      document.getElementById("tabs").innerHTML = vis.map((t) => `<button class="tab${t === on ? " is-on" : ""}" data-t="${t}">${t}</button>`).join("");
       render();
     }
 
@@ -114,15 +124,25 @@
         </div>
         <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)">Top products</h2>
         <table class="table"><thead><tr><th>Title</th><th>Units</th><th>Revenue</th></tr></thead>
-        <tbody>${(s.top_products || []).map((p) => `<tr><td>${PawUI.esc(p.title)}</td><td>${p.units}</td><td class="price">${PawUI.money(p.revenue)}</td></tr>`).join("") || "<tr><td colspan='3'>No paid sales yet.</td></tr>"}</tbody></table>`;
+        <tbody>${(s.top_products || []).map((p) => `<tr><td>${PawUI.esc(p.title)}</td><td>${p.units}</td><td class="price">${PawUI.money(p.revenue)}</td></tr>`).join("") || "<tr><td colspan='3'>No paid sales yet.</td></tr>"}</tbody></table>
+        <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-top:20px">Orders by step</h2>
+        <div class="step-chips">${(s.order_by_step || []).map((x) => `<button type="button" class="step-chip" data-jump-step="${PawUI.esc(x.slug)}"><b>${x.count || 0}</b><span>${PawUI.esc(x.label || x.slug)}</span></button>`).join("") || "<p class='note'>No pipeline counts yet.</p>"}</div>`;
       }
       if (on === "Users") {
         const users = (await api.admin.users()).users || [];
-        return `<table class="table"><thead><tr><th>Email</th><th>Name</th><th>Joined</th><th></th></tr></thead><tbody>
-          ${users.map((u) => `<tr><td>${PawUI.esc(u.email)}</td><td>${PawUI.esc(u.name)}</td>
+        return `<div class="access-toolbar">
+            <p class="note" style="margin:0">${users.length} accounts</p>
+            <label class="field-col access-search">Search
+              <input id="user-q" type="search" placeholder="Name, email, or role" autocomplete="off" />
+            </label>
+          </div>
+          <table class="table"><thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Joined</th><th></th></tr></thead><tbody>
+          ${users.map((u) => `<tr data-hay="${PawUI.esc([u.name, u.email, u.role || "customer"].join(" ").toLowerCase())}"><td>${PawUI.esc(u.email)}</td><td>${PawUI.esc(u.name)}</td>
+            <td>${PawUI.esc(u.role || "customer")}</td>
             <td>${u.created_at ? new Date(u.created_at).toLocaleDateString() : ""}</td>
             <td><button class="btn" data-reset="${u.id}">Reset pw</button>
-            <button class="btn" data-delu="${u.id}">Delete</button></td></tr>`).join("")}</tbody></table>`;
+            <button class="btn" data-delu="${u.id}">Delete</button></td></tr>`).join("")}</tbody></table>
+          <p class="note" id="user-empty" hidden>No matching accounts.</p>`;
       }
       if (on === "Products") {
         const res = await api.admin.products();
@@ -143,11 +163,30 @@
           <td>${p.pwyw_enabled ? "min " + PawUI.money(p.pwyw_min_price) : ""}</td>
           <td>
             <button class="btn" data-editp="${p.id}">Edit</button>
-            <button class="btn" data-pin="${p.id}">${p.pinned ? "Unpin" : "Pin"}</button>
+            <button class="btn" data-pin="${p.id}">${p.pinned ? "On banner / unpin" : "Pin"}</button>
             <button class="btn" data-prev="${p.id}">Previews</button>
             <button class="btn" data-delp="${p.id}">Delete</button>
           </td>
         </tr>`).join("")}</tbody></table>`;
+      }
+      if (on === "Banner") {
+        await PawUI.catalog.load();
+        const shop = (await api.products.list({ per_page: 200 })).products || [];
+        const slides = (await api.products.list({ banner: 1, per_page: 24 })).products || [];
+        const slideIds = slides.map((p) => p.id);
+        const rest = shop.filter((p) => slideIds.indexOf(p.id) < 0);
+        return `<p class="note" style="margin:0 0 16px">Homepage banner slider. Order here is the slide order. Save writes <code>PUT /products/banner</code> on the shop catalog.</p>
+          <ol id="banner-list" class="feed" style="max-width:720px">${slides.map((p, i) => `<li data-bid="${p.id}" style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+            <img src="${PawUI.img(p)}" alt="" style="width:72px;height:48px;object-fit:cover;border-radius:8px" />
+            <strong style="flex:1">${PawUI.esc(p.title)}</strong>
+            <button class="btn" data-bup="${p.id}" ${i === 0 ? "disabled" : ""}>Up</button>
+            <button class="btn" data-bdown="${p.id}">Down</button>
+            <button class="btn" data-bdel="${p.id}">Remove</button>
+          </li>`).join("") || "<p class='note'>No banner slides yet.</p>"}</ol>
+          <div class="admin-toolbar">
+            <select id="banner-add"><option value="">Add a product…</option>${rest.map((p) => `<option value="${p.id}">${PawUI.esc(p.title)}</option>`).join("")}</select>
+            <button class="btn btn-accent" id="banner-save">Save banner</button>
+          </div>`;
       }
       if (on === "Categories") {
         const byId = {};
@@ -200,19 +239,52 @@
           </tr>`).join("")}</tbody></table>`;
       }
       if (on === "Orders") {
-        const o = (await api.admin.orders()).orders || [];
-        return `<table class="table"><thead><tr><th>ID</th><th>Email</th><th>Status</th><th>Total</th><th></th></tr></thead>
+        const steps = (await api.admin.orderSteps()).steps || [];
+        const res = await api.admin.orders({ status: orderFilter, q: orderQ });
+        const o = res.orders || [];
+        const by = res.by_step || [];
+        const opts = (cur) => steps.map((s) => `<option value="${PawUI.esc(s.slug)}"${s.slug === cur ? " selected" : ""}>${PawUI.esc(s.label)}</option>`).join("");
+        return `<div class="step-chips" id="order-filters">
+            <button type="button" class="step-chip${orderFilter === "" ? " is-on" : ""}" data-of="">All <b>${res.total || o.length}</b></button>
+            ${by.map((x) => `<button type="button" class="step-chip${orderFilter === x.slug ? " is-on" : ""}" data-of="${PawUI.esc(x.slug)}">${PawUI.esc(x.label)} <b>${x.count || 0}</b></button>`).join("")}
+          </div>
+          <div class="admin-toolbar">
+            <label class="field-col">Search
+              <input id="order-q" type="search" value="${PawUI.esc(orderQ)}" placeholder="Order id or email" />
+            </label>
+            <label class="field-col">Move selected
+              <select id="bulk-step"><option value="">Choose step…</option>${steps.map((s) => `<option value="${PawUI.esc(s.slug)}">${PawUI.esc(s.label)}</option>`).join("")}</select>
+            </label>
+            <button class="btn" id="bulk-move" type="button">Move</button>
+          </div>
+          <table class="table"><thead><tr><th></th><th>ID</th><th>Email</th><th>Step</th><th>Total</th><th>Date</th><th></th></tr></thead>
           <tbody>${o.map((x) => `<tr>
-            <td>#${x.id}</td><td>${PawUI.esc(x.user_email)}</td><td>${x.status}</td>
+            <td><input type="checkbox" data-oid="${x.id}" /></td>
+            <td>#${x.id}</td><td>${PawUI.esc(x.user_email || x.email || "")}</td>
+            <td><span class="step-pill">${PawUI.esc(x.status_label || x.status)}</span></td>
             <td class="price">${PawUI.money(x.total_usd)}</td>
+            <td>${x.created_at ? new Date(x.created_at).toLocaleDateString() : ""}</td>
             <td><button class="btn" data-ordo="${x.id}">Detail</button>
-              <select data-st="${x.id}">
-                <option>${x.status}</option>
-                <option>pending</option><option>processing</option><option>paid</option>
-                <option>shipped</option><option>completed</option><option>cancelled</option>
-                <option>refunded</option><option>failed</option>
-              </select></td>
-          </tr>`).join("")}</tbody></table>`;
+              <select data-st="${x.id}">${opts(x.status)}</select></td>
+          </tr>`).join("") || "<tr><td colspan='7'>No orders in this view.</td></tr>"}</tbody></table>`;
+      }
+      if (on === "Steps") {
+        const steps = (await api.admin.orderSteps()).steps || [];
+        return `<p class="note" style="margin:0 0 16px">Pipeline order is top to bottom. System steps can be renamed or reordered but not deleted. Custom steps sit after Paid (seeded: Preparation, Delivered).</p>
+          <ol id="step-list" class="step-list">${steps.map((s, i) => `<li data-sid="${s.id}" data-slug="${PawUI.esc(s.slug)}" data-sys="${s.is_system ? 1 : 0}">
+            <span class="step-pill">${PawUI.esc(s.label)}</span>
+            <code>${PawUI.esc(s.slug)}</code>
+            ${s.is_system ? "<em>system</em>" : ""}
+            ${s.is_terminal ? "<em>terminal</em>" : ""}
+            <button class="btn" type="button" data-sup="${s.id}" ${i === 0 ? "disabled" : ""}>Up</button>
+            <button class="btn" type="button" data-sdown="${s.id}">Down</button>
+            <button class="btn" type="button" data-sren="${s.id}">Rename</button>
+            ${s.is_system ? "" : `<button class="btn" type="button" data-sdel="${s.id}">Delete</button>`}
+          </li>`).join("")}</ol>
+          <form id="new-step" class="admin-toolbar">
+            <label class="field-col">New step <input name="label" required placeholder="Packaging" /></label>
+            <button class="btn btn-accent" type="submit">Add step</button>
+          </form>`;
       }
       if (on === "Guest") {
         const g = (await api.admin.guestOrders()).orders || [];
@@ -263,7 +335,7 @@
         const s = (await api.admin.settings()).settings || [];
         const map = {};
         s.forEach((x) => { map[x.key] = x.value; });
-        return `<p class="note" style="margin:0 0 16px">Site-wide meta, Open Graph defaults, robots, and canonical host. Per-product title/description/OG are on the product editor. Sitemap: <a href="../sitemap.xml">/sitemap.xml</a> · <a href="../robots.txt">/robots.txt</a></p>
+        return `<p class="note" style="margin:0 0 16px">Site-wide meta, Open Graph defaults, robots, and canonical host. Per-product title/description/OG are on the product editor. Sitemap: <a href="..//sitemap.xml">//sitemap.xml</a> · <a href="../robots.txt">/robots.txt</a></p>
           <form id="seo-form">
             ${SEO_KEYS.map((k) => `<label class="field-col">${k}
               <input name="${k}" value="${PawUI.esc(map[k] || "")}" /></label>`).join("")}
@@ -299,6 +371,61 @@
               <option>${x.status}</option><option>open</option><option>reviewed</option><option>quoted</option><option>closed</option>
             </select></td>
           </tr>`).join("") || "<tr><td colspan='5'>No custom requests.</td></tr>"}</tbody></table>`;
+      }
+      if (on === "Appearance") {
+        const t = Object.assign(PawUI.defaultTheme(), await api.appearance.get().catch(() => ({})));
+        const pick = (kind, items, current) => `<div class="theme-pick">${items.map((x) => `
+          <button type="button" class="theme-card${x.id === current ? " is-on" : ""}" data-theme-kind="${kind}" data-theme-id="${x.id}">
+            ${x.swatch ? `<span class="swatch">${x.swatch.map((c) => `<i style="background:${c}"></i>`).join("")}</span>` : ""}
+            <strong>${PawUI.esc(x.name)}</strong>
+            ${x.note ? `<small>${PawUI.esc(x.note)}</small>` : ""}
+          </button>`).join("")}</div>`;
+        return `<p class="note" style="margin:0 0 16px">These tokens apply to every public page. Palette, type, corners, and density.</p>
+          <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)">Palette</h2>
+          ${pick("palette", PawUI.THEME.palettes, t.palette)}
+          <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)">Type</h2>
+          ${pick("font", PawUI.THEME.fonts, t.font)}
+          <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)">Corners</h2>
+          ${pick("radius", PawUI.THEME.radii, t.radius)}
+          <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)">Density</h2>
+          ${pick("density", PawUI.THEME.densities, t.density)}`;
+      }
+      if (on === "Access") {
+        if (!token()) {
+          return `<form id="unlock" class="auth-card">
+            <p class="note" style="margin:0 0 16px">Changing roles and staff tabs needs the operator token in addition to your admin login.</p>
+            <label class="field-col">Operator token
+              <input name="token" placeholder="admin_secret_staging_2026" autocomplete="off" />
+            </label>
+            <p class="form-error"></p>
+            <button class="btn btn-accent">Unlock Access</button>
+          </form>`;
+        }
+        const users = (await api.admin.users()).users || [];
+        return `<div class="access-toolbar">
+            <p class="note" style="margin:0">Operator unlocked. Role changes apply on the user's next login. <button class="btn" id="lock">Lock operator</button></p>
+            <label class="field-col access-search">Search people
+              <input id="access-q" type="search" placeholder="Name, email, or role" autocomplete="off" />
+            </label>
+          </div>
+          <div class="access-grid">${users.map((u) => {
+            const tabs = staffTabsOf(u);
+            const hay = [u.name, u.email, u.role || "customer", tabs.join(" ")].join(" ").toLowerCase();
+            return `<form class="access-form access-card" data-uid="${u.id}" data-hay="${PawUI.esc(hay)}">
+              <strong>${PawUI.esc(u.name)}</strong>
+              <p class="note" style="margin:4px 0 12px">${PawUI.esc(u.email)}</p>
+              <label class="field-col">Role
+                <select name="role">
+                  <option value="customer"${u.role === "customer" ? " selected" : ""}>customer</option>
+                  <option value="staff"${u.role === "staff" ? " selected" : ""}>staff</option>
+                  <option value="admin"${u.role === "admin" ? " selected" : ""}>admin</option>
+                </select>
+              </label>
+              <div class="staff-tabs">${ALL_TABS.map((t) => `<label><input type="checkbox" name="tab" value="${t}"${tabs.indexOf(t) >= 0 ? " checked" : ""} /> ${t}</label>`).join("")}</div>
+              <button class="btn btn-accent">Save access</button>
+            </form>`;
+          }).join("")}</div>
+          <p class="note" id="access-empty" hidden>No matching accounts.</p>`;
       }
       return "";
     }
@@ -460,16 +587,22 @@
     }
 
     async function render() {
-      document.getElementById("tabs").innerHTML = tabs.map((t) =>
+      document.getElementById("tabs").innerHTML = deskTabs().map((t) =>
         `<button class="${t === on ? "is-on" : ""}" data-t="${t}">${t}</button>`
       ).join("");
       try {
         document.getElementById("panel").innerHTML = await panel();
       } catch (e) {
-        if (e.status === 401) { clearToken(); gateView(); return; }
         document.getElementById("panel").innerHTML = `<p class="note">${PawUI.esc(e.message)}</p>`;
         return;
       }
+      document.getElementById("panel").querySelectorAll("table.table").forEach((t) => {
+        if (t.parentElement && t.parentElement.classList.contains("table-wrap")) return;
+        const w = document.createElement("div");
+        w.className = "table-wrap";
+        t.parentNode.insertBefore(w, t);
+        w.appendChild(t);
+      });
       bindPanel();
     }
 
@@ -505,6 +638,42 @@
         PawUI.catalog.invalidate();
         render();
       });
+      function bannerIds() {
+        return [...p.querySelectorAll("#banner-list [data-bid]")].map((el) => Number(el.dataset.bid));
+      }
+      function bindBannerMoves() {
+        p.querySelectorAll("[data-bdel]").forEach((b) => { b.onclick = () => { const li = b.closest("[data-bid]"); if (li) li.remove(); }; });
+        p.querySelectorAll("[data-bup]").forEach((b) => { b.onclick = () => { const li = b.closest("[data-bid]"); if (li && li.previousElementSibling) li.parentNode.insertBefore(li, li.previousElementSibling); }; });
+        p.querySelectorAll("[data-bdown]").forEach((b) => { b.onclick = () => { const li = b.closest("[data-bid]"); if (li && li.nextElementSibling) li.parentNode.insertBefore(li.nextElementSibling, li); }; });
+      }
+      bindBannerMoves();
+      const bsave = p.querySelector("#banner-save");
+      if (bsave) bsave.onclick = async () => {
+        await api.products.setBanner(bannerIds());
+        PawUI.catalog.invalidate();
+        PawUI.toast("Banner saved");
+        render();
+      };
+      const badd = p.querySelector("#banner-add");
+      if (badd) badd.onchange = () => {
+        const id = Number(badd.value);
+        if (!id) return;
+        const opt = badd.selectedOptions[0];
+        const list = p.querySelector("#banner-list");
+        if (list && !list.querySelector(`[data-bid="${id}"]`)) {
+          if (list.querySelector(".note")) list.innerHTML = "";
+          const li = document.createElement("li");
+          li.dataset.bid = String(id);
+          li.style.cssText = "display:flex;gap:10px;align-items:center;margin-bottom:10px";
+          li.innerHTML = `<strong style="flex:1">${PawUI.esc(opt.textContent)}</strong>
+            <button class="btn" data-bup="${id}">Up</button>
+            <button class="btn" data-bdown="${id}">Down</button>
+            <button class="btn" data-bdel="${id}">Remove</button>`;
+          list.appendChild(li);
+        }
+        badd.value = "";
+        bindBannerMoves();
+      };
       p.querySelectorAll("[data-delp]").forEach((b) => b.onclick = async () => { await api.admin.deleteProduct(b.dataset.delp); PawUI.catalog.invalidate(); render(); });
       p.querySelectorAll("[data-prev]").forEach((b) => b.onclick = async () => { await api.admin.generatePreviews(b.dataset.prev); PawUI.toast("Previews generated"); });
       p.querySelectorAll("[data-editp]").forEach((b) => b.onclick = () => {
@@ -638,6 +807,65 @@
       });
       p.querySelectorAll("[data-delc]").forEach((b) => b.onclick = async () => { await api.admin.deleteCoupon(b.dataset.delc); render(); });
       p.querySelectorAll("[data-delpost]").forEach((b) => b.onclick = async () => { await api.admin.deletePost(b.dataset.delpost); render(); });
+      p.querySelectorAll("[data-jump-step]").forEach((b) => b.onclick = () => {
+        orderFilter = b.dataset.jumpStep || "";
+        if (deskTabs().indexOf("Orders") >= 0) { on = "Orders"; showDesk(); }
+      });
+      p.querySelectorAll("[data-of]").forEach((b) => b.onclick = () => { orderFilter = b.dataset.of || ""; render(); });
+      const oq = p.querySelector("#order-q");
+      if (oq) {
+        oq.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); orderQ = oq.value.trim(); render(); } };
+        oq.onchange = () => { orderQ = oq.value.trim(); render(); };
+      }
+      const bulkMove = p.querySelector("#bulk-move");
+      if (bulkMove) bulkMove.onclick = async () => {
+        const slug = (document.getElementById("bulk-step") || {}).value;
+        if (!slug) { PawUI.toast("Choose a step"); return; }
+        const ids = [...p.querySelectorAll("[data-oid]:checked")].map((i) => i.dataset.oid);
+        if (!ids.length) { PawUI.toast("Select orders first"); return; }
+        for (const id of ids) await api.admin.setOrderStatus(id, slug);
+        render();
+      };
+      async function persistStepOrder() {
+        const rows = [...p.querySelectorAll("#step-list li")].map((li, i) => ({
+          id: Number(li.dataset.sid),
+          slug: li.dataset.slug,
+          label: (li.querySelector(".step-pill") || {}).textContent || li.dataset.slug,
+          sort_order: i + 1
+        }));
+        await api.admin.saveOrderSteps(rows);
+        render();
+      }
+      p.querySelectorAll("[data-sup]").forEach((b) => b.onclick = async () => {
+        const li = b.closest("li");
+        if (li && li.previousElementSibling) li.parentNode.insertBefore(li, li.previousElementSibling);
+        await persistStepOrder();
+      });
+      p.querySelectorAll("[data-sdown]").forEach((b) => b.onclick = async () => {
+        const li = b.closest("li");
+        if (li && li.nextElementSibling) li.parentNode.insertBefore(li.nextElementSibling, li);
+        await persistStepOrder();
+      });
+      p.querySelectorAll("[data-sren]").forEach((b) => b.onclick = async () => {
+        const li = b.closest("li");
+        const cur = (li.querySelector(".step-pill") || {}).textContent || "";
+        const label = window.prompt("Rename step", cur);
+        if (!label) return;
+        await api.admin.renameOrderStep(b.dataset.sren, label);
+        render();
+      });
+      p.querySelectorAll("[data-sdel]").forEach((b) => b.onclick = async () => {
+        if (!window.confirm("Delete this step?")) return;
+        try { await api.admin.deleteOrderStep(b.dataset.sdel); render(); }
+        catch (e) { PawUI.toast(e.message); }
+      });
+      const ns = p.querySelector("#new-step");
+      if (ns) ns.onsubmit = async (e) => {
+        e.preventDefault();
+        const label = new FormData(ns).get("label");
+        try { await api.admin.createOrderStep({ label }); render(); }
+        catch (err) { PawUI.toast(err.message); }
+      };
       p.querySelectorAll("[data-st]").forEach((s) => s.onchange = async () => {
         try { await api.admin.setOrderStatus(s.dataset.st, s.value); render(); }
         catch (e) { PawUI.toast(e.message); }
@@ -645,11 +873,21 @@
       p.querySelectorAll("[data-ordo]").forEach((b) => b.onclick = async () => {
         const d = await api.admin.getOrder(b.dataset.ordo);
         const o = d.order || {};
+        const steps = (await api.admin.orderSteps()).steps || [];
+        const opts = steps.map((s) => `<option value="${PawUI.esc(s.slug)}"${s.slug === o.status ? " selected" : ""}>${PawUI.esc(s.label)}</option>`).join("");
         openModal(`<h2>Order #${o.id}</h2>
-          <p>${PawUI.esc(o.user_email || "")} · ${o.status} · ${PawUI.money(o.total_usd)}</p>
-          <table class="table">${(d.items || []).map((it) => `<tr><td>${PawUI.esc(it.product_title)}</td><td>${it.quantity}</td><td>${PawUI.money(it.unit_price_usd)}</td></tr>`).join("")}</table>
-          <button class="btn" id="cancel-m">Close</button>`);
+          <p>${PawUI.esc(o.user_email || "")} · <span class="step-pill">${PawUI.esc(d.status_label || o.status)}</span> · ${PawUI.money(o.total_usd)}</p>
+          <table class="table">${(d.items || []).map((it) => `<tr><td>${PawUI.esc(it.product_title || ("#" + it.product_id))}</td><td>${it.quantity}</td><td>${PawUI.money(it.unit_price_usd)}</td></tr>`).join("")}</table>
+          <label class="field-col" style="margin:16px 0">Move to
+            <select id="detail-st">${opts}</select>
+          </label>
+          <div class="admin-toolbar"><button class="btn btn-accent" id="detail-move" type="button">Save step</button>
+          <button class="btn" id="cancel-m" type="button">Close</button></div>`);
         document.getElementById("cancel-m").onclick = closeModal;
+        document.getElementById("detail-move").onclick = async () => {
+          await api.admin.setOrderStatus(o.id, document.getElementById("detail-st").value);
+          closeModal(); render();
+        };
       });
       p.querySelectorAll("[data-delr]").forEach((b) => b.onclick = async () => { await api.admin.deleteRate(b.dataset.delr); render(); });
       p.querySelectorAll("[data-req]").forEach((s) => s.onchange = async () => { await api.admin.setRequestStatus(s.dataset.req, s.value); render(); });
@@ -685,6 +923,59 @@
           <table class="table"><thead><tr><th>Email</th><th>Name</th><th>Purchases</th></tr></thead>
           <tbody>${(data.users || []).map((u) => `<tr><td>${PawUI.esc(u.email)}</td><td>${PawUI.esc(u.name)}</td><td>${u.total_purchases || ""}</td></tr>`).join("")}</tbody></table>`;
       };
+      const unlock = p.querySelector("#unlock");
+      if (unlock) unlock.onsubmit = async (e) => {
+        e.preventDefault();
+        const t = (new FormData(e.target).get("token") || "").trim();
+        if (!t) {
+          e.target.querySelector(".form-error").textContent = "Token required";
+          return;
+        }
+        setToken(t);
+        render();
+      };
+      const lock = p.querySelector("#lock");
+      if (lock) lock.onclick = () => { clearToken(); render(); };
+      p.querySelectorAll("[data-theme-kind]").forEach((b) => {
+        b.onclick = async () => {
+          const cur = Object.assign(PawUI.defaultTheme(), await api.appearance.get().catch(() => ({})));
+          cur[b.dataset.themeKind] = b.dataset.themeId;
+          const saved = await api.appearance.set(cur);
+          PawUI.applyTheme(saved);
+          try { localStorage.setItem("pawradise_theme", JSON.stringify(saved)); } catch (e) { /* ignore */ }
+          PawUI.toast("Look saved");
+          render();
+        };
+      });
+      p.querySelectorAll("form.access-form").forEach((form) => {
+        form.onsubmit = async (e) => {
+          e.preventDefault();
+          const role = form.querySelector("[name=role]").value;
+          const staff_tabs = [...form.querySelectorAll("[name=tab]:checked")].map((x) => x.value);
+          await api.admin.setUserAccess(form.dataset.uid, { role, staff_tabs });
+          PawUI.toast("Access saved");
+          render();
+        };
+      });
+      function bindFilter(inputSel, itemSel, emptySel) {
+        const input = p.querySelector(inputSel);
+        if (!input) return;
+        const apply = () => {
+          const s = input.value.trim().toLowerCase();
+          let n = 0;
+          p.querySelectorAll(itemSel).forEach((el) => {
+            const hay = (el.dataset.hay || el.textContent || "").toLowerCase();
+            const on = !s || hay.indexOf(s) >= 0;
+            el.hidden = !on;
+            if (on) n++;
+          });
+          const empty = emptySel && p.querySelector(emptySel);
+          if (empty) empty.hidden = n > 0;
+        };
+        input.oninput = apply;
+      }
+      bindFilter("#access-q", "form.access-form", "#access-empty");
+      bindFilter("#user-q", "tbody tr[data-hay]", "#user-empty");
     }
 
     document.getElementById("tabs").onclick = (e) => {
@@ -694,9 +985,15 @@
       render();
     };
 
-    if (token()) {
-      api.admin.stats().then(showDesk).catch(() => { clearToken(); gateView(); });
-    } else gateView();
+    (async function boot() {
+      try { meUser = await api.auth.getProfile(); } catch (e) { meUser = null; }
+      if (!meUser) { gateView("login"); return; }
+      if (meUser.role !== "admin" && meUser.role !== "staff") { gateView("customer"); return; }
+      const vis = deskTabs();
+      if (!vis.length) { gateView("empty"); return; }
+      if (vis.indexOf(on) < 0) on = vis[0];
+      showDesk();
+    })();
   </script>
 </body>
 </html>

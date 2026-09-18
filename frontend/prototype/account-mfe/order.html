@@ -15,6 +15,7 @@
   <script src="../shared/mock-api.js"></script>
   <script src="../shared/api-client.js"></script>
   <script src="../shared/ui.js"></script>
+  <script src="../shared/events.js"></script>
   <script src="../shared/chrome.js"></script>
   <script>
     const id = new URLSearchParams(location.search).get("id");
@@ -27,18 +28,18 @@
       catch (e) { root.innerHTML = `<p class="note">${PawUI.esc(e.message)}</p>`; return; }
       const o = data.order || data;
       const items = data.items || [];
-      const paid = o.status === "paid" || o.status === "completed";
+      const paid = !({ created: 1, awaiting_payment: 1, pending: 1, processing: 1, cancelled: 1, refunded: 1, failed: 1 })[o.status];
       root.innerHTML = PawUI.accountNav("account") + `
         <div class="kicker">Account</div>
         <h1 class="page-title">Order #${o.id}</h1>
         <p>Status <strong>${PawUI.esc(o.status)}</strong> · ${PawUI.money(o.total_usd)} · ${o.crypto_chain || ""}</p>
-        <table class="table"><thead><tr><th>Asset</th><th>Qty</th><th>Unit</th><th></th></tr></thead>
+        <div class="table-wrap"><table class="table"><thead><tr><th>Asset</th><th>Qty</th><th>Unit</th><th></th></tr></thead>
         <tbody>${items.map((it) => `<tr>
           <td>${PawUI.esc(it.product_title || ("#" + it.product_id))}</td>
           <td>${it.quantity}</td>
           <td class="price">${PawUI.money(it.unit_price_usd)}</td>
           <td>${paid ? `<button class="btn" data-dl="${it.id}">Re-download</button>` : ""}</td>
-        </tr>`).join("") || "<tr><td colspan='4'>No line items on this order payload.</td></tr>"}</tbody></table>
+        </tr>`).join("") || "<tr><td colspan='4'>No line items on this order payload.</td></tr>"}</tbody></table></div>
         <p class="note" style="margin-top:16px">Paid orders can be re-downloaded any time. Live download returns a placeholder message.</p>`;
       root.querySelectorAll("[data-dl]").forEach((b) => b.onclick = async () => {
         try {

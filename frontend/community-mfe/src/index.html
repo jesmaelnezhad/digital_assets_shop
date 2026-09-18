@@ -40,11 +40,16 @@
   <footer id="site-footer"></footer>
     <script src="/assets/api.js"></script>
   <script src="/assets/ui.js"></script>
+  <script src="/assets/events.js"></script>
   <script src="/assets/chrome.js"></script>
   <script>
     const api = Pawradise.api;
     let filter = "recent";
     let me = null;
+    let feedPage = 1;
+    const FEED_PER = 10;
+    let feedPosts = [];
+    let feedTotal = 0;
 
     function setNav() {
       document.getElementById("nav").innerHTML = PawUI.communityNav("feed", me && me.id);
@@ -79,18 +84,25 @@
       }
     }
 
-    async function render() {
+    async function render(reset) {
+      if (reset !== false) { feedPage = 1; feedPosts = []; }
       try { me = await api.auth.getProfile(); } catch (e) { me = null; }
       setNav();
       document.getElementById("composer").hidden = !me;
       document.getElementById("guest-composer").hidden = !!me;
       try {
-        const res = await api.community.getPosts(filter);
-        const posts = res.posts || [];
-        const empty = filter === "following" && !posts.length
+        const res = await api.community.getPosts({ filter, page: feedPage, per_page: FEED_PER });
+        const batch = res.posts || [];
+        feedTotal = res.total || batch.length;
+        feedPosts = feedPage === 1 ? batch : feedPosts.concat(batch);
+        const empty = filter === "following" && !feedPosts.length
           ? `<p class="note">${me ? "Accounts you follow have not posted yet. Open People and follow someone." : "Log in to see posts from people you follow."}</p>`
           : '<p class="note">No posts in this feed.</p>';
-        document.getElementById("feed").innerHTML = posts.map((p) => PawUI.postCard(p, me && me.id)).join("") || empty;
+        const more = feedPosts.length < feedTotal;
+        document.getElementById("feed").innerHTML = (feedPosts.map((p) => PawUI.postCard(p, me && me.id)).join("") || empty) +
+          (more ? `<p style="margin-top:16px"><button class="btn" id="more-feed">Show more</button></p>` : "");
+        const moreBtn = document.getElementById("more-feed");
+        if (moreBtn) moreBtn.onclick = () => { feedPage += 1; render(false); };
       } catch (e) {
         document.getElementById("feed").innerHTML = `<p class="note">${PawUI.esc(e.message)}</p>`;
       }

@@ -1,91 +1,61 @@
 package identity_test
 
 import (
-	"database/sql"
+	"os"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/pawradise/shared/auth"
+	"golang.org/x/crypto/bcrypt"
 )
 
-func setupTestDB(t *testing.T) (*sql.DB, sqlmock.Sqlmock) {
-	t.Helper()
-	db, mock, err := sqlmock.New()
+func TestMain(m *testing.M) {
+	os.Setenv("JWT_SECRET", "test-jwt-secret")
+	os.Exit(m.Run())
+}
+
+func TestRegisterLoginJWTCarriesCustomerRole(t *testing.T) {
+	tok, err := auth.GenerateJWT(9, "maya@example.com", "customer")
 	if err != nil {
-		t.Fatalf("failed to create mock db: %v", err)
+		t.Fatal(err)
 	}
-	return db, mock
+	claims, err := auth.ValidateJWT(tok, os.Getenv("JWT_SECRET"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if claims.Role != "customer" || claims.Email != "maya@example.com" {
+		t.Fatalf("%+v", claims)
+	}
 }
 
-func TestAuthService_Register(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	_ = db
-	// TODO: Call identity.Service.Register
+func TestStaffJWTKeepsTabs(t *testing.T) {
+	tok, err := auth.GenerateJWT(2, "leo@example.com", "staff", "Products,Banner")
+	if err != nil {
+		t.Fatal(err)
+	}
+	claims, err := auth.ValidateJWT(tok, os.Getenv("JWT_SECRET"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if claims.Role != "staff" || claims.Tabs != "Products,Banner" {
+		t.Fatalf("%+v", claims)
+	}
 }
 
-func TestAuthService_Login(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	_ = db
-	// TODO: Call identity.Service.Login
+func TestPasswordHashRoundTrip(t *testing.T) {
+	hash, err := bcrypt.GenerateFromPassword([]byte("nia"), bcrypt.MinCost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bcrypt.CompareHashAndPassword(hash, []byte("nia")) != nil {
+		t.Fatal("verify failed")
+	}
+	if bcrypt.CompareHashAndPassword(hash, []byte("wrong")) == nil {
+		t.Fatal("wrong password should fail")
+	}
 }
 
-func TestAuthService_ValidateToken(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	_ = db
-	// TODO: Call identity.Service.ValidateToken
+func TestLegacyUserRoleNormalizesToCustomer(t *testing.T) {
+	if auth.NormalizeRole("user") != "customer" {
+		t.Fatal("user -> customer")
+	}
 }
-
-func TestAuthService_Logout(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	_ = db
-	// TODO: Call identity.Service.Logout
-}
-
-func TestAuthService_ResetPassword(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	_ = db
-	// TODO: Call identity.Service.ResetPassword
-}
-
-func TestAuthService_DeleteUser(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	_ = db
-	// TODO: Call identity.Service.DeleteUser
-}
-
-func TestAuthService_GetProfile(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	_ = db
-	// TODO: Call identity.Service.GetProfile
-}
-
-func TestAuthService_UpdateProfile(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	_ = db
-	// TODO: Call identity.Service.UpdateProfile
-}
-
-func TestJWT_Generation(t *testing.T) {
-	// TODO: Test JWT generation
-}
-
-func TestJWT_Validation(t *testing.T) {
-	// TODO: Test JWT validation
-}
-
-func TestPassword_Hashing(t *testing.T) {
-	// TODO: Test password hashing
-}
-
-func TestPassword_Verification(t *testing.T) {
-	// TODO: Test password verification
-}
-
-var _ = sql.ErrNoRows

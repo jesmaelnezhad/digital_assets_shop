@@ -6,6 +6,8 @@ type User struct {
 	ID        int        `json:"id"`
 	Email     string     `json:"email"`
 	Name      string     `json:"name"`
+	Role      string     `json:"role"`
+	StaffTabs string     `json:"staff_tabs,omitempty"`
 	CreatedAt time.Time  `json:"created_at,omitempty"`
 	UpdatedAt time.Time  `json:"updated_at,omitempty"`
 	Profile   *UserProfile `json:"profile,omitempty"`

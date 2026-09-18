@@ -15,16 +15,54 @@
   <footer id="site-footer"></footer>
     <script src="/assets/api.js"></script>
   <script src="/assets/ui.js"></script>
+  <script src="/assets/events.js"></script>
   <script src="/assets/chrome.js"></script>
   <script>
     const params = new URLSearchParams(location.search);
     if (!params.get('id')) { const m = location.pathname.match(/\/profile\/(\d+)/); if (m) params.set('id', m[1]); }
     let tab = params.get("tab") || "posts";
     const api = Pawradise.api;
+    const PER = 10;
+    let page = 1;
+    let items = [];
+    let total = 0;
+    let me = null;
+    let u = null;
+
+    function more() {
+      return PawUI.moreBtn("more-tab", items.length < total);
+    }
+
+    async function loadTab(reset) {
+      if (reset !== false) { page = 1; items = []; }
+      const box = document.getElementById("tab-body");
+      if (!box || !u) return;
+      if (tab === "followers") {
+        const res = await api.community.getFollowers(u.id, { page, per_page: PER });
+        const batch = res.users || [];
+        total = res.total || batch.length;
+        items = page === 1 ? batch : items.concat(batch);
+        box.innerHTML = (items.map((x) => PawUI.personRow(x, me && me.id)).join("") || '<p class="note">No followers yet.</p>') + more();
+      } else if (tab === "following") {
+        const res = await api.community.getFollowing(u.id, { page, per_page: PER });
+        const batch = res.users || [];
+        total = res.total || batch.length;
+        items = page === 1 ? batch : items.concat(batch);
+        box.innerHTML = (items.map((x) => PawUI.personRow(x, me && me.id)).join("") || '<p class="note">Not following anyone.</p>') + more();
+      } else {
+        const feed = await api.community.getPosts({ user_id: u.id, page, per_page: PER });
+        const batch = feed.posts || [];
+        total = feed.total || batch.length;
+        items = page === 1 ? batch : items.concat(batch);
+        box.innerHTML = `<div class="feed">${items.map((p) => PawUI.postCard(p, me && me.id)).join("") || '<p class="note">No posts yet.</p>'}</div>` + more();
+      }
+      const btn = document.getElementById("more-tab");
+      if (btn) btn.onclick = () => { page += 1; loadTab(false); };
+      PawUI.bindFollow(box, () => loadTab(true));
+    }
 
     async function render() {
       const root = document.getElementById("root");
-      let me = null;
       try { me = await api.auth.getProfile(); } catch (e) { me = null; }
       let id = params.get("id");
       if (!id) {
@@ -32,26 +70,13 @@
         root.innerHTML = PawUI.communityNav("people") + '<p class="note">Pick someone in <a href="/people">People</a>, or <a href="' + PawUI.loginHref() + '">log in</a> to open your profile.</p>';
         return;
       }
-      let u;
       try { u = await api.community.getProfile(id); }
       catch (e) { root.innerHTML = PawUI.communityNav("people", me && me.id) + '<p class="note">Profile not found. <a href="/people">People</a></p>'; return; }
       document.title = u.name + " — Pawradise";
       const self = !!(me && me.id === u.id);
       const followBtn = self || !me
-        ? (me ? `<a class="btn" href="..//account">Account settings</a>` : `<a class="btn btn-accent" href="${PawUI.loginHref()}">Log in to follow</a>`)
+        ? (me ? `<a class="btn" href="/account">Account settings</a>` : `<a class="btn btn-accent" href="${PawUI.loginHref()}">Log in to follow</a>`)
         : PawUI.followControl(u, me.id);
-      let body = "";
-      if (tab === "followers") {
-        const list = (await api.community.getFollowers(id)).users || [];
-        body = list.map((x) => PawUI.personRow(x, me && me.id)).join("") || '<p class="note">No followers yet.</p>';
-      } else if (tab === "following") {
-        const list = (await api.community.getFollowing(id)).users || [];
-        body = list.map((x) => PawUI.personRow(x, me && me.id)).join("") || '<p class="note">Not following anyone.</p>';
-      } else {
-        const feed = await api.community.getPosts({ user_id: id, per_page: 50 });
-        const posts = feed.posts || [];
-        body = `<div class="feed">${posts.map((p) => PawUI.postCard(p, me && me.id)).join("") || '<p class="note">No posts yet.</p>'}</div>`;
-      }
       const avatarUrl = u.avatar_url || "";
       const avatarField = avatarUrl.indexOf("data:") === 0 ? "" : avatarUrl;
       const photoForm = self ? `<form id="photo" class="buy" style="margin-top:16px;max-width:360px">
@@ -76,7 +101,7 @@
           <a class="${tab === "followers" ? "is-on" : ""}" href="/profile/${u.id}?tab=followers"><b>${u.follower_count || 0}</b> Followers</a>
           <a class="${tab === "following" ? "is-on" : ""}" href="/profile/${u.id}?tab=following"><b>${u.following_count || 0}</b> Following</a>
         </nav>
-        ${body}`;
+        <div id="tab-body"></div>`;
       PawUI.bindFollow(root, render);
       const photo = document.getElementById("photo");
       if (photo) photo.onsubmit = async (e) => {
@@ -93,6 +118,7 @@
           render();
         } catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
       };
+      await loadTab(true);
     }
     render();
   </script>

@@ -74,3 +74,17 @@ INSERT INTO bundles (title, slug, description, price_usd, status, sort_order) VA
 ('Studio Kit', 'studio-kit', 'Clay characters, marble, and HDRIs — the stills stack.', 72, 'active', 1),
 ('Jam Pack', 'jam-pack', 'Tiles, icons, and lo-fi for a weekend ship.', 28, 'active', 2)
 ON CONFLICT (slug) DO UPDATE SET title = EXCLUDED.title, price_usd = EXCLUDED.price_usd;
+
+INSERT INTO bundle_items (bundle_id, product_id, sort_order)
+SELECT b.id, p.id, x.sort_order
+FROM (VALUES
+  ('studio-kit', 'lunar-clay-characters', 1),
+  ('studio-kit', 'obsidian-marble-pack', 2),
+  ('studio-kit', 'studio-light-hdris', 3),
+  ('jam-pack', 'arcade-tile-kit', 1),
+  ('jam-pack', 'glyph-factory', 2),
+  ('jam-pack', 'night-bus-lofi', 3)
+) AS x(bundle_slug, product_slug, sort_order)
+JOIN bundles b ON b.slug = x.bundle_slug
+JOIN products p ON p.slug = x.product_slug
+ON CONFLICT (bundle_id, product_id) DO NOTHING;

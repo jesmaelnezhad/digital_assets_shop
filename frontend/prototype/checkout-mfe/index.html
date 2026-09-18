@@ -16,6 +16,7 @@
   <script src="../shared/mock-api.js"></script>
   <script src="../shared/api-client.js"></script>
   <script src="../shared/ui.js"></script>
+  <script src="../shared/events.js"></script>
   <script src="../shared/chrome.js"></script>
   <script>
     const api = Pawradise.api;
@@ -45,7 +46,7 @@
         <div>
           <div class="kicker">Commerce</div>
           <h1 class="page-title">Checkout</h1>
-          <table class="table">${items.map((i) => `<tr><td>${PawUI.esc((i.product&&i.product.title)||("#"+i.product_id))}</td><td>${i.quantity}</td><td>${PawUI.money(i.unit * i.quantity)}</td></tr>`).join("")}</table>
+          <div class="table-wrap"><table class="table">${items.map((i) => `<tr><td>${PawUI.esc((i.product&&i.product.title)||("#"+i.product_id))}</td><td>${i.quantity}</td><td>${PawUI.money(i.unit * i.quantity)}</td></tr>`).join("")}</table></div>
           <form id="coupon" class="field-col">Coupon
             <input name="code" placeholder="SAVE12 · WELCOME · MARBLE" value="${coupon && coupon.code || ""}" />
             <button class="btn">Apply</button>

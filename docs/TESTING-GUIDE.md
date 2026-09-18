@@ -7,11 +7,7 @@
 
 ## The Core Mistake
 
-We had 104 API tests passing while the site was visually broken. Users saw:
-- White pages with no styling
-- nginx welcome pages
-- Buttons linking to 404s
-- Empty product grids
+Live counts and coverage live in [`tests/REPORT.md`](../tests/REPORT.md). API-only green is not a visual pass — Playwright still has to check computed styles, chrome, and rendered cards.
 
 **The fundamental problem:** Checking HTTP 200 + API response shape ≠ checking what the user sees.
 
@@ -244,3 +240,11 @@ curl -s https://<domain>/path/to/file | md5sum
 ## Rule 12: Test in Production-Like Conditions
 
 Test against the actual staging domain, not localhost. CDN, SSL termination, and reverse proxy behavior can differ.
+
+## Rule 13: Guest page-load is not a logged-in cookie session
+
+API e2e that sends `Authorization: Bearer` and Playwright that only opens `/referrals` as a guest both miss cookie-session bugs.
+
+**What happened:** Identity `GET /referrals` read Bearer only. Chrome `/me` used cookie-or-Bearer middleware, so a logged-in user saw Account chrome but Referrals still asked them to log in.
+
+**Rule:** For every auth-required page, Playwright must `loginAs` (real cookie) then visit the page and assert the authenticated UI — not the guest gate. Bearer-only HTTP tests do not prove the cookie session the browser uses. Assert `#root` (or the painted surface), not `body`: inline scripts still contain guest-gate copy and will false-fail `textContent('body')`.

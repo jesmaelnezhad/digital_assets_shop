@@ -16,6 +16,7 @@
   <script src="../shared/mock-api.js"></script>
   <script src="../shared/api-client.js"></script>
   <script src="../shared/ui.js"></script>
+  <script src="../shared/events.js"></script>
   <script src="../shared/chrome.js"></script>
   <script>
     const slug = new URLSearchParams(location.search).get("slug") || "lunar-clay-characters";
@@ -31,6 +32,9 @@
       try { tiers = (await api.products.getTiers(p.id)).tiers || []; } catch (e) { tiers = []; }
       try { related = (await api.products.getRecommendations(p.id)).products || []; } catch (e) { related = []; }
       try { await api.recentlyViewed.record(p.id); } catch (e) { /* 401 ok */ }
+      try {
+        if (window.PawEvents) PawEvents.track("product_view", { product_id: p.id, slug: p.slug, title: p.title });
+      } catch (e) { /* collector is best-effort */ }
       pwyw = p.pwyw_min_price || p.price_usd;
       document.title = p.title + " — Pawradise";
       paint();

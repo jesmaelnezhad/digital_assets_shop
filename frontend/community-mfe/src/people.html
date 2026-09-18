@@ -16,7 +16,7 @@
     <h1 class="page-title">People</h1>
     <div id="nav"></div>
     <p class="desc">Follow collectors to fill your Following feed. Mutual follows show as Mutual; incoming edges as Follows you.</p>
-    <form class="header-search" id="search" style="max-width:420px;margin:16px 0" onsubmit="return false">
+    <form class="header-search people-search" id="search" onsubmit="return false">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
       <input name="q" placeholder="Search name or bio" />
     </form>
@@ -26,11 +26,12 @@
       <button data-f="followers">Followers</button>
       <button data-f="suggested">Suggested</button>
     </div>
-    <div class="feed" id="list" style="max-width:720px;margin-top:20px"></div>
+    <div class="people-grid" id="list"></div>
   </main>
   <footer id="site-footer"></footer>
     <script src="/assets/api.js"></script>
   <script src="/assets/ui.js"></script>
+  <script src="/assets/events.js"></script>
   <script src="/assets/chrome.js"></script>
   <script>
     const api = Pawradise.api;
@@ -38,31 +39,55 @@
     let filter = "all";
     let query = "";
     let people = [];
+    let page = 1;
+    const PER = 12;
+    let total = 0;
 
     function setNav() {
       document.getElementById("nav").innerHTML = PawUI.communityNav("people", me && me.id);
     }
 
-    function paint() {
-      const q = query.trim().toLowerCase();
-      let rows = people.slice();
-      if (q) rows = rows.filter((u) => ((u.name || "") + " " + (u.bio || "") + " " + (u.email || "")).toLowerCase().includes(q));
-      if (filter === "following") rows = rows.filter((u) => u.following);
-      else if (filter === "followers") rows = rows.filter((u) => u.follows_you);
-      else if (filter === "suggested") rows = rows.filter((u) => me && u.id !== me.id && !u.following);
-      const empty = !rows.length
+    function paint(paged) {
+      const empty = !people.length
         ? (!me && (filter === "following" || filter === "followers" || filter === "suggested")
           ? `<p class="note"><a href="${PawUI.loginHref()}">Log in</a> to see your follow graph.</p>`
           : '<p class="note">Nobody in this list.</p>')
         : "";
-      document.getElementById("list").innerHTML = rows.map((u) => PawUI.personRow(u, me && me.id)).join("") || empty;
+      const more = paged && people.length < total;
+      document.getElementById("list").innerHTML = (people.map((u) => PawUI.personRow(u, me && me.id)).join("") || empty) +
+        (more ? `<p style="margin-top:16px"><button class="btn" id="more-people">Show more</button></p>` : "");
+      const moreBtn = document.getElementById("more-people");
+      if (moreBtn) moreBtn.onclick = () => { page += 1; render(false); };
     }
 
-    async function render() {
+    async function render(reset) {
+      if (reset !== false) { page = 1; people = []; }
       try { me = await api.auth.getProfile(); } catch (e) { me = null; }
       setNav();
-      people = (await api.community.listPeople()).users || [];
-      paint();
+      if (filter !== "all") {
+        let res = { users: [], total: 0 };
+        if (filter === "following" && me) res = await api.community.getFollowing(me.id, { page, per_page: PER });
+        else if (filter === "followers" && me) res = await api.community.getFollowers(me.id, { page, per_page: PER });
+        else if (filter === "suggested") {
+          const all = (await api.community.suggestions()).users || [];
+          total = all.length;
+          const start = (page - 1) * PER;
+          const batch = all.slice(start, start + PER);
+          people = page === 1 ? batch : people.concat(batch);
+          paint(true);
+          return;
+        } else people = [];
+        const batch = res.users || [];
+        total = res.total != null ? res.total : batch.length;
+        people = page === 1 ? batch : people.concat(batch);
+        paint(true);
+        return;
+      }
+      const res = await api.community.listPeople({ q: query, page, per_page: PER });
+      const batch = res.users || [];
+      total = res.total || batch.length;
+      people = page === 1 ? batch : people.concat(batch);
+      paint(true);
     }
 
     document.getElementById("filters").onclick = (e) => {
@@ -70,11 +95,16 @@
       if (!b) return;
       filter = b.dataset.f;
       document.querySelectorAll("#filters button").forEach((x) => x.classList.toggle("is-on", x === b));
-      paint();
+      render(true);
     };
-    document.querySelector("#search input").oninput = (e) => { query = e.target.value; paint(); };
-    PawUI.bindFollow(document.getElementById("list"), render);
-    render();
+    let searchTimer = 0;
+    document.querySelector("#search input").oninput = (e) => {
+      query = e.target.value;
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => render(true), 200);
+    };
+    PawUI.bindFollow(document.getElementById("list"), () => render(true));
+    render(true);
   </script>
 </body>
 </html>

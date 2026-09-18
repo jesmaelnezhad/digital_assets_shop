@@ -8,6 +8,7 @@
   }
 
   async function mount() {
+    if (global.PawUI && PawUI.bootTheme) PawUI.bootTheme(global.Pawradise && Pawradise.api);
     const header = document.getElementById("site-header");
     const footer = document.getElementById("site-footer");
     let count = 0;
@@ -31,18 +32,34 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
           <input name="search" placeholder="Search assets, kits, packs" value="${new URLSearchParams(location.search).get("search") || ""}" />
         </form>
+        <button type="button" class="nav-toggle" aria-label="Menu" aria-expanded="false">☰</button>
         <nav class="header-nav">
           ${navLink("shop-mfe/index.html", "Shop", "shop")}
           ${navLink("product-mfe/bundles.html", "Bundles", "bundles")}
           ${navLink("community-mfe/index.html", "Community", "community")}
           ${navLink("account-mfe/cart.html", "Cart", "cart", count ? `<span class="badge">${count}</span>` : "")}
           ${user
-            ? navLink("account-mfe/account.html", (user.name || "Account").split(" ")[0], "account")
+            ? navLink("account-mfe/account.html", (user.name || "Account").split(" ")[0], "account") +
+              `<button type="button" class="nav-auth" data-logout>${(global.PawUI && PawUI.icon) ? PawUI.icon("logout") : ""}<span>Log out</span></button>`
             : navLink("auth-mfe/login.html", "Log in", "auth")}
-          ${navLink("admin-app/index.html", "Admin", "admin")}
+          ${(user && (user.role === "admin" || user.role === "staff"))
+            ? navLink("admin-app/index.html", "Admin", "admin")
+            : ""}
           <span class="wallet-dot" title="Wallet">${wallet ? "Wallet · " + PawUI.esc(wallet.slice(0, 8)) + "…" : "Wallet · none"}</span>
         </nav>
       `;
+      const toggle = header.querySelector(".nav-toggle");
+      if (toggle) {
+        toggle.onclick = () => {
+          const open = header.classList.toggle("nav-open");
+          toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        };
+      }
+      const out = header.querySelector("[data-logout]");
+      if (out) out.onclick = async () => {
+        try { await Pawradise.api.auth.logout(); } catch (e) {}
+        location.href = root() + "shop-mfe/index.html";
+      };
     }
     if (footer) {
       footer.className = "site-footer";

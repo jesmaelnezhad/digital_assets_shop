@@ -32,7 +32,7 @@
       if (this.products) return this;
       const a = api();
       const [list, cats] = await Promise.all([
-        a.products.list({ per_page: 100 }),
+        a.products.list({ per_page: 200 }),
         a.products.getCategories()
       ]);
       this.products = list.products || [];
@@ -245,5 +245,115 @@
       `<a class="${on === p ? "is-on" : ""}" href="${root()}account-mfe/${h}">${l}</a>`).join("")}</nav>`;
   }
 
-  global.PawUI = { esc, money, stars, card, bindCards, productUrl, bundleUrl, orderUrl, toast, img, price, root, catalog, couponOff, accountNav, communityNav, avatar, personRow, postCard, bindFollow, followControl, relationPills, loginHref, authGate, safeNext, readAvatarFromForm, avatarFields };
+  function mountHeroSlider(el, products) {
+    if (!el) return;
+    const slides = (products || []).map((p) => catalog.decorate(p)).filter(Boolean);
+    if (!slides.length) { el.innerHTML = ""; return; }
+    let i = 0;
+    let timer = null;
+    function paint() {
+      el.className = "hero";
+      el.setAttribute("aria-roledescription", "carousel");
+      el.innerHTML = slides.map((p, n) => `
+        <article class="hero-slide${n === i ? " is-on" : ""}" data-slide="${n}">
+          <img src="${img(p)}" alt="" />
+          <div class="hero-veil"></div>
+          <div class="hero-copy">
+            <div class="kicker">Banner · ${n + 1} / ${slides.length} · ${esc(p.category_name || "")}</div>
+            <h1>${esc(p.title)}</h1>
+            <p>${esc(p.description)}</p>
+            <div class="hero-meta">
+              <span class="price">${money(p.price_usd)}</span>
+              <span>${esc(p.digital_formats || "")}</span>
+            </div>
+            <a class="btn btn-accent" href="${productUrl(p.slug)}">View asset</a>
+          </div>
+        </article>`).join("") + (slides.length > 1 ? `
+          <button type="button" class="hero-arrow hero-prev" aria-label="Previous banner">‹</button>
+          <button type="button" class="hero-arrow hero-next" aria-label="Next banner">›</button>
+          <div class="hero-dots">${slides.map((_, n) => `<button type="button" class="${n === i ? "is-on" : ""}" data-dot="${n}" aria-label="Banner ${n + 1}"></button>`).join("")}</div>
+        ` : "");
+    }
+    function go(n) {
+      i = (n + slides.length) % slides.length;
+      paint();
+      arm();
+    }
+    function arm() {
+      if (timer) clearInterval(timer);
+      if (slides.length < 2) return;
+      timer = setInterval(() => go(i + 1), 6500);
+    }
+    el.onclick = (e) => {
+      if (e.target.closest(".hero-next")) { e.preventDefault(); go(i + 1); }
+      else if (e.target.closest(".hero-prev")) { e.preventDefault(); go(i - 1); }
+      const dot = e.target.closest("[data-dot]");
+      if (dot) { e.preventDefault(); go(Number(dot.dataset.dot)); }
+    };
+    let sx = 0;
+    el.ontouchstart = (e) => { sx = e.changedTouches[0].clientX; };
+    el.ontouchend = (e) => {
+      const dx = e.changedTouches[0].clientX - sx;
+      if (Math.abs(dx) < 40) return;
+      go(dx > 0 ? i - 1 : i + 1);
+    };
+    paint();
+    arm();
+  }
+
+  const THEME = {
+    palettes: [
+      { id: "clay", name: "Clay", note: "Default gallery gold", swatch: ["#0c0c0e", "#e8b86d", "#ecece8"] },
+      { id: "marble", name: "Marble", note: "Light cream studio", swatch: ["#f3eee6", "#9a5b2f", "#1b1712"] },
+      { id: "night", name: "Night", note: "Ice on ink", swatch: ["#07080d", "#7eb6ff", "#e8edf8"] },
+      { id: "moss", name: "Moss", note: "Forest stills", swatch: ["#0c110e", "#9cbf7a", "#e6eee4"] },
+      { id: "ink", name: "Ink", note: "Navy and gold", swatch: ["#0a0e18", "#d4ba6e", "#f3ead4"] },
+      { id: "ember", name: "Ember", note: "Warm charcoal", swatch: ["#120c0b", "#e07a4a", "#f6ece6"] },
+      { id: "dune", name: "Dune", note: "Sand and bronze", swatch: ["#16120e", "#c4a06a", "#f3eadc"] },
+      { id: "frost", name: "Frost", note: "Cool cyan", swatch: ["#0c1014", "#6ec8d4", "#e6eef2"] }
+    ],
+    fonts: [
+      { id: "system", name: "System" },
+      { id: "humanist", name: "Humanist" },
+      { id: "serif", name: "Serif" },
+      { id: "mono", name: "Mono" },
+      { id: "display", name: "Display" }
+    ],
+    radii: [
+      { id: "sharp", name: "Sharp" },
+      { id: "soft", name: "Soft" },
+      { id: "round", name: "Round" }
+    ],
+    densities: [
+      { id: "compact", name: "Compact" },
+      { id: "comfortable", name: "Comfortable" },
+      { id: "roomy", name: "Roomy" }
+    ]
+  };
+  function defaultTheme() {
+    return { palette: "clay", font: "system", radius: "soft", density: "comfortable" };
+  }
+  function applyTheme(t) {
+    t = Object.assign(defaultTheme(), t || {});
+    const html = document.documentElement;
+    html.dataset.palette = t.palette;
+    html.dataset.font = t.font;
+    html.dataset.radius = t.radius;
+    html.dataset.density = t.density;
+    return t;
+  }
+  function bootTheme(apiObj) {
+    try {
+      const cached = JSON.parse(localStorage.getItem("pawradise_theme") || "null");
+      if (cached) applyTheme(cached);
+    } catch (e) { /* ignore */ }
+    const client = apiObj || api();
+    if (!client || !client.appearance) return;
+    client.appearance.get().then((t) => {
+      applyTheme(t);
+      try { localStorage.setItem("pawradise_theme", JSON.stringify(t)); } catch (e) { /* ignore */ }
+    }).catch(() => {});
+  }
+
+  global.PawUI = { esc, money, stars, card, bindCards, productUrl, bundleUrl, orderUrl, toast, img, price, root, catalog, couponOff, accountNav, communityNav, avatar, personRow, postCard, bindFollow, followControl, relationPills, loginHref, authGate, safeNext, readAvatarFromForm, avatarFields, mountHeroSlider, THEME, applyTheme, defaultTheme, bootTheme };
 })(window);

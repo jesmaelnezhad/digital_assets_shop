@@ -21,10 +21,9 @@ Fixed 9 test expectation mismatches to match actual API response shapes:
 - **Exchange rate** (#8): Tests now look for `data.rate.chain` (nested) instead of `data.chain`
 - **Recommendations** (#9): Added null guard — accepts both array and null responses
 
-### 3. Test Results
-- **104/104 tests passing** (100% pass rate)
-- **0 failures, 0 5xx errors**
-- All core endpoints smoke-tested: products, product detail, categories, community posts, exchange rates, health — all return 200
+## Test results
+
+Current pass/fail counts live in [`../tests/REPORT.md`](../tests/REPORT.md). Do not treat numbers in this historical note as live status.
 
 ### 4. Database Seeding (verified)
 | Database | Entity | Count | Target |

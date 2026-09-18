@@ -116,8 +116,9 @@ type ProductComparison struct {
 }
 
 type OrderItemRequest struct {
-	ProductID int `json:"product_id" binding:"required"`
-	Quantity  int `json:"quantity"`
+	ProductID int     `json:"product_id" binding:"required"`
+	Quantity  int     `json:"quantity"`
+	PriceUSD  float64 `json:"price_usd,omitempty"`
 }
 
 type CreateOrderRequest struct {

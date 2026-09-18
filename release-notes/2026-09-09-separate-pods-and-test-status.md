@@ -4,7 +4,7 @@
 
 **Deployment model changed:** Grouped pod (8 containers/pod) → separate pods (1 container/pod)  
 **Infrastructure:** ✅ Stable  
-**Tests:** 200/200 unit+integration passing, 77/104 e2e passing (27 pre-existing failures)
+**Tests:** see [`tests/REPORT.md`](../tests/REPORT.md) for current counts. This note is the 2026-09-09 pod split, not live status.
 
 ---
 

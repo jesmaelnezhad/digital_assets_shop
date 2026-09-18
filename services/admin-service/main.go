@@ -79,6 +79,7 @@ func main() {
 		admin.GET("/admin/users", h.ListUsers)
 		admin.DELETE("/admin/users/:id", h.DeleteUser)
 		admin.POST("/admin/users/:id/reset-password", h.ResetPassword)
+		admin.PUT("/admin/users/:id/access", h.SetUserAccess)
 
 		// Products
 		admin.GET("/admin/products", h.ListAllProducts)
@@ -99,6 +100,11 @@ func main() {
 		admin.GET("/admin/orders", h.ListAllOrders)
 		admin.GET("/admin/orders/:id", h.GetOrderDetail)
 		admin.PUT("/admin/orders/:id/status", h.UpdateOrderStatus)
+		admin.GET("/admin/order-steps", h.ListOrderSteps)
+		admin.POST("/admin/order-steps", h.CreateOrderStep)
+		admin.PUT("/admin/order-steps", h.UpdateOrderSteps)
+		admin.PUT("/admin/order-steps/:id", h.RenameOrderStep)
+		admin.DELETE("/admin/order-steps/:id", h.DeleteOrderStep)
 		admin.GET("/admin/guest-orders", h.ListGuestOrders)
 		admin.GET("/admin/guest-orders/:id", h.GetGuestOrder)
 

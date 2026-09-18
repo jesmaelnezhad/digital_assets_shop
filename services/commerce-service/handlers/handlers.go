@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -28,7 +30,7 @@ func (h *CommerceHandler) CreateGuestOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if req.Status == "" { req.Status = "pending" }
+	if req.Status == "" { req.Status = "awaiting_payment" }
 
 	var orderID int
 	err := h.db.QueryRow(
@@ -97,9 +99,10 @@ func (h *CommerceHandler) ValidateCoupon(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	req.Code = strings.TrimSpace(req.Code)
 	var coupon models.Coupon
 	if err := h.db.QueryRow(
-		"SELECT id, code, discount_type, discount_value, min_purchase, max_uses, current_uses, expires_at, active FROM coupons WHERE code = $1",
+		"SELECT id, code, discount_type, discount_value, min_purchase, max_uses, current_uses, expires_at, active FROM coupons WHERE UPPER(code) = UPPER($1)",
 		req.Code,
 	).Scan(&coupon.ID, &coupon.Code, &coupon.DiscountType, &coupon.DiscountValue, &coupon.MinPurchase, &coupon.MaxUses, &coupon.CurrentUses, &coupon.ExpiresAt, &coupon.Active); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "coupon not found"})
@@ -126,6 +129,7 @@ func (h *CommerceHandler) ValidateCoupon(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"valid":          true,
+		"code":           coupon.Code,
 		"discount_type":  coupon.DiscountType,
 		"discount_value": coupon.DiscountValue,
 	})
@@ -138,19 +142,19 @@ func (h *CommerceHandler) CreateOrder(c *gin.Context) {
 		return
 	}
 	var req models.CreateOrderRequest
-	// Parse body first
 	if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// If no items in request, pull from cart
 	if len(req.Items) == 0 {
-		rows, _ := h.db.Query("SELECT product_id, quantity FROM cart_items WHERE user_id = $1", userID)
-		defer rows.Close()
-		for rows.Next() {
-			var productID, quantity int
-			if rows.Scan(&productID, &quantity) == nil {
-				req.Items = append(req.Items, models.OrderItemRequest{ProductID: productID, Quantity: quantity})
+		rows, err := h.db.Query("SELECT product_id, quantity FROM cart_items WHERE user_id = $1", userID)
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var productID, quantity int
+				if rows.Scan(&productID, &quantity) == nil {
+					req.Items = append(req.Items, models.OrderItemRequest{ProductID: productID, Quantity: quantity})
+				}
 			}
 		}
 	}
@@ -158,48 +162,100 @@ func (h *CommerceHandler) CreateOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no items in cart or request"})
 		return
 	}
-	tx, _ := h.db.Begin()
-	var orderID int
-	err := tx.QueryRow(
-		"INSERT INTO orders (user_id, total_usd, status) VALUES ($1, 0, 'pending') RETURNING id",
-		userID,
-	).Scan(&orderID)
+	tx, err := h.db.Begin()
 	if err != nil {
-		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
 		return
 	}
+	defer tx.Rollback()
+
+	type line struct {
+		productID int
+		qty       int
+		price     float64
+	}
+	lines := []line{}
 	var totalUSD float64
 	for _, item := range req.Items {
-		var price float64
-		tx.QueryRow("SELECT price_usd FROM products WHERE id = $1", item.ProductID).Scan(&price)
-		tx.Exec(
-			"INSERT INTO order_items (order_id, product_id, quantity, price_usd) VALUES ($1, $2, $3, $4)",
-			orderID, item.ProductID, item.Quantity, price,
-		)
-		totalUSD += price * float64(item.Quantity)
+		qty := item.Quantity
+		if qty < 1 {
+			qty = 1
+		}
+		price := item.PriceUSD
+		var dbPrice float64
+		if err := h.db.QueryRow("SELECT price_usd FROM products WHERE id = $1", item.ProductID).Scan(&dbPrice); err == nil && dbPrice > 0 {
+			price = dbPrice
+		}
+		lines = append(lines, line{item.ProductID, qty, price})
+		totalUSD += price * float64(qty)
 	}
-	tx.Exec("UPDATE orders SET total_usd = $1 WHERE id = $2", totalUSD, orderID)
-	tx.Commit()
 
-	if req.CouponCode != "" {
-		var coupon models.Coupon
-		if err := h.db.QueryRow("SELECT id, discount_type, discount_value FROM coupons WHERE code = $1 AND active = true", req.CouponCode).Scan(&coupon.ID, &coupon.DiscountType, &coupon.DiscountValue); err == nil {
-			h.db.Exec("INSERT INTO coupon_usages (coupon_id, order_id, user_id) VALUES ($1, $2, $3)", coupon.ID, orderID, userID)
+	discount := 0.0
+	var couponID int
+	code := strings.TrimSpace(req.CouponCode)
+	if code != "" {
+		var dtype, dval string
+		var active bool
+		if err := h.db.QueryRow(
+			`SELECT id, discount_type, discount_value, active FROM coupons WHERE UPPER(code) = UPPER($1)`,
+			code,
+		).Scan(&couponID, &dtype, &dval, &active); err == nil && active {
+			discount = applyCouponDiscount(dtype, dval, totalUSD)
+			totalUSD -= discount
+			if totalUSD < 0 {
+				totalUSD = 0
+			}
+		} else {
+			couponID = 0
 		}
 	}
 
-	// Store payment info
+	status := "awaiting_payment"
+	if totalUSD <= 0.0001 {
+		totalUSD = 0
+		status = "paid"
+	}
+	var orderID int
+	if err := tx.QueryRow(
+		"INSERT INTO orders (user_id, total_usd, status) VALUES ($1, $2, $3) RETURNING id",
+		userID, totalUSD, status,
+	).Scan(&orderID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
+		return
+	}
+	for _, ln := range lines {
+		if _, err := tx.Exec(
+			"INSERT INTO order_items (order_id, product_id, quantity, price_usd) VALUES ($1, $2, $3, $4)",
+			orderID, ln.productID, ln.qty, ln.price,
+		); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
+			return
+		}
+	}
+	if couponID > 0 {
+		tx.Exec("INSERT INTO coupon_usages (coupon_id, order_id, user_id) VALUES ($1, $2, $3)", couponID, orderID, userID)
+		tx.Exec("UPDATE coupons SET current_uses = COALESCE(current_uses,0) + 1 WHERE id = $1", couponID)
+	}
+	tx.Exec("DELETE FROM cart_items WHERE user_id = $1", userID)
 	walletAddress := "0xPAWRADISE_WALLET_BSC"
-	h.db.Exec("UPDATE orders SET payment_address = $1, memo = $2 WHERE id = $3", walletAddress, orderID, orderID)
-
+	if status == "paid" {
+		tx.Exec("UPDATE orders SET payment_address = $1, memo = $2, paid_at = NOW() WHERE id = $3", walletAddress, orderID, orderID)
+	} else {
+		tx.Exec("UPDATE orders SET payment_address = $1, memo = $2 WHERE id = $3", walletAddress, orderID, orderID)
+	}
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
+		return
+	}
 	c.JSON(http.StatusCreated, gin.H{
-		"order":          gin.H{"id": orderID},
-		"total_usd":      totalUSD,
+		"order":           gin.H{"id": orderID, "status": status, "total_usd": totalUSD},
+		"total_usd":       totalUSD,
+		"discount_usd":    discount,
+		"zero_due":        status == "paid" && totalUSD == 0,
 		"payment_address": walletAddress,
-		"total_crypto":   0,
-		"crypto_chain":   "BSC",
-		"memo":           orderID,
+		"total_crypto":    0,
+		"crypto_chain":    "BSC",
+		"memo":            orderID,
 	})
 }
 
@@ -257,13 +313,39 @@ func (h *CommerceHandler) GetOrder(c *gin.Context) {
 func (h *CommerceHandler) GetOrderPayment(c *gin.Context) {
 	idStr := c.Param("id")
 	id, _ := strconv.Atoi(idStr)
-	var status string
+	var status, chain, amount, addr, payAddr sql.NullString
 	var totalUSD float64
-	if err := h.db.QueryRow("SELECT status, total_usd FROM orders WHERE id = $1", id).Scan(&status, &totalUSD); err != nil {
+	if err := h.db.QueryRow(
+		`SELECT status, total_usd, COALESCE(crypto_chain,''), COALESCE(crypto_amount,''), COALESCE(crypto_address,''), COALESCE(payment_address,'')
+		 FROM orders WHERE id = $1`, id,
+	).Scan(&status, &totalUSD, &chain, &amount, &addr, &payAddr); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"order_id": id, "status": status, "total_usd": totalUSD})
+	cryptoAddr := addr.String
+	if cryptoAddr == "" {
+		cryptoAddr = payAddr.String
+	}
+	if cryptoAddr == "" {
+		cryptoAddr = "0xPAWRADISE_WALLET_BSC"
+	}
+	cryptoChain := chain.String
+	if cryptoChain == "" {
+		cryptoChain = "BSC"
+	}
+	cryptoAmount := amount.String
+	if cryptoAmount == "" {
+		cryptoAmount = fmt.Sprintf("%.2f", totalUSD)
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"order_id":        id,
+		"status":          status.String,
+		"total_usd":       totalUSD,
+		"crypto_address":  cryptoAddr,
+		"crypto_amount":   cryptoAmount,
+		"crypto_chain":    cryptoChain,
+		"zero_due":        status.String == "paid" && totalUSD == 0,
+	})
 }
 
 func (h *CommerceHandler) CheckPaymentStatus(c *gin.Context) {
@@ -286,7 +368,7 @@ func (h *CommerceHandler) GetOrderDownload(c *gin.Context) {
 func (h *CommerceHandler) ConfirmPayment(c *gin.Context) {
 	idStr := c.Param("id")
 	id, _ := strconv.Atoi(idStr)
-	h.db.Exec("UPDATE orders SET status = 'paid', paid_at = NOW() WHERE id = $1", id)
+	h.db.Exec("UPDATE orders SET status = 'paid', paid_at = COALESCE(paid_at, NOW()) WHERE id = $1 AND status IN ('pending','created','awaiting_payment','processing','paid')", id)
 	c.JSON(http.StatusOK, gin.H{"message": "payment confirmed"})
 }
 

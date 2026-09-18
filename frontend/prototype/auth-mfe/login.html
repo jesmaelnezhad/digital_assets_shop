@@ -12,11 +12,11 @@
   <form class="auth-card" id="form">
     <div class="kicker">Identity</div>
     <h1>Log in</h1>
-    <p style="color:var(--mute);margin-bottom:12px">Demo: nia@example.com / nia · leo@example.com / leo · maya@example.com / maya · owen@example.com / owen</p>
+    <p style="color:var(--mute);margin-bottom:12px">Demo: nia@example.com / nia (admin) · leo@example.com / leo (staff) · maya@example.com / maya · owen@example.com / owen</p>
     <label class="field-col">Email <input name="email" type="email" required /></label>
     <label class="field-col">Password <input name="password" type="password" required /></label>
     <p class="form-error"></p>
-    <button class="btn btn-accent" style="width:100%">Log in</button>
+    <button type="submit" class="btn btn-accent" style="width:100%">Log in</button>
     <p style="margin-top:14px"><a id="reg" href="register.html">Create an account</a></p>
   </form>
   <footer id="site-footer"></footer>
@@ -24,6 +24,7 @@
   <script src="../shared/mock-api.js"></script>
   <script src="../shared/api-client.js"></script>
   <script src="../shared/ui.js"></script>
+  <script src="../shared/events.js"></script>
   <script src="../shared/chrome.js"></script>
   <script>
     const next = new URLSearchParams(location.search).get("next");

@@ -42,6 +42,7 @@
   <script src="../shared/mock-api.js"></script>
   <script src="../shared/api-client.js"></script>
   <script src="../shared/ui.js"></script>
+  <script src="../shared/events.js"></script>
   <script src="../shared/chrome.js"></script>
   <script>
     const params = new URLSearchParams(location.search);
@@ -53,7 +54,8 @@
       file_type: params.get("file_type") || "",
       price_min: params.get("price_min") || "",
       price_max: params.get("price_max") || "",
-      page: Number(params.get("page") || 1)
+      page: Number(params.get("page") || 1),
+      per_page: 12
     };
     document.getElementById("sort").value = state.sort;
     document.getElementById("rating").value = state.rating;
@@ -63,23 +65,14 @@
 
     async function renderHero() {
       await PawUI.catalog.load();
-      const list = await api.products.list({ sort: "newest", per_page: 12 });
-      const raw = (list.products || []).find((x) => x.is_pinned || x.pinned) || (list.products || [])[0];
-      const p = PawUI.catalog.decorate(raw);
-      if (!p) return;
-      document.getElementById("hero").innerHTML = `
-        <img src="${PawUI.img(p)}" alt="" />
-        <div class="hero-veil"></div>
-        <div class="hero-copy">
-          <div class="kicker">Pinned · ${PawUI.esc(p.category_name || "")}</div>
-          <h1>${PawUI.esc(p.title)}</h1>
-          <p>${PawUI.esc(p.description)}</p>
-          <div class="hero-meta">
-            <span class="price">${PawUI.money(p.price_usd)}</span>
-            <span>${PawUI.esc(p.digital_formats || "")}</span>
-          </div>
-          <a class="btn btn-accent" href="${PawUI.productUrl(p.slug)}">View asset</a>
-        </div>`;
+      const list = await api.products.list({ banner: 1, per_page: 24 });
+      let slides = list.products || [];
+      if (!slides.length) {
+        const fallback = await api.products.list({ sort: "newest", per_page: 12 });
+        slides = (fallback.products || []).filter((x) => x.is_pinned || x.pinned).slice(0, 4);
+        if (!slides.length) slides = (fallback.products || []).slice(0, 1);
+      }
+      PawUI.mountHeroSlider(document.getElementById("hero"), slides);
     }
 
     async function render() {

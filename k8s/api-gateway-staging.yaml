@@ -204,6 +204,21 @@ spec:
             name: payment-service
             port:
               number: 8086
+      # === Events Service (admin/events before /admin prefix) ===
+      - path: /api/v1/admin/events
+        pathType: Prefix
+        backend:
+          service:
+            name: events-service
+            port:
+              number: 8089
+      - path: /api/v1/events
+        pathType: Prefix
+        backend:
+          service:
+            name: events-service
+            port:
+              number: 8089
       # === Admin Service ===
       - path: /api/v1/admin
         pathType: Prefix

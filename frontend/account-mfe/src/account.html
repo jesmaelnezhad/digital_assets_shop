@@ -15,6 +15,7 @@
   <footer id="site-footer"></footer>
     <script src="/assets/api.js"></script>
   <script src="/assets/ui.js"></script>
+  <script src="/assets/events.js"></script>
   <script src="/assets/chrome.js"></script>
   <script>
     const api = Pawradise.api;
@@ -40,13 +41,13 @@
         <div class="split">
           <div>
             <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:12px">Orders</h2>
-            <table class="table"><thead><tr><th>ID</th><th>Status</th><th>Total</th><th>When</th></tr></thead>
+            <div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Status</th><th>Total</th><th>When</th></tr></thead>
             <tbody>${orders.map((o) => `<tr>
               <td class="mono"><a href="/account/order.html?id=${o.id}">#${o.id}</a></td>
               <td>${PawUI.esc(o.status)}</td>
               <td class="price">${PawUI.money(o.total_usd)}</td>
               <td>${new Date(o.created_at).toLocaleDateString()}</td>
-            </tr>`).join("") || '<tr><td colspan="4">No orders yet.</td></tr>'}</tbody></table>
+            </tr>`).join("") || '<tr><td colspan="4">No orders yet.</td></tr>'}</tbody></table></div>
           </div>
           <form id="prof" class="buy">
             <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">${PawUI.avatar({ name: me.name, avatar_url: avatarUrl }, "lg")}</div>

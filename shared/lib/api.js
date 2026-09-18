@@ -18,7 +18,7 @@
         });
         if (!res.ok) {
             const body = await res.json().catch(() => ({}));
-            if (res.status === 401 && path.indexOf('/admin/') === 0) {
+            if (res.status === 401 && path.indexOf('/access') >= 0) {
                 try {
                     sessionStorage.removeItem('admin_token');
                     localStorage.removeItem('pawradise_admin_token');
@@ -36,7 +36,9 @@
         const t = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('admin_token'))
             || localStorage.getItem('pawradise_admin_token')
             || '';
-        return { Authorization: 'Bearer ' + t };
+        const h = {};
+        if (t) h['X-Admin-Token'] = t;
+        return h;
     }
 
     const api = {
@@ -65,6 +67,12 @@
             getBundle: (id) => apiFetch(`/bundles/${id}`),
             getTiers: (id) => apiFetch(`/products/${id}/tiers`),
             getRecommendations: (productId) => apiFetch(`/recommendations/${productId}`),
+            setBanner: (ids) => apiFetch('/products/banner', { method: 'PUT', body: JSON.stringify({ product_ids: ids }), headers: adminHeaders() }),
+        },
+
+        appearance: {
+            get: () => apiFetch('/products/appearance'),
+            set: (data) => apiFetch('/products/appearance', { method: 'PUT', body: JSON.stringify(data), headers: adminHeaders() }),
         },
 
         orders: {
@@ -110,8 +118,8 @@
             unfollow: (userId) => apiFetch(`/community/follow/${userId}`, { method: 'DELETE' }),
             getProfile: (userId) => apiFetch(`/community/users/${userId}`),
             listPeople: (params) => apiFetch('/community/users' + (params ? '?' + new URLSearchParams(params).toString() : '')),
-            getFollowers: (userId) => apiFetch(`/community/users/${userId}/followers`),
-            getFollowing: (userId) => apiFetch(`/community/users/${userId}/following`),
+            getFollowers: (userId, params) => apiFetch(`/community/users/${userId}/followers` + (params ? '?' + new URLSearchParams(params).toString() : '')),
+            getFollowing: (userId, params) => apiFetch(`/community/users/${userId}/following` + (params ? '?' + new URLSearchParams(params).toString() : '')),
             suggestions: () => apiFetch('/community/suggestions'),
         },
 
@@ -161,6 +169,7 @@
             users: () => apiFetch('/admin/users', { headers: adminHeaders() }),
             deleteUser: (id) => apiFetch('/admin/users/' + id, { method: 'DELETE', headers: adminHeaders() }),
             resetPassword: (id) => apiFetch('/admin/users/' + id + '/reset-password', { method: 'POST', headers: adminHeaders() }),
+            setUserAccess: (id, data) => apiFetch('/admin/users/' + id + '/access', { method: 'PUT', body: JSON.stringify(data), headers: adminHeaders() }),
             products: () => apiFetch('/admin/products', { headers: adminHeaders() }),
             createProduct: (data) => apiFetch('/admin/products', { method: 'POST', body: JSON.stringify(data), headers: adminHeaders() }),
             updateProduct: (id, data) => apiFetch('/admin/products/' + id, { method: 'PUT', body: JSON.stringify(data), headers: adminHeaders() }),
@@ -182,9 +191,22 @@
             deleteImage: (id, imageId) => apiFetch('/admin/products/' + id + '/images/' + imageId, { method: 'DELETE', headers: adminHeaders() }),
             generatePreviews: (id) => apiFetch('/admin/products/' + id + '/generate-previews', { method: 'POST', headers: adminHeaders() }),
             bulkProducts: (data) => apiFetch('/admin/products/bulk', { method: 'POST', body: JSON.stringify(data), headers: adminHeaders() }),
-            orders: () => apiFetch('/admin/orders', { headers: adminHeaders() }),
+            orders: (params = {}) => {
+                const q = new URLSearchParams();
+                if (params.status) q.set('status', params.status);
+                if (params.q) q.set('q', params.q);
+                if (params.page) q.set('page', String(params.page));
+                if (params.per_page) q.set('per_page', String(params.per_page));
+                const s = q.toString();
+                return apiFetch('/admin/orders' + (s ? '?' + s : ''), { headers: adminHeaders() });
+            },
             getOrder: (id) => apiFetch('/admin/orders/' + id, { headers: adminHeaders() }),
             setOrderStatus: (id, status) => apiFetch('/admin/orders/' + id + '/status', { method: 'PUT', body: JSON.stringify({ status }), headers: adminHeaders() }),
+            orderSteps: () => apiFetch('/admin/order-steps', { headers: adminHeaders() }),
+            createOrderStep: (data) => apiFetch('/admin/order-steps', { method: 'POST', body: JSON.stringify(data), headers: adminHeaders() }),
+            saveOrderSteps: (steps) => apiFetch('/admin/order-steps', { method: 'PUT', body: JSON.stringify({ steps }), headers: adminHeaders() }),
+            renameOrderStep: (id, label) => apiFetch('/admin/order-steps/' + id, { method: 'PUT', body: JSON.stringify({ label }), headers: adminHeaders() }),
+            deleteOrderStep: (id) => apiFetch('/admin/order-steps/' + id, { method: 'DELETE', headers: adminHeaders() }),
             guestOrders: () => apiFetch('/admin/guest-orders', { headers: adminHeaders() }),
             getGuestOrder: (id) => apiFetch('/admin/guest-orders/' + id, { headers: adminHeaders() }),
             communityPosts: () => apiFetch('/admin/community/posts', { headers: adminHeaders() }),
@@ -210,6 +232,9 @@
             createCategory: (data) => apiFetch('/categories', { method: 'POST', body: JSON.stringify(data), headers: adminHeaders() }),
             updateCategory: (id, data) => apiFetch('/categories/' + id, { method: 'PUT', body: JSON.stringify(data), headers: adminHeaders() }),
             deleteCategory: (id) => apiFetch('/categories/' + id, { method: 'DELETE', headers: adminHeaders() }),
+            events: (params = {}) => apiFetch('/admin/events?' + new URLSearchParams(params).toString(), { headers: adminHeaders() }),
+            eventsTtl: () => apiFetch('/admin/events/ttl', { headers: adminHeaders() }),
+            setEventsTtl: (data) => apiFetch('/admin/events/ttl', { method: 'PUT', body: JSON.stringify(data), headers: adminHeaders() }),
         }
     };
 

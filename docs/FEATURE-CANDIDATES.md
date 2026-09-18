@@ -1,6 +1,6 @@
 # Pawradise — Candidate Feature Improvements
 
-> Research-based list of 20 features that can improve the Pawradise digital
+> Research-based list of 21 features that can improve the Pawradise digital
 > asset marketplace. Sorted by expected impact / popularity first.
 > Sources: Gumroad, Sellfy, Easy Digital Downloads, itch.io, Creative Market,
 > StoreEngine, FluentCart, and general ecommerce best practices.
@@ -321,6 +321,64 @@ Prevents abuse and protects buyer data. Important as the platform grows.
 
 ---
 
+## 21. Configurable order pipeline (ops desk)
+**Priority: HIGH**
+**Effort: Medium**
+
+Studio operations needs a real order desk, not a hardcoded status enum:
+- One admin **Steps** surface to define the pipeline and its sequence
+- Default system steps: created → waiting for payment → paid
+- Custom steps after paid (seeded: preparation, delivered) plus terminal steps cancelled / refunded / failed
+- Staff **Orders** panel: filter by step, search, see the current step, move an order to another step
+- Stats dashboard counts orders in each step
+
+This is how Gumroad/EDD/Shopify ops queues work: payment state plus fulfillment states the studio defines.
+
+>>>> let's add this. Admin defines the steps (order/sequence). Staff work the Orders panel: filter, status, manual move. Stats show counts per step. Seed custom steps preparation and delivered for now.
+
+---
+
+## 22. Appearance: palettes, icon sets, extra look dimensions
+**Priority: HIGH**
+**Effort: Low-Medium**
+
+Studio branding needs more than eight palettes and a single icon style:
+- At least 16 additional palettes, with many light backgrounds and more variety
+- Selectable icon sets for menus and actions (free, standard SVG paths)
+- Extra appearance dimensions beyond palette / font / radius / density (contrast, grain, glow, motion, letter-spacing)
+
+This is how a small studio shop stays on-brand without a custom CSS dump.
+
+>>>> let's add this. 24 palettes. Icon sets line/bold/filled/glyph. Extra dims: contrast, grain, glow, motion, tracking. Admin Appearance tab.
+
+---
+
+## 23. Zero-due checkout (complete order when pay amount is $0)
+**Priority: HIGH**
+**Effort: Low**
+
+Payment rails are not implemented yet. When a coupon (or other discount) brings the amount due to zero, checkout should still complete: create a paid order in one click, no crypto modal. Admin-created coupons must be the same coupons checkout validates.
+
+>>>> let's add this. Coupons live in the commerce DB. 100% / $0 due marks the order paid (`zero_due`). Checkout “Complete order” skips the pay modal.
+
+---
+
+## 24. Frontend event collector (MongoDB + events-service)
+**Priority: HIGH**
+**Effort: Medium**
+
+Funnel/stats charts are suspected stale. Before fixing funnel math, collect real frontend events:
+- One MongoDB instance (same pattern as Postgres: one shared cluster instance for staging and production for now)
+- New `events-service` that ingests events and stores them with a TTL
+- TTL settable from the admin panel, default 1 hour
+- Small frontend SDK plus product wiring so the path works end to end
+- Only two event names for now: `product_view` (product page visit) and `checkout_click` (cart Checkout click)
+- Funnel numbers may stay wrong until a later reporting pass
+
+>>>> let's add this. Completeness of the event utility first. Mongo TTL index on `expire_at`. Admin Events tab for TTL + recent events.
+
+---
+
 ## Summary Table
 
 | # | Feature | Priority | Effort |
@@ -345,6 +403,10 @@ Prevents abuse and protects buyer data. Important as the platform grows.
 | 18 | Wishlist Sharing / Gift Links | MEDIUM-LOW | Low-Medium |
 | 19 | Multi-Language / i18n | MEDIUM-LOW | HIGH |
 | 20 | API Rate Limiting & Security | MEDIUM-LOW | Low-Medium |
+| 21 | Configurable order pipeline / ops desk | HIGH | Medium |
+| 22 | Appearance palettes, icon sets, extra look dims | HIGH | Low-Medium |
+| 23 | Zero-due checkout when pay amount is $0 | HIGH | Low |
+| 24 | Frontend event collector (Mongo + events-service) | HIGH | Medium |
 
 ---
 

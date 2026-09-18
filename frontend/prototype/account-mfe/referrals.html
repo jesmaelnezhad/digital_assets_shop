@@ -15,6 +15,7 @@
   <script src="../shared/mock-api.js"></script>
   <script src="../shared/api-client.js"></script>
   <script src="../shared/ui.js"></script>
+  <script src="../shared/events.js"></script>
   <script src="../shared/chrome.js"></script>
   <script>
     async function render() {
@@ -40,14 +41,14 @@
             <button class="btn btn-accent" id="copy" type="button">Copy link</button>
           </p>
           <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:24px 0 12px">Referred people</h2>
-          <table class="table"><thead><tr><th>User</th><th>When</th></tr></thead>
+          <div class="table-wrap"><table class="table"><thead><tr><th>User</th><th>When</th></tr></thead>
           <tbody>${people.map((x) => `<tr>
             <td>${x.referred_user_id ? `<a href="../community-mfe/profile.html?id=${x.referred_user_id}">${PawUI.esc(x.name || ("User #" + x.referred_user_id))}</a>` : PawUI.esc(x.name || x.email || "—")}</td>
             <td>${x.created_at ? new Date(x.created_at).toLocaleDateString() : "—"}</td>
-          </tr>`).join("") || "<tr><td colspan=2>Nobody has used your link yet. Copy it above.</td></tr>"}</tbody></table>
+          </tr>`).join("") || "<tr><td colspan=2>Nobody has used your link yet. Copy it above.</td></tr>"}</tbody></table></div>
           <h2 style="font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:24px 0 12px">Earnings</h2>
-          <table class="table"><thead><tr><th>Order</th><th>Amount</th></tr></thead>
-          <tbody>${rows.map((e) => `<tr><td>#${e.order_id}</td><td class="price">${PawUI.money(e.amount)}</td></tr>`).join("") || "<tr><td colspan=2>None yet. Earnings appear after a referred buyer pays.</td></tr>"}</tbody></table>`;
+          <div class="table-wrap"><table class="table"><thead><tr><th>Order</th><th>Amount</th></tr></thead>
+          <tbody>${rows.map((e) => `<tr><td>#${e.order_id}</td><td class="price">${PawUI.money(e.amount)}</td></tr>`).join("") || "<tr><td colspan=2>None yet. Earnings appear after a referred buyer pays.</td></tr>"}</tbody></table></div>`;
         document.getElementById("copy").onclick = async () => {
           try { await navigator.clipboard.writeText(link); PawUI.toast("Copied"); }
           catch (e) { PawUI.toast("Copy failed"); }

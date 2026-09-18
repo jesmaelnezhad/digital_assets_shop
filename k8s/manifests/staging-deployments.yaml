@@ -95,6 +95,11 @@ spec:
             secretKeyRef:
               name: pawradise-secrets
               key: JWT_SECRET
+        - name: ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: ADMIN_TOKEN
         resources:
           requests:
             cpu: 20m
@@ -473,4 +478,59 @@ spec:
   ports:
   - port: 8088
     targetPort: 8088
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: events-service
+  namespace: staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: events-service
+  template:
+    metadata:
+      labels:
+        app: events-service
+    spec:
+      containers:
+      - name: events-service
+        image: 130.185.123.156:30099/pawradise/events-service:proto-v8
+        ports:
+        - containerPort: 8089
+        env:
+        - name: PORT
+          value: "8089"
+        - name: MONGO_URI
+          value: "mongodb://paw:events_mongo_staging_2026@130.185.123.156:27017/?authSource=admin"
+        - name: MONGO_DB
+          value: "events"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pawradise-secrets
+              key: JWT_SECRET
+        - name: ADMIN_TOKEN
+          value: "admin_secret_staging_2026"
+        resources:
+          requests:
+            cpu: 20m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: events-service
+  namespace: staging
+spec:
+  selector:
+    app: events-service
+  ports:
+  - port: 8089
+    targetPort: 8089
   type: ClusterIP

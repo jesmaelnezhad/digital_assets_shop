@@ -42,6 +42,7 @@ func main() {
 	r.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok", "service": "product-service"}) })
 
 	// Public
+	r.GET("/api/v1/products/appearance", h.GetAppearance)
 	r.GET("/api/v1/products", h.ListProducts)
 	r.GET("/api/v1/products/:slug/tiers", h.GetProductTiers)
 	r.GET("/api/v1/products/:slug", h.GetProduct)
@@ -57,6 +58,8 @@ func main() {
 	admin.Use(middleware.AdminAuthMiddleware())
 	{
 		admin.POST("/products", h.CreateProduct)
+		admin.PUT("/products/appearance", h.SetAppearance)
+		admin.PUT("/products/banner", h.SetBanner)
 		admin.PUT("/products/:id", h.UpdateProduct)
 		admin.DELETE("/products/:id", h.DeleteProduct)
 		admin.POST("/products/:id/images", h.AddProductImage)

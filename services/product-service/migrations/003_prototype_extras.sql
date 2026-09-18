@@ -9,6 +9,7 @@ ALTER TABLE product_tiers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAUL
 UPDATE product_tiers SET tier_name = name WHERE (tier_name IS NULL OR tier_name = '') AND name IS NOT NULL;
 
 ALTER TABLE products ADD COLUMN IF NOT EXISTS average_rating DECIMAL(4,2) DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS banner_sort INTEGER NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS product_requests (
     id SERIAL PRIMARY KEY,

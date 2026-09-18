@@ -218,8 +218,12 @@ func (h *Handlers) GetRelatedProducts(c *gin.Context) {
 	pid, err := strconv.Atoi(c.Param("productId"))
 	if err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"}); return }
 	var catID sql.NullInt64
-	h.db.QueryRow("SELECT category_id FROM products WHERE id=$1", pid).Scan(&catID)
-	if !catID.Valid {
+	err = h.db.QueryRow("SELECT category_id FROM products WHERE id=$1", pid).Scan(&catID)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "product not found"})
+		return
+	}
+	if err != nil || !catID.Valid {
 		c.JSON(http.StatusOK, gin.H{"products": []models.Product{}})
 		return
 	}
@@ -248,6 +252,7 @@ func (h *Handlers) ListBundles(c *gin.Context) {
 	for rows.Next() {
 		var b models.Bundle
 		if rows.Scan(&b.ID, &b.Title, &b.Slug, &b.Description, &b.PriceUSD, &b.Status, &b.SortOrder, &b.CreatedAt, &b.UpdatedAt) == nil {
+			b.Items = h.bundleItemCSV(b.ID)
 			bundles = append(bundles, b)
 		}
 	}
@@ -256,12 +261,23 @@ func (h *Handlers) ListBundles(c *gin.Context) {
 }
 
 func (h *Handlers) GetBundle(c *gin.Context) {
-	slug := c.Param("slug")
+	key := c.Param("id")
+	if key == "" {
+		key = c.Param("slug")
+	}
 	var b models.Bundle
-	if err := h.db.QueryRow("SELECT id, title, slug, description, price_usd, status, sort_order, created_at, updated_at FROM bundles WHERE slug = $1", slug).Scan(&b.ID, &b.Title, &b.Slug, &b.Description, &b.PriceUSD, &b.Status, &b.SortOrder, &b.CreatedAt, &b.UpdatedAt); err != nil {
+	q := "SELECT id, title, slug, description, price_usd, status, sort_order, created_at, updated_at FROM bundles"
+	var err error
+	if id, convErr := strconv.Atoi(key); convErr == nil && id > 0 {
+		err = h.db.QueryRow(q+" WHERE id = $1", id).Scan(&b.ID, &b.Title, &b.Slug, &b.Description, &b.PriceUSD, &b.Status, &b.SortOrder, &b.CreatedAt, &b.UpdatedAt)
+	} else {
+		err = h.db.QueryRow(q+" WHERE slug = $1", key).Scan(&b.ID, &b.Title, &b.Slug, &b.Description, &b.PriceUSD, &b.Status, &b.SortOrder, &b.CreatedAt, &b.UpdatedAt)
+	}
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "bundle not found"})
 		return
 	}
+	b.Items = h.bundleItemCSV(b.ID)
 	c.JSON(http.StatusOK, gin.H{"bundle": b})
 }
 
@@ -349,7 +365,11 @@ func (h *Handlers) GeneratePreviews(c *gin.Context) {
 func (h *Handlers) PinProduct(c *gin.Context) {
 	idStr := c.Param("id")
 	id, _ := strconv.Atoi(idStr)
-	h.db.Exec("UPDATE products SET pinned = true, is_pinned = true, pinned_at = NOW() WHERE id = $1", id)
+	var max int
+	_ = h.db.QueryRow("SELECT COALESCE(MAX(banner_sort),0) FROM products").Scan(&max)
+	h.db.Exec(`UPDATE products SET pinned = true, is_pinned = true, pinned_at = NOW(),
+		banner_sort = CASE WHEN COALESCE(banner_sort,0) = 0 THEN $1 ELSE banner_sort END
+		WHERE id = $2`, max+1, id)
 	c.JSON(http.StatusOK, gin.H{"message": "product pinned"})
 }
 

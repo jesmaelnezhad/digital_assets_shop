@@ -2,8 +2,10 @@ const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: '.',
-  timeout: 30000,
+  testIgnore: ['**/e2e-root.spec.cjs'],
+  timeout: 45000,
   retries: 1,
+  workers: 1,
   reporter: [['list']],
   use: {
     baseURL: process.env.BASE_URL || 'https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir',

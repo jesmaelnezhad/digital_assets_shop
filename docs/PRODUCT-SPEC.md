@@ -40,10 +40,12 @@ price points).
 
 ### 1.4 Design Direction
 
-- Dark theme background (near-black with slight blue tint)
+- Dark theme background (near-black with slight blue tint) as the default **clay** look; admin Appearance can switch palettes (24 total, including many light backgrounds)
+- Extra look dimensions on `<html>`: `data-palette`, `data-font`, `data-radius`, `data-density`, `data-icons` (`line|bold|filled|glyph`), `data-contrast`, `data-grain`, `data-glow`, `data-motion`, `data-tracking`
+- Icon SVG sprites for nav and actions; chips on images use forced light text so dark-on-dark contrast does not happen
 - Monospace accents for prices, technical labels, code elements
-- Neon/synthwave accent colors (cyan, magenta) used sparingly
-- CSS glow effects on interactive elements
+- Neon/synthwave accent colors (cyan, magenta) used sparingly on darker palettes
+- CSS glow effects on interactive elements (admin can set glow/motion)
 - System fonts only — no external font loading
 - No heavy graphics — substance over style
 - ASCII-art style dividers or simple CSS borders
@@ -63,7 +65,7 @@ price points).
 
 ### 2.1 Visitor / Browser Flow (No Auth Required)
 
-1. Lands on shop homepage — sees product grid (paginated, 12 per page)
+1. Lands on shop homepage — sees a multi-slide hero (admin Banner tab) plus product grid (paginated, 12 per page)
 2. Can search by text (searches title + description)
 3. Can filter by category, price range, file type, rating
 4. Can sort by newest, price low-high, price high-low
@@ -118,7 +120,7 @@ price points).
    - Subtotal
    - Discount applied (if coupon code entered)
    - Total USD
-3. User clicks "Pay" — confirmation popup/modal appears
+3. User clicks "Pay" — confirmation popup/modal appears. If the amount due is `$0` (for example a 100% coupon), checkout shows **Complete order** instead, creates the order as `paid` with `zero_due: true`, and skips the crypto modal
 4. Payment method: crypto wallet (BSC-compatible) OR simplified pay button
 5. After payment initiated/confirmed — order marked as paid
 6. Download links become available for purchased items
@@ -173,9 +175,11 @@ price points).
    - **Users:** list, delete, reset passwords
    - **Products:** CRUD, tiers, image gallery, preview generation, pinning,
      PWYW toggle, bulk operations
+   - **Banner:** ordered homepage hero slider (one or more shop-catalog products)
    - **Bundles:** create/edit/delete product bundles with discounted pricing
    - **Coupons:** create/edit/delete discount codes
-   - **Orders:** list, view, update status with transition validation
+   - **Orders:** ops desk — filter by step, search, open detail, manually move an order to another defined step
+   - **Steps:** define the order pipeline and its sequence (system: created, waiting for payment, paid; custom e.g. preparation, delivered; terminals: cancelled, refunded, failed)
    - **Community:** list posts, delete posts (moderation)
    - **Referrals:** view all referrals and commissions
    - **Exchange rates:** list, set, delete rates
@@ -190,7 +194,7 @@ price points).
 
 | Page | URL | Purpose |
 |------|-----|---------|
-| Shop home | / | Product grid with search, filter, sort, pagination; pinned products first |
+| Shop home | / | Product grid with search, filter, sort, pagination (12 per page); homepage hero is a multi-product slider from `GET /products?banner=1` |
 | Product detail | /product/:slug | Single product: image gallery, preview, tier selection, PWYW input, buy button, related products, share buttons |
 | Bundle detail | /bundle/:id | Bundle: list of included products, bundle price vs. individual total, buy button |
 | Community feed | /community | Posts feed (public read) |
@@ -213,12 +217,14 @@ price points).
 
 | Page | URL | Purpose |
 |------|-----|---------|
-| Admin panel | /admin | Dashboard with tabs: Stats, Users, Products, Bundles, Coupons, Orders, Community, Referrals, Exchange Rates, Settings, Email Export |
+| Admin panel | /admin | Staff/admin desk. Tabs: Stats, Users, Products, Banner, Categories, Bundles, Coupons, Orders, Steps, Guest, Community, Referrals, Rates, Settings, SEO, Export, Requests, Appearance, Events. Access (roles/staff tabs) is admin-only and also needs the operator token. Access and Users include live search; Access cards are a 1/2/3-column grid by viewport. **Orders** is the ops queue (filter/search/move by step). **Steps** is the pipeline editor. **Stats** includes counts per order step. **Events** sets event TTL (default 1 hour) and shows recent collector rows. Funnel charts may still be stale. |
 
 ### 3.4 Shared UI Elements
 
 - **Header (all pages):** Logo "PAWRADISE", nav links (Shop, Community,
-  Account), wallet status indicator, admin link if admin
+  Account), wallet status indicator, **Log in** when logged out and **Log out** in the header when logged in (logout is not buried only in profile). Admin link only when the signed-in user is `staff` or `admin`
+- **Long lists:** Shop, community feed, people directory, profile posts, followers, and following use **Show more** / pagination. Seed data is large enough that pagers actually appear.
+- **Responsive layout:** Below 980px the header uses a hamburger, shop rail scrolls, two-column splits (checkout, account, product buy box) stack, and tables scroll inside `.table-wrap`. Access cards and the People directory are one column on phones, two from 860px, three from 1240px. Community feed stays a single readable column.
 - **Footer (all pages):** Copyright, links
 - **Product card:** Thumbnail (generated preview), title, category badge,
   price (or "Pay what you want"), buy button, pinned badge if pinned
@@ -248,7 +254,7 @@ All API routes under /api/v1/. Both staging and production use identical paths �
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | /api/v1/products | List products — pagination, search (title/description), filter (category, price_min, price_max, file_type, rating), sort (newest, price_asc, price_desc, popular). Pinned products always appear first. Returns products array + total count |
+| GET | /api/v1/products | List products — pagination, search (title/description), filter (category, price_min, price_max, file_type, rating, `banner=1` for homepage slider only), sort (newest, price_asc, price_desc, popular). Pinned products always appear first except `banner=1` which orders by `banner_sort`. Returns products array + total count |
 | GET | /api/v1/products/:slug | Get single product by slug — full detail: images, generated previews, tiers (if any), PWYW config, related products |
 | GET | /api/v1/categories | List all categories (id, name, slug, description, parent_id) |
 | GET | /api/v1/bundles | List all bundles (id, title, description, price, products in bundle) |
@@ -291,6 +297,7 @@ All API routes under /api/v1/. Both staging and production use identical paths �
 | DELETE | /api/v1/community/posts/:id/comments/:commentId | Delete own comment |
 | POST | /api/v1/community/follow/:userId | Follow a user |
 | DELETE | /api/v1/community/follow/:userId | Unfollow a user |
+| GET | /api/v1/community/users | People directory — `page`, `per_page` (default 12), `q`, `total` |
 | GET | /api/v1/community/users/:id | Get public user profile with post count, follower/following counts |
 
 ### 4.8 Feature Routes (JWT Protected)
@@ -334,13 +341,16 @@ All API routes under /api/v1/. Both staging and production use identical paths �
 | GET | /api/v1/settings | List all settings (admin) |
 | PUT | /api/v1/settings/:key | Set/update a setting value (admin) |
 
-### 4.12 Admin Routes (Admin Token Auth)
+### 4.12 Admin Routes (staff/admin JWT; operator token for Access)
+
+Desk routes accept a session JWT with `role=staff|admin` (cookie or Bearer) or the static `ADMIN_TOKEN` Bearer (full admin, used by automation). Staff JWTs are limited to the tabs stored in the `tabs` claim. `PUT /admin/users/:id/access` additionally requires header `X-Admin-Token: <ADMIN_TOKEN>` and an admin JWT (static `ADMIN_TOKEN` Bearer still bypasses).
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | /api/v1/admin/users | List all users |
+| GET | /api/v1/admin/users | List all users (includes `role`, `staff_tabs`) |
 | DELETE | /api/v1/admin/users/:id | Delete a user |
 | POST | /api/v1/admin/users/:id/reset-password | Reset a user's password |
+| PUT | /api/v1/admin/users/:id/access | Set `role` (`customer`/`staff`/`admin`) and `staff_tabs`. Admin JWT + `X-Admin-Token`. Last admin cannot be demoted. |
 | GET | /api/v1/admin/products | List all products (admin) |
 | POST | /api/v1/admin/products | Create a product |
 | PUT | /api/v1/admin/products/:id | Update product |
@@ -351,8 +361,12 @@ All API routes under /api/v1/. Both staging and production use identical paths �
 | POST | /api/v1/admin/products/:id/images | Add image to product gallery |
 | DELETE | /api/v1/admin/products/:id/images/:imageId | Delete product image |
 | POST | /api/v1/admin/products/:id/generate-previews | Trigger preview generation (admin-only, for images/GIFs) |
-| POST | /api/v1/admin/products/:id/pin | Pin product to top |
-| DELETE | /api/v1/admin/products/:id/pin | Unpin product |
+| GET | /api/v1/products/appearance | Public site look: `{ palette, font, radius, density, icons, contrast, grain, glow, motion, tracking }` |
+| PUT | /api/v1/products/appearance | Admin/staff Appearance tab. Palettes: clay, marble, night, moss, ink, ember, dune, frost, paper, chalk, linen, mist, petal, foam, porcelain, sage, snow, honey, bone, cloud, wine, violet, ocean, slate. Fonts: system, humanist, serif, mono, display. Radius: sharp, soft, round. Density: compact, comfortable, roomy. Icons: line, bold, filled, glyph. Contrast: soft, standard, punchy. Grain: off, light, heavy. Glow: none, halo, bloom. Motion: still, gentle. Tracking: tight, normal, wide. |
+| PUT | /api/v1/products/banner | Replace homepage slider order. Body `{ "product_ids": [id, …] }`. Sets `banner_sort` 1..n and pins those rows; others `banner_sort=0`. Must be registered before `PUT /products/:id`. |
+| POST | /api/v1/products/:id/pin | Pin product to the listing (also appends to banner if `banner_sort` is 0) |
+| POST | /api/v1/products/:id/unpin | Unpin product and clear `banner_sort` |
+| DELETE | /api/v1/products/:id/pin | Same as unpin |
 | POST | /api/v1/admin/products/bulk | Bulk update products (status, category) |
 | GET | /api/v1/admin/bundles | List all bundles |
 | POST | /api/v1/admin/bundles | Create a bundle |
@@ -362,13 +376,16 @@ All API routes under /api/v1/. Both staging and production use identical paths �
 | POST | /api/v1/admin/coupons | Create a coupon |
 | PUT | /api/v1/admin/coupons/:id | Update a coupon |
 | DELETE | /api/v1/admin/coupons/:id | Delete a coupon |
-| GET | /api/v1/admin/orders | List all orders |
+| GET | /api/v1/admin/orders | List all orders. Query: `status` (step slug), `q` (id or email), `page`, `per_page`. Returns `orders`, `total`, `by_step` counts |
 | GET | /api/v1/admin/orders/:id | Get order detail |
-| PUT | /api/v1/admin/orders/:id/status | Update order status with transition validation |
-| GET | /api/v1/admin/community/posts | List community posts (moderation) |
-| DELETE | /api/v1/admin/community/posts/:id | Delete a community post |
+| PUT | /api/v1/admin/orders/:id/status | Move an order to another defined step. Body `{ "status": "<slug>" }`. Slug must exist in the pipeline. Same-step is a no-op 200 |
+| GET | /api/v1/admin/order-steps | List pipeline steps in sort order |
+| POST | /api/v1/admin/order-steps | Add a custom step `{ "label": "Preparation" }` (slug derived). Inserted before terminal steps |
+| PUT | /api/v1/admin/order-steps | Replace/reorder pipeline `{ "steps": [{ "id", "slug", "label", "sort_order" }] }`. System slugs cannot be removed |
+| PUT | /api/v1/admin/order-steps/:id | Rename a step `{ "label" }` |
+| DELETE | /api/v1/admin/order-steps/:id | Delete a custom (non-system) step. Blocked if orders still use that slug |
 | GET | /api/v1/admin/referrals | List all referrals and commissions |
-| GET | /api/v1/admin/stats | Dashboard stats: revenue (daily/weekly/monthly), top-selling products, conversion rates, totals |
+| GET | /api/v1/admin/stats | Dashboard stats: revenue (daily/weekly/monthly), top-selling products, conversion rates, totals, order counts per pipeline step (`order_by_step`) |
 | GET | /api/v1/admin/settings | List all settings |
 | PUT | /api/v1/admin/settings/:key | Set setting value (e.g., referral_commission_percent) |
 | PUT | /api/v1/admin/exchange-rates/:chain | Set exchange rate |
@@ -376,6 +393,10 @@ All API routes under /api/v1/. Both staging and production use identical paths �
 | GET | /api/v1/admin/guest-orders | List guest orders |
 | GET | /api/v1/admin/guest-orders/:id | Get guest order detail |
 | POST | /api/v1/admin/export/emails | Export buyer emails (CSV/JSON). Optional filters: date range, category, product |
+| POST | /api/v1/events | events-service. Body `{name, session_id?, path?, properties?, occurred_at?}`. Allowed names: `product_view`, `checkout_click`. Optional JWT/cookie (anonymous allowed). Returns 202. Unknown names 400. |
+| GET | /api/v1/admin/events | events-service. Query `name`, `limit`. Returns `{events, total}`. Staff Events tab or admin. Ingress must register this path **before** `/api/v1/admin`. |
+| GET | /api/v1/admin/events/ttl | `{seconds, hours}`. Default 3600 (1 hour). |
+| PUT | /api/v1/admin/events/ttl | Body `{seconds}` or `{hours}`. Clamped 60s–30d. Applies to newly ingested events. Mongo TTL index deletes on `expire_at`. |
 
 ---
 
@@ -390,6 +411,7 @@ Details and IPs: `docs/DEPLOYMENT-ARCHITECTURE.md`. Summary:
   - `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir` → staging namespace
 - **BLUE** — build box (Go, Docker). Images push to RED’s registry.
 - PostgreSQL 16 in `database` namespace: **one logical database per service per environment** (`appdb_<service>_staging` / `_production`), not a single `appdb_staging`.
+- MongoDB 7 in the same `database` namespace: **one instance for both staging and production for now** (same sharing pattern as Postgres). Events live in DB `events` with a TTL index.
 - One Deployment per backend service and per MFE, per namespace.
 
 ### 5.2 Backend services
@@ -406,6 +428,7 @@ Public routes stay under `/api/v1/` as listed in §4. Each service is a Go/Gin p
 | payment-service | 8086 | Payment details/status, exchange rates, public settings read |
 | admin-service | 8087 | Admin aggregation, stats, email export, settings write (must call other services — must not copy their tables) |
 | media-service | 8088 | Upload, download, watermarked previews |
+| events-service | 8089 | Frontend event ingest into MongoDB. TTL from admin Events tab (default 1 hour). Allowed names: `product_view`, `checkout_click` |
 
 Cross-service consistency is via HTTP or events (`services/shared/events`), not shared tables.
 
@@ -423,18 +446,19 @@ Static HTML + vanilla JS per MFE under `frontend/`. Shared chrome, theme, and AP
 | Auth | `frontend/auth-mfe` | `/login`, `/register` |
 | Admin | `frontend/admin-app` | `/admin` |
 
-API client: `shared/lib/api.js`. Theme: `shared/theme/`.
+API client: `shared/lib/api.js`. Theme: `shared/theme/`. Event SDK: `shared/lib/events.js` (`PawEvents.track`). Live `/assets/*` is served by shop-mfe, so SDK updates require a shop-mfe rebuild.
 
 ### 5.4 Database Schema
 
 | Table | Key columns | Purpose |
 |-------|------------|---------|
-| users | id, email, password_hash, name, referred_by (user_id nullable), created_at, updated_at | User accounts |
+| users | id, email, password_hash, name, role (customer/staff/admin), staff_tabs, referred_by (user_id nullable), created_at, updated_at | User accounts |
 | user_profiles | user_id, bio, avatar_url, wallet_address, created_at, updated_at | Extended profile data |
 | referral_links | id, user_id, code (unique), created_at | Unique referral codes per user |
 | user_referrals | id, referrer_id, referred_id, created_at | Track who referred whom |
 | referral_commissions | id, order_id, referrer_id, commission_percent, commission_usd, status, created_at | Commission earned per order |
-| products | id, title, slug, description, category_id, price_usd, asset_path, asset_hash, status, file_size_bytes, file_mime_type, pwyw_enabled, pwyw_min_price, pinned, sort_order, user_id, created_at, updated_at | Products for sale |
+| products | id, title, slug, description, category_id, price_usd, asset_path, asset_hash, status, file_size_bytes, file_mime_type, pwyw_enabled, pwyw_min_price, pinned, sort_order, banner_sort, user_id, created_at, updated_at | Products for sale. `banner_sort` 0 = not in homepage slider; 1+ = slide order |
+| site_appearance | id=1, palette, font, radius, density, icons, contrast, grain, glow, motion, tracking, updated_at | Public site look tokens |
 | product_tiers | id, product_id, tier_name, file_path, file_hash, price_usd, sort_order, created_at | Multiple file versions / tiers per product |
 | product_images | id, product_id, url, image_type (full/preview/thumbnail), is_primary, width, height, created_at | Product image gallery and generated previews |
 | categories | id, name, slug, description, parent_id, created_at, updated_at | Product categories |
@@ -442,7 +466,8 @@ API client: `shared/lib/api.js`. Theme: `shared/theme/`.
 | bundle_items | id, bundle_id, product_id, quantity, created_at | Products in a bundle |
 | coupons | id, code, discount_type (percentage/fixed), discount_value, expires_at, usage_limit, times_used, min_purchase_usd, product_id (nullable — null means cart-wide), is_active, created_by, created_at, updated_at | Discount codes |
 | coupon_usages | id, coupon_id, user_id, order_id, discount_usd, created_at | Track coupon usage |
-| orders | id, user_id, coupon_id, coupon_discount_usd, total_usd, status, payment_tx_hash, payment_chain, payment_confirmations, guest_email, billing_name, paid_at, crypto_amount, crypto_address, crypto_chain, created_at, updated_at | Customer orders |
+| orders | id, user_id, coupon_id, coupon_discount_usd, total_usd, status (pipeline step slug), payment_tx_hash, payment_chain, payment_confirmations, guest_email, billing_name, paid_at, crypto_amount, crypto_address, crypto_chain, created_at, updated_at | Customer orders. `status` is the current step slug |
+| order_steps | id, slug, label, sort_order, is_system, is_terminal, created_at | Admin-defined order pipeline. System slugs: `created`, `awaiting_payment`, `paid`, `cancelled`, `refunded`, `failed`. Seeded custom: `preparation`, `delivered` |
 | order_items | id, order_id, product_id, product_tier_id, product_title, product_slug, quantity, unit_price_usd, download_count, created_at | Items in an order |
 | downloads | id, order_item_id, user_id, downloaded_at, ip_address | Download tracking (unlimited — for analytics only) |
 | community_posts | id, user_id, content, type, created_at, updated_at | Community posts |
@@ -459,10 +484,18 @@ API client: `shared/lib/api.js`. Theme: `shared/theme/`.
 | product_comparison | id, user_id, product_id, added_at | Product comparison list |
 | guest_orders | id, email, total_usd, crypto_chain, crypto_amount, crypto_address, status, created_at | Guest orders |
 
+MongoDB `events` database (shared instance, not Postgres):
+
+| Collection | Key fields | Purpose |
+|------------|------------|---------|
+| events | name, session_id, user_id, path, properties, occurred_at, expire_at, received_at | Frontend collector rows. TTL index on `expire_at` |
+| meta | `_id=ttl`, seconds | Event TTL in seconds (default 3600) |
+
 ### 5.5 External Dependencies
 
 - **PostgreSQL:** On RED, in k3s database namespace. Access via connection
   string from backend.
+- **MongoDB:** On RED, in k3s `database` namespace (`mongodb.database.svc.cluster.local:27017`, NodePort 30017). One instance for staging and production for now. Used by events-service.
 - **No external APIs required for v1** — exchange rates are manual, no price
   feed API, no blockchain node needed.
 - **Wallet integration (future):** MetaMask or similar browser extension for
@@ -523,7 +556,8 @@ When a product is created or its images are updated:
   preview generation
 - **Product preview:** manually trigger or regenerate watermarked previews/
   thumbnails for images and GIFs
-- **Pin product:** pin/unpin products to appear at top of listings
+- **Pin product:** pin/unpin products to appear at top of listings. Pinning a product that is not already in the homepage slider appends it.
+- **Homepage banner:** Admin **Banner** tab writes `PUT /api/v1/products/banner` with ordered `product_ids`. Public shop loads `GET /api/v1/products?banner=1`. More than one slide is a CSS/JS slider (arrows, dots, autoplay, swipe).
 - **Pay-what-you-want:** enable/disable PWYW per product, set minimum price
 - **Bulk update:** change status for multiple products, change category for
   multiple products
@@ -542,12 +576,13 @@ When a product is created or its images are updated:
 - View usage stats (times used, total discount given)
 
 ### 6.5 Order Management
-- List all orders (paginated, with user, total, status, date)
-- View order detail: items, quantities, prices, total, status, coupon used,
-  payment info
-- Update order status: pending, paid, completed, cancelled, refunded, failed
-  (with transition validation)
-- View order items with product title, slug, tier, quantity, unit price
+- **Pipeline (Steps tab):** create, rename, reorder, and delete custom steps. System steps (created, waiting for payment, paid, cancelled, refunded, failed) can be renamed/reordered but not deleted. Seeded custom steps: preparation, delivered.
+- List all orders (paginated) with user/email, total, current step, date
+- Filter by step; search by order id or email
+- View order detail: items, quantities, prices, total, step, coupon used, payment info
+- Manually move an order to any other defined step (ops queue)
+- Stats dashboard shows a count of orders in each step
+- Checkout creates orders in `awaiting_payment`. Confirmed crypto payment sets `paid`. Older `pending`/`processing` rows map to `awaiting_payment`; `shipped`/`completed` map to `delivered`.
 
 ### 6.6 Community Moderation
 - List all community posts (paginated, with author, content, timestamps,
@@ -589,6 +624,13 @@ When a product is created or its images are updated:
   - Checkout-to-purchase rate
 - **Totals:** total users, total orders, total revenue, total products, total
   categories, total downloads
+- **Orders by step:** count of orders in each pipeline step (created, waiting for payment, paid, custom fulfillment, terminals)
+- Conversion funnel charts may still use the old stats path and can be wrong. Live collector data is on the **Events** tab.
+
+### 6.12 Event collector
+- Admin **Events** tab: set Mongo TTL (hours, default 1) and inspect recent events
+- Frontend SDK `PawEvents.track` on product page visit (`product_view`) and cart Checkout click (`checkout_click`)
+- Unknown event names are rejected. Funnel reporting from this data is later work.
 
 ---
 
@@ -600,22 +642,23 @@ When a product is created or its images are updated:
 - Product catalog (CRUD, list, search, detail, categories, tiers, gallery,
   previews, pinning, PWYW)
 - Product bundles (discounted multi-product packs)
-- Coupon/discount code system
+- Coupon/discount code system (admin writes the same commerce coupons checkout validates; `$0` due completes as paid)
 - Referral program (referral links + fixed commission %)
-- Orders (create, list, detail, payment status, download, guest orders)
+- Orders (create, list, detail, payment status, download, guest orders; zero-due paid orders)
 - Unlimited downloads for purchased items
-- Community (posts, likes, comments, follows, public profiles)
+- Community (posts, likes, comments, follows, public profiles; paginated followers/posts)
 - Product ratings (1-5 stars, verified purchase)
 - Features (cart, wishlist, reviews, recently-viewed, compare, recommendations)
 - Exchange rates (manual, admin-set)
 - Settings (key-value, admin-managed)
-- Admin panel (users, products, bundles, coupons, orders, community, referrals,
-  stats, settings, email export)
+- Admin panel (users, products, appearance, bundles, coupons, orders, order steps, community, referrals,
+  stats including orders-by-step, settings, email export, role-based staff access, event TTL)
+- Frontend event collector (events-service + MongoDB + `shared/lib/events.js`)
 - Image preview generation (watermarked/thumbnails for images and GIFs)
 - SEO (meta tags, Open Graph, structured data, sitemap)
 - Social sharing (X, Instagram, Reddit, others)
 - Digital asset download (auth + payment verified)
-- Dark theme, monospace accents, CSS glow, no external fonts
+- Dark theme by default, with admin Appearance palettes/fonts/radius/density/icons/contrast/grain/glow/motion/tracking; system font stacks, CSS glow, no webfonts required
 
 ### Out of Scope (Not in current product spec)
 - Multi-vendor marketplace
@@ -641,5 +684,5 @@ When a product is created or its images are updated:
 
 ---
 
-*Spec version: 1.2 — 2026-09-17*
+*Spec version: 1.3 — 2026-09-18*
 *Status: Defining the target product. Implementation status tracked separately.*

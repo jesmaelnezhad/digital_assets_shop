@@ -15,7 +15,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
-	adminmodels "github.com/pawradise/admin-service/models"
+	"github.com/pawradise/shared/middleware"
 	"github.com/pawradise/shared/models"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -24,6 +24,7 @@ type AdminHandler struct {
 	db          *sql.DB
 	identityDB  *sql.DB
 	commerceDB  *sql.DB
+	stepsReady  bool
 }
 
 func NewAdminHandler(db *sql.DB, identityDB *sql.DB) *AdminHandler {
@@ -34,13 +35,14 @@ func NewAdminHandler(db *sql.DB, identityDB *sql.DB) *AdminHandler {
 
 // Users
 func (h *AdminHandler) ListUsers(c *gin.Context) {
-	rows, err := h.identityDB.Query("SELECT id, email, name, created_at, updated_at FROM users ORDER BY created_at DESC")
+	rows, err := h.identityDB.Query(`SELECT id, email, name, COALESCE(NULLIF(role,''),'customer'), COALESCE(staff_tabs,''), created_at, updated_at FROM users ORDER BY created_at DESC`)
 	if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"}); return }
 	defer rows.Close()
 	users := []models.User{}
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.CreatedAt, &u.UpdatedAt); err != nil { continue }
+		if err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.StaffTabs, &u.CreatedAt, &u.UpdatedAt); err != nil { continue }
+		if u.Role == "" || u.Role == "user" { u.Role = "customer" }
 		users = append(users, u)
 	}
 	if users == nil { users = []models.User{} }
@@ -51,10 +53,30 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"}); return }
 
-	result, err := h.identityDB.Exec("DELETE FROM users WHERE id = $1", id)
+	result, err := h.identityDB.Exec("DELETE FROM users WHERE id = $1 AND role <> 'admin'", id)
 	if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": "delete failed"}); return }
 	rows, _ := result.RowsAffected()
-	if rows == 0 { c.JSON(http.StatusNotFound, gin.H{"error": "not found"}); return }
+	if rows == 0 {
+		var role string
+		if h.identityDB.QueryRow("SELECT role FROM users WHERE id=$1", id).Scan(&role) == nil && role == "admin" {
+			if middleware.RoleOf(c) != "admin" {
+				c.JSON(http.StatusForbidden, gin.H{"error": "only admins can remove an admin"})
+				return
+			}
+			var n int
+			_ = h.identityDB.QueryRow("SELECT COUNT(*) FROM users WHERE role='admin'").Scan(&n)
+			if n <= 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "cannot delete the last admin"})
+				return
+			}
+			_, err = h.identityDB.Exec("DELETE FROM users WHERE id=$1", id)
+			if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": "delete failed"}); return }
+			c.JSON(http.StatusOK, gin.H{"message": "user deleted"})
+			return
+		}
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "user deleted"})
 }
 
@@ -442,125 +464,38 @@ func (h *AdminHandler) DeleteBundle(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "bundle deleted"})
 }
 
-// Coupons
-func (h *AdminHandler) ListCoupons(c *gin.Context) {
-	rows, err := h.db.Query(`SELECT id, code, discount_type, discount_value, expires_at, usage_limit, times_used, min_purchase_usd, product_id, is_active, created_at, updated_at FROM coupons ORDER BY created_at DESC`)
-	if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"}); return }
-	defer rows.Close()
-	coupons := []adminmodels.Coupon{}
-	for rows.Next() {
-		var c adminmodels.Coupon
-		var expires sql.NullTime
-		if err := rows.Scan(&c.ID, &c.Code, &c.DiscountType, &c.DiscountValue, &expires, &c.UsageLimit, &c.TimesUsed, &c.MinPurchaseUSD, &c.ProductID, &c.IsActive, &c.CreatedAt, &c.UpdatedAt); err != nil { continue }
-		if expires.Valid { c.ExpiresAt = &expires.Time }
-		coupons = append(coupons, c)
-	}
-	if coupons == nil { coupons = []adminmodels.Coupon{} }
-	c.JSON(http.StatusOK, gin.H{"coupons": coupons})
-}
-
-func (h *AdminHandler) CreateCoupon(c *gin.Context) {
-	var req struct {
-		Code          string  `json:"code" binding:"required"`
-		DiscountType  string  `json:"discount_type" binding:"required"`
-		DiscountValue float64 `json:"discount_value" binding:"required"`
-		ExpiresAt     string  `json:"expires_at"`
-		UsageLimit    int     `json:"usage_limit"`
-		MinPurchase   float64 `json:"min_purchase_usd"`
-		ProductID     *int    `json:"product_id"`
-		IsActive      bool    `json:"is_active"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
-	if req.DiscountType == "" { req.DiscountType = "percentage" }
-	if req.UsageLimit == 0 { req.UsageLimit = 100 }
-
-	var expires sql.NullTime
-	if req.ExpiresAt != "" {
-		t, err := time.Parse("2006-01-02", req.ExpiresAt)
-		if err == nil { expires = sql.NullTime{Time: t, Valid: true} }
-	}
-
-	var id int
-	err := h.db.QueryRow(
-		`INSERT INTO coupons (code, discount_type, discount_value, expires_at, usage_limit, times_used, min_purchase_usd, product_id, is_active, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8, NOW(), NOW()) RETURNING id`,
-		req.Code, req.DiscountType, req.DiscountValue, expires, req.UsageLimit, req.MinPurchase, req.ProductID, req.IsActive,
-	).Scan(&id)
-	if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}); return }
-	c.JSON(http.StatusCreated, gin.H{"id": id, "message": "coupon created"})
-}
-
-func (h *AdminHandler) UpdateCoupon(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"}); return }
-
-	var req struct {
-		Code          string  `json:"code"`
-		DiscountType  string  `json:"discount_type"`
-		DiscountValue float64 `json:"discount_value"`
-		ExpiresAt     string  `json:"expires_at"`
-		UsageLimit    int     `json:"usage_limit"`
-		MinPurchase   float64 `json:"min_purchase_usd"`
-		ProductID     *int    `json:"product_id"`
-		IsActive      *bool   `json:"is_active"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
-
-	query := `UPDATE coupons SET updated_at = NOW()`
-	args := []interface{}{}
-	idx := 2
-
-	if req.Code != "" { query += fmt.Sprintf(", code = $%d", idx); args = append(args, req.Code); idx++ }
-	if req.DiscountType != "" { query += fmt.Sprintf(", discount_type = $%d", idx); args = append(args, req.DiscountType); idx++ }
-	if req.DiscountValue > 0 { query += fmt.Sprintf(", discount_value = $%d", idx); args = append(args, req.DiscountValue); idx++ }
-
-	var expires sql.NullTime
-	if req.ExpiresAt != "" {
-		t, err := time.Parse("2006-01-02", req.ExpiresAt)
-		if err == nil { expires = sql.NullTime{Time: t, Valid: true} }
-	}
-	if expires.Valid { query += fmt.Sprintf(", expires_at = $%d", idx); args = append(args, expires); idx++ }
-	if req.UsageLimit > 0 { query += fmt.Sprintf(", usage_limit = $%d", idx); args = append(args, req.UsageLimit); idx++ }
-	if req.MinPurchase > 0 { query += fmt.Sprintf(", min_purchase_usd = $%d", idx); args = append(args, req.MinPurchase); idx++ }
-	if req.ProductID != nil { query += fmt.Sprintf(", product_id = $%d", idx); args = append(args, *req.ProductID); idx++ }
-	if req.IsActive != nil { query += fmt.Sprintf(", is_active = $%d", idx); args = append(args, *req.IsActive); idx++ }
-
-	if len(args) == 0 { c.JSON(http.StatusBadRequest, gin.H{"error": "no fields to update"}); return }
-	args = append(args, id)
-	_, err = h.db.Exec(query+" WHERE id = $1", args...)
-	if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}); return }
-	c.JSON(http.StatusOK, gin.H{"message": "coupon updated"})
-}
-
-func (h *AdminHandler) DeleteCoupon(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"}); return }
-
-	result, err := h.db.Exec("DELETE FROM coupons WHERE id = $1", id)
-	if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": "delete failed"}); return }
-	rows, _ := result.RowsAffected()
-	if rows == 0 { c.JSON(http.StatusNotFound, gin.H{"error": "not found"}); return }
-	c.JSON(http.StatusOK, gin.H{"message": "coupon deleted"})
-}
+// Coupons live in coupons.go (commerce DB).
 
 // Stats
 func (h *AdminHandler) GetStats(c *gin.Context) {
 	var totalUsers, totalOrders, totalRevenueUSD, totalProducts, activeProducts, pinnedProducts int
 
-	h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM users").Scan(&totalUsers)
-	h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM orders").Scan(&totalOrders)
+	if h.identityDB != nil {
+		_ = h.identityDB.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM users").Scan(&totalUsers)
+	} else {
+		_ = h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM users").Scan(&totalUsers)
+	}
+
+	odb := h.ordersDB()
+	_ = odb.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM orders").Scan(&totalOrders)
 
 	var revenue float64
-	h.db.QueryRow("SELECT COALESCE(SUM(total_usd), 0) FROM orders WHERE status = 'paid'").Scan(&revenue)
+	err := odb.QueryRow(`SELECT COALESCE(SUM(total_usd), 0) FROM orders WHERE status IN (
+		SELECT slug FROM order_steps WHERE is_terminal = false
+		AND sort_order >= COALESCE((SELECT sort_order FROM order_steps WHERE slug = 'paid'), 0)
+	)`).Scan(&revenue)
+	if err != nil {
+		_ = odb.QueryRow(`SELECT COALESCE(SUM(total_usd), 0) FROM orders WHERE status IN ('paid','preparation','delivered')`).Scan(&revenue)
+	}
 	totalRevenueUSD = int(revenue)
 
-	h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM products").Scan(&totalProducts)
-	h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM products WHERE status = 'active'").Scan(&activeProducts)
-	h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM products WHERE pinned = true").Scan(&pinnedProducts)
+	_ = h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM products").Scan(&totalProducts)
+	_ = h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM products WHERE status = 'active'").Scan(&activeProducts)
+	_ = h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM products WHERE pinned = true").Scan(&pinnedProducts)
 
 	var totalCategories, totalDownloads int
-	h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM categories").Scan(&totalCategories)
-	h.db.QueryRow("SELECT COALESCE(SUM(downloads), 0) FROM products").Scan(&totalDownloads)
+	_ = h.db.QueryRow("SELECT COALESCE(COUNT(*), 0) FROM categories").Scan(&totalCategories)
+	_ = h.db.QueryRow("SELECT COALESCE(SUM(downloads), 0) FROM products").Scan(&totalDownloads)
 
 	revenueDaily := []gin.H{}
 	topProducts := []gin.H{}
@@ -581,6 +516,7 @@ func (h *AdminHandler) GetStats(c *gin.Context) {
 		"revenue_daily":     revenueDaily,
 		"top_products":      topProducts,
 		"conversions":       conversions,
+		"order_by_step":     h.countsByStep(),
 	})
 }
 
@@ -747,108 +683,220 @@ func (h *AdminHandler) ExportEmails(c *gin.Context) {
 // Orders
 func (h *AdminHandler) ListAllOrders(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	if page < 1 { page = 1 }
+	if page < 1 {
+		page = 1
+	}
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "50"))
-	if perPage < 1 || perPage > 200 { perPage = 50 }
+	if perPage < 1 || perPage > 200 {
+		perPage = 50
+	}
+	status := strings.TrimSpace(c.Query("status"))
+	q := strings.TrimSpace(c.Query("q"))
+	odb := h.ordersDB()
+	labels := h.stepLabels()
 
-	rows, err := h.db.Query(
-		`SELECT o.id, o.email, o.status, o.total_usd, o.total_crypto, o.crypto_chain,
-			o.payment_tx_hash, o.payment_confirmations, o.paid_at,
-			o.created_at, o.updated_at
+	where := []string{"1=1"}
+	args := []interface{}{}
+	if status != "" && status != "_other" {
+		args = append(args, status)
+		where = append(where, fmt.Sprintf("o.status = $%d", len(args)))
+	} else if status == "_other" {
+		where = append(where, "o.status IS NULL OR o.status NOT IN (SELECT slug FROM order_steps)")
+	}
+	if q != "" {
+		args = append(args, "%"+q+"%")
+		n := len(args)
+		where = append(where, fmt.Sprintf("(CAST(o.id AS TEXT) ILIKE $%d OR COALESCE(o.email,'') ILIKE $%d)", n, n))
+	}
+	clause := strings.Join(where, " AND ")
+	limitArg := len(args) + 1
+	offsetArg := len(args) + 2
+	args = append(args, perPage, (page-1)*perPage)
+
+	rows, err := odb.Query(
+		`SELECT o.id, COALESCE(o.user_id, 0), COALESCE(o.email, ''), o.status, o.total_usd,
+			COALESCE(o.crypto_chain, ''), COALESCE(o.crypto_amount, ''), COALESCE(o.payment_tx_hash, ''),
+			COALESCE(o.payment_confirmations, 0), o.paid_at, o.created_at, o.updated_at
 		FROM orders o
-		ORDER BY o.created_at DESC LIMIT $1 OFFSET $2`,
-		perPage, (page-1)*perPage,
+		WHERE `+clause+`
+		ORDER BY o.created_at DESC LIMIT $`+strconv.Itoa(limitArg)+` OFFSET $`+strconv.Itoa(offsetArg),
+		args...,
 	)
-	if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"}); return }
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
+		return
+	}
 	defer rows.Close()
 
 	type oWithUser struct {
 		models.Order
-		UserEmail string `json:"user_email"`
-		UserName  string `json:"user_name"`
+		StatusLabel string `json:"status_label"`
+		Email       string `json:"email"`
 	}
 	orders := []oWithUser{}
 	for rows.Next() {
 		var o oWithUser
 		var paidAt sql.NullTime
-		if err := rows.Scan(&o.ID, &o.UserID, &o.Status, &o.TotalUSD, &o.TotalCrypto, &o.CryptoChain,
-			&o.PaymentTxHash, &o.PaymentConfirmations, &paidAt, &o.CreatedAt, &o.UpdatedAt,
-			&o.UserEmail, &o.UserName); err != nil { continue }
-		if paidAt.Valid { o.PaidAt = &paidAt.Time }
+		var cryptoAmt, txHash sql.NullString
+		if err := rows.Scan(&o.ID, &o.UserID, &o.Email, &o.Status, &o.TotalUSD, &o.CryptoChain,
+			&cryptoAmt, &txHash, &o.PaymentConfirmations, &paidAt, &o.CreatedAt, &o.UpdatedAt); err != nil {
+			continue
+		}
+		o.UserEmail = o.Email
+		if cryptoAmt.Valid {
+			o.TotalCrypto = cryptoAmt.String
+		}
+		if txHash.Valid {
+			hash := txHash.String
+			o.PaymentTxHash = &hash
+		}
+		if paidAt.Valid {
+			o.PaidAt = &paidAt.Time
+		}
+		if s, ok := labels[o.Status]; ok {
+			o.StatusLabel = s.Label
+		} else {
+			o.StatusLabel = o.Status
+		}
+		if h.identityDB != nil && o.UserID > 0 {
+			var name, idEmail string
+			if h.identityDB.QueryRow(`SELECT COALESCE(name,''), COALESCE(email,'') FROM users WHERE id=$1`, o.UserID).Scan(&name, &idEmail) == nil {
+				o.UserName = name
+				if o.UserEmail == "" {
+					o.UserEmail = idEmail
+					o.Email = idEmail
+				}
+			}
+		}
 		orders = append(orders, o)
 	}
-	if orders == nil { orders = []oWithUser{} }
+	if orders == nil {
+		orders = []oWithUser{}
+	}
 
+	countArgs := args[:len(args)-2]
 	var total int
-	h.db.QueryRow("SELECT COUNT(*) FROM orders").Scan(&total)
-	c.JSON(http.StatusOK, gin.H{"orders": orders, "total": total})
+	_ = odb.QueryRow(`SELECT COUNT(*) FROM orders o WHERE `+clause, countArgs...).Scan(&total)
+	c.JSON(http.StatusOK, gin.H{"orders": orders, "total": total, "page": page, "per_page": perPage, "by_step": h.countsByStep()})
 }
 
 func (h *AdminHandler) GetOrderDetail(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"}); return }
-
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	odb := h.ordersDB()
 	var o models.Order
+	var email string
 	var paidAt sql.NullTime
-	if err := h.db.QueryRow(
-		`SELECT o.id, o.user_id, o.status, o.total_usd, o.total_crypto, o.crypto_chain,
-			o.payment_tx_hash, o.payment_confirmations, o.paid_at,
-			o.created_at, o.updated_at, u.email, u.name
-		FROM orders o JOIN users u ON o.user_id = u.id WHERE o.id = $1`,
+	var cryptoAmt, txHash sql.NullString
+	if err := odb.QueryRow(
+		`SELECT o.id, COALESCE(o.user_id, 0), COALESCE(o.email, ''), o.status, o.total_usd,
+			COALESCE(o.crypto_chain, ''), COALESCE(o.crypto_amount, ''), COALESCE(o.payment_tx_hash, ''),
+			COALESCE(o.payment_confirmations, 0), o.paid_at, o.created_at, o.updated_at
+		FROM orders o WHERE o.id = $1`,
 		id,
-	).Scan(&o.ID, &o.UserID, &o.Status, &o.TotalUSD, &o.TotalCrypto, &o.CryptoChain,
-		&o.PaymentTxHash, &o.PaymentConfirmations, &paidAt, &o.CreatedAt, &o.UpdatedAt); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "order not found"}); return
+	).Scan(&o.ID, &o.UserID, &email, &o.Status, &o.TotalUSD, &o.CryptoChain,
+		&cryptoAmt, &txHash, &o.PaymentConfirmations, &paidAt, &o.CreatedAt, &o.UpdatedAt); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "order not found"})
+		return
 	}
-	if paidAt.Valid { o.PaidAt = &paidAt.Time }
-
-	itemRows, _ := h.db.Query("SELECT id, order_id, product_id, product_tier_id, quantity, unit_price_usd, product_title, product_slug, max_downloads, download_count, created_at, updated_at FROM order_items WHERE order_id = $1 ORDER BY id", id)
-	defer itemRows.Close()
-	items := []models.OrderItem{}
-	for itemRows.Next() {
-		var item models.OrderItem
-		var dlCount sql.NullInt64
-		if err := itemRows.Scan(&item.ID, &item.OrderID, &item.ProductID, &item.ProductTierID, &item.Quantity, &item.UnitPriceUSD, &item.ProductTitle, &item.ProductSlug, &item.MaxDownloads, &dlCount, &item.CreatedAt, &item.UpdatedAt); err != nil { continue }
-		if dlCount.Valid { item.DownloadCount = int(dlCount.Int64) }
-		items = append(items, item)
+	o.UserEmail = email
+	if cryptoAmt.Valid {
+		o.TotalCrypto = cryptoAmt.String
+	}
+	if txHash.Valid {
+		hsh := txHash.String
+		o.PaymentTxHash = &hsh
+	}
+	if paidAt.Valid {
+		o.PaidAt = &paidAt.Time
+	}
+	if h.identityDB != nil && o.UserID > 0 {
+		var name, idEmail string
+		if h.identityDB.QueryRow(`SELECT COALESCE(name,''), COALESCE(email,'') FROM users WHERE id=$1`, o.UserID).Scan(&name, &idEmail) == nil {
+			o.UserName = name
+			if o.UserEmail == "" {
+				o.UserEmail = idEmail
+			}
+		}
+	}
+	statusLabel := o.Status
+	if s, ok := h.stepLabels()[o.Status]; ok {
+		statusLabel = s.Label
 	}
 
-	c.JSON(http.StatusOK, gin.H{"order": o, "items": items})
+	items := []gin.H{}
+	itemRows, err := odb.Query(`SELECT id, order_id, product_id, quantity, price_usd FROM order_items WHERE order_id = $1 ORDER BY id`, id)
+	if err == nil {
+		defer itemRows.Close()
+		for itemRows.Next() {
+			var iid, oid, pid, qty int
+			var price float64
+			if itemRows.Scan(&iid, &oid, &pid, &qty, &price) == nil {
+				items = append(items, gin.H{
+					"id": iid, "order_id": oid, "product_id": pid, "quantity": qty,
+					"unit_price_usd": price, "product_title": "", "product_slug": "",
+				})
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"order": o, "status_label": statusLabel, "items": items})
 }
 
 func (h *AdminHandler) UpdateOrderStatus(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"}); return }
-
-	var req struct{ Status string `json:"status" binding:"required"` }
-	if err := c.ShouldBindJSON(&req); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
-
-	validTransitions := map[string][]string{
-		"pending":  {"processing", "cancelled", "refunded"},
-		"processing": {"shipped", "cancelled", "refunded"},
-		"shipped":  {"delivered", "refunded"},
-		"delivered": {"refunded"},
-		"cancelled": {},
-		"refunded":  {},
-	}
-
-	currentStatus := ""
-	h.db.QueryRow("SELECT status FROM orders WHERE id = $1", id).Scan(&currentStatus)
-	if currentStatus == "" { c.JSON(http.StatusNotFound, gin.H{"error": "order not found"}); return }
-
-	allowed, ok := validTransitions[currentStatus]
-	if !ok { c.JSON(http.StatusBadRequest, gin.H{"error": "invalid current status"}); return }
-
-	valid := false
-	for _, s := range allowed { if s == req.Status { valid = true; break } }
-	if !valid && req.Status != currentStatus {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("cannot transition from %s to %s", currentStatus, req.Status)})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
-	_, err = h.db.Exec("UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2", req.Status, id)
-	if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": "update failed"}); return }
-	c.JSON(http.StatusOK, gin.H{"message": "status updated"})
+	var req struct {
+		Status string `json:"status" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	status := pipelineSlug(req.Status)
+	if status == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "status required"})
+		return
+	}
+	step, ok := h.stepLabels()[status]
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "unknown step"})
+		return
+	}
+
+	var current string
+	err = h.ordersDB().QueryRow("SELECT status FROM orders WHERE id = $1", id).Scan(&current)
+	if err == sql.ErrNoRows || current == "" && err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "order not found"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "order not found"})
+		return
+	}
+	if current == status {
+		c.JSON(http.StatusOK, gin.H{"message": "status updated", "status": status, "status_label": step.Label})
+		return
+	}
+
+	res, err := h.ordersDB().Exec("UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2", status, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "update failed"})
+		return
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "order not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "status updated", "status": status, "status_label": step.Label})
 }
 
 // Helper

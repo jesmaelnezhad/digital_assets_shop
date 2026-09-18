@@ -10,7 +10,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TestUpdateCartItem(t *testing.T) {
+func TestApplyCouponDiscount(t *testing.T) {
+	if applyCouponDiscount("percentage", "100", 40) != 40 {
+		t.Fatal("100 percent")
+	}
+	if applyCouponDiscount("percentage", "12", 100) != 12 {
+		t.Fatal("12 percent")
+	}
+	if applyCouponDiscount("fixed", "15", 10) != 10 {
+		t.Fatal("fixed capped")
+	}
+}
+
+func TestZeroDueIsPaid(t *testing.T) {
+	if applyCouponDiscount("percentage", "100", 48) < 48 {
+		t.Fatal("full off")
+	}
+}
+
+func TestUpdateCartItemQuantity(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db, mock, err := sqlmock.New()
 	if err != nil {

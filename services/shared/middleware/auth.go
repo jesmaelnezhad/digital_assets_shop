@@ -32,7 +32,8 @@ func JwtAuthMiddleware() gin.HandlerFunc {
 		// Store user info and continue
 		c.Set("user_id", claims.UserID)
 		c.Set("email", claims.Email)
-		c.Set("role", claims.Role)
+		c.Set("role", auth.NormalizeRole(claims.Role))
+		c.Set("tabs", claims.Tabs)
 		c.Set("token_hash", auth.HashToken(tokenString))
 		c.Next()
 	}
@@ -49,41 +50,77 @@ func extractToken(c *gin.Context) string {
 	return ""
 }
 
-// AdminAuthMiddleware restricts access to admin-only endpoints.
-// Checks for either a JWT with role=admin or an ADMIN_TOKEN bearer.
+// AdminAuthMiddleware restricts access to staff/admin desk endpoints.
+// Static ADMIN_TOKEN bearer is a full-admin API bypass (e2e / automation).
+// Staff and admins authenticate with a session JWT (cookie or Bearer).
+// Changing roles/tabs additionally requires X-Admin-Token = ADMIN_TOKEN.
 func AdminAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		adminToken := getAdminToken()
+		bearer := ""
+		if h := c.GetHeader("Authorization"); strings.HasPrefix(h, "Bearer ") {
+			bearer = strings.TrimPrefix(h, "Bearer ")
+		}
+		if bearer != "" && bearer == adminToken {
+			c.Set("role", "admin")
+			c.Set("operator", true)
+			c.Set("tabs", "*")
+			c.Next()
+			return
+		}
+
+		tokenString := extractToken(c)
+		if tokenString == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization required"})
 			return
 		}
 
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-
-		// Check admin token first
-		adminToken := getAdminToken()
-		if tokenString == adminToken {
-			c.Set("role", "admin")
-			c.Next()
-			return
-		}
-
-		// Check JWT for admin role
 		claims, err := auth.ValidateJWT(tokenString, getJwtSecret())
-		if err != nil {
+		if err != nil || claims == nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
 
-		if claims.Role == "admin" {
-			c.Set("user_id", claims.UserID)
-			c.Set("role", "admin")
+		role := auth.NormalizeRole(claims.Role)
+		if role != "admin" && role != "staff" {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Staff or admin access required"})
+			return
+		}
+
+		c.Set("user_id", claims.UserID)
+		c.Set("email", claims.Email)
+		c.Set("role", role)
+		c.Set("tabs", claims.Tabs)
+
+		operator := false
+		if role == "admin" {
+			op := c.GetHeader("X-Admin-Token")
+			if op == adminToken {
+				operator = true
+			}
+		}
+		c.Set("operator", operator)
+
+		if PrivilegedAccessPath(c) {
+			if role != "admin" || !operator {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Operator token required"})
+				return
+			}
 			c.Next()
 			return
 		}
 
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+		if role == "admin" {
+			c.Next()
+			return
+		}
+
+		tab := TabForRequest(c)
+		if !StaffHasTab(claims.Tabs, tab) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "This section is not assigned to your account"})
+			return
+		}
+		c.Next()
 	}
 }
 

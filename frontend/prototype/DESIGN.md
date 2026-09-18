@@ -16,15 +16,16 @@ The live site is a dark cyan/magenta card grid with glow on hover. This slice is
 | Accent | `#e8b86d` | Price, primary CTA (clay gold, not neon cyan) |
 | Mono | system ui-monospace | Prices, file types, SKUs |
 
-System fonts only. No framework. CSS variables in `shared/theme.css` so later MFEs can swap the file.
+System fonts only. No framework. CSS variables in `shared/theme.css` (`html[data-palette]` etc.) so admin Appearance can retoken the gallery.
 
 ## Layout bets (this slice)
 
-1. **Hero** — one pinned product, full-bleed still, not a banner slogan.
+1. **Hero** — multi-product homepage slider (admin Banner tab), full-bleed stills, not a slogan strip.
 2. **Left category rail** — Fab-style counts, not a dropdown-only filter.
 3. **Cards** — 4:3 stills, title and price under the image, hover actions on the still.
 4. **Product page** — itch/Fab two-column: gallery + sticky buy box (tiers, PWYW, ratings).
-5. **Admin** — denser, less gallery. Same tokens, tabular.
+5. **Admin** — denser, less gallery. Same tokens, tabular. Appearance tab switches palettes/fonts/radius/density for the whole site. Access is a searchable card grid (one column on phones, two/three on wide screens).
+6. **Responsive** — every page is a single column on a phone; catalogs, people, and access become grids as the viewport widens. Tables never force the page sideways.
 
 ## Stack
 

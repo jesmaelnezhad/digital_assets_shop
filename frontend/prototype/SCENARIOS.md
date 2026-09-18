@@ -47,6 +47,7 @@ Treat these as always-on. If any fail, later scenarios are untrustworthy.
 0.10 After login, the user lands where they were going (deep link / `next`), not always the shop.
 0.11 Logout clears the buyer session on every MFE; cart badge, name, and gated pages update.
 0.12 A second tab sharing the same origin sees the same cart, follows, and profile.
+0.13 At a phone-width viewport the header uses a menu button; the shop hero, grid, and buy box stay on-screen without a horizontal scrollbar.
 0.13 Refresh does not drop a just-saved profile, cart line, follow, or coupon choice mid-checkout unless the spec says so.
 0.14 404-ish URLs (bad slug, bad order id, missing profile id) explain the miss and offer a next step.
 0.15 Buttons that need auth still **exist** for guests; using them sends the user to login, then back.
@@ -61,7 +62,7 @@ Treat these as always-on. If any fail, later scenarios are untrustworthy.
 ## 1. First landing and chrome
 
 1.1 Open `/` — redirect or continue into the shop, not a blank folder listing.
-1.2 Shop hero shows a pinned (or first) product with image, title, price, file type.
+1.2 Shop hero is a slider of Banner-tab products (more than one slide, arrows/dots). Empty banner falls back to pinned/newest.
 1.3 Hero CTA opens that product.
 1.4 Nav: Shop, Bundles, Community, Cart, Log in / Account, Admin.
 1.5 Admin link is visible to everyone (token is entered later), and does not imply the visitor is already admin.
@@ -215,6 +216,7 @@ The public profile is a **directory page for a person**, not a second copy of Ac
 10.5 Follow / Follow back / Unfollow from the row; People and the target profile stay consistent.
 10.6 “You” is marked on the current user; no follow button on self.
 10.7 Sort or default order is understandable (e.g. by followers).
+10.8 All-people lists paginate (Show more); the seed has enough collectors that the first page is not the whole directory.
 
 ---
 
@@ -228,6 +230,7 @@ The public profile is a **directory page for a person**, not a second copy of Ac
 11.6 Following while logged out is an empty-state with login, **not** 401 JSON.
 11.7 Following while following nobody explains how to follow someone.
 11.8 Post card: author name, avatar, date, like count, comment count, follow control for others.
+11.8a Recent feed paginates with **Show more**; the volume seed has more posts than one page.
 11.9 Like and unlike toggle; count changes; liked state is visible after refresh.
 11.10 Guest like → login.
 11.11 Author name opens their profile.
@@ -379,7 +382,7 @@ Walk this as Nia, then Leo, then a brand-new user.
 
 22.1 Stats: users, orders, revenue, products, pinned, categories; extra analytics if the prototype shows them.
 22.2 Users: list emails/names; reset password; delete user; confirm the user disappears from People.
-22.3 Products: create, edit title/price/category/PWYW/SEO, add/remove images, tiers CRUD, pin/unpin, generate previews message, delete/archive.
+22.3 Products: create, edit title/price/category/PWYW/SEO, add/remove images, tiers CRUD, pin/unpin, generate previews message, delete/archive. Homepage slides are **not** hidden here — open the **Banner** tab, add more than one product, reorder, Save banner; shop hero must match that order.
 22.4 New product appears in the public shop; archived does not.
 22.5 Bulk status/category update.
 22.6 Bundles: create with product ids, edit, delete; public bundle page matches.
@@ -407,7 +410,7 @@ After each write, confirm the other surfaces:
 23.4 Cart add → badge, cart page, checkout, compare bar still independent.
 23.5 Wishlist toggle → wishlist page and product button.
 23.6 Paid order → account list, order downloads, review eligibility, referral earnings if referred.
-23.7 Admin pin → shop hero/grid order.
+23.7 Admin Banner tab (or pin that appends) → shop hero slider order and slide count.
 23.8 Admin coupon change → checkout validate.
 23.9 Logout → all gated pages, badge, community composer, follow buttons’ login path.
 23.10 Reset demo → seed users, follows, posts, coupons, and **logged-out** chrome.
@@ -440,6 +443,8 @@ After each write, confirm the other surfaces:
 25.5 Compare bar does not cover the pay button on a phone.
 25.6 Profile hero (avatar, stats, follow) stacks on a narrow viewport; stats remain tappable.
 25.7 People follow button still visible next to long bios.
+25.8 Access user cards are one column on a phone and a 2–3 column grid on a wide screen; search filters by name, email, or role without a reload.
+25.9 Checkout/account splits stack on a narrow viewport; admin and cart tables scroll inside the page instead of widening it.
 
 ---
 
@@ -449,8 +454,18 @@ After each write, confirm the other surfaces:
 26.2 Nia has at least one paid order (marble) and a referral code that others used.
 26.3 Follow graph is non-trivial (not a single edge) so Following feeds and follow-back can be demonstrated.
 26.4 Coupons SAVE12, WELCOME, MARBLE behave as named.
-26.5 Admin token documented in README is the one the gate accepts.
+26.5 Nia is studio admin. Leo is staff with Products/Banner/Orders/Community. The operator token in README unlocks the Access tab only.
 26.6 Reset demo restores this seed, including avatars and follows.
+
+---
+
+## 27. Appearance and access
+
+27.1 Logged-out header has no Admin link. Maya (customer) still has none after login.
+27.2 Leo (staff) sees Admin and only Products, Banner, Orders, Community.
+27.3 Nia (admin) sees every operational tab plus Access and Appearance without typing a token.
+27.4 Access tab asks for the operator token before role/staff-tab edits. After unlock, a search field filters the user cards.
+27.5 Appearance palettes change `html[data-palette]` on save and the shop uses the new tokens.
 
 ---
 
@@ -465,6 +480,6 @@ After each write, confirm the other surfaces:
 | Community graph | People → follow → profile Followers/Following → feed Following |
 | Self | Account form (incl. picture) → public profile as others see it |
 | Money from friends | Referrals dashboard → share link → other browser register → they buy → earnings |
-| Operator | Admin gate → each tab → one create, one edit, one delete, then public site |
+| Operator | Log in as Nia → Admin desk → Appearance → Access (token) → staff tabs for Leo |
 
 When a row in this file has no corresponding control on the page, that is a product gap — not a skipped test.

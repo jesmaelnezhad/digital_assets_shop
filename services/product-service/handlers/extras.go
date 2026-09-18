@@ -31,6 +31,32 @@ func (h *Handlers) ensureExtras() {
 	_, _ = h.db.Exec(`ALTER TABLE product_tiers ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true`)
 	_, _ = h.db.Exec(`ALTER TABLE product_tiers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`)
 	_, _ = h.db.Exec(`UPDATE product_tiers SET tier_name = name WHERE (tier_name IS NULL OR tier_name = '') AND name IS NOT NULL`)
+	_, _ = h.db.Exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS banner_sort INTEGER NOT NULL DEFAULT 0`)
+	_, _ = h.db.Exec(`UPDATE products SET banner_sort = sub.rn FROM (
+		SELECT id, ROW_NUMBER() OVER (ORDER BY sort_order ASC, id ASC) AS rn
+		FROM products WHERE pinned = true AND COALESCE(banner_sort,0) = 0
+	) sub WHERE products.id = sub.id`)
+	_, _ = h.db.Exec(`CREATE TABLE IF NOT EXISTS site_appearance (
+		id INTEGER PRIMARY KEY DEFAULT 1,
+		palette TEXT NOT NULL DEFAULT 'clay',
+		font TEXT NOT NULL DEFAULT 'system',
+		radius TEXT NOT NULL DEFAULT 'soft',
+		density TEXT NOT NULL DEFAULT 'comfortable',
+		icons TEXT NOT NULL DEFAULT 'line',
+		contrast TEXT NOT NULL DEFAULT 'standard',
+		grain TEXT NOT NULL DEFAULT 'light',
+		glow TEXT NOT NULL DEFAULT 'halo',
+		motion TEXT NOT NULL DEFAULT 'gentle',
+		tracking TEXT NOT NULL DEFAULT 'normal',
+		updated_at TIMESTAMPTZ DEFAULT NOW()
+	)`)
+	_, _ = h.db.Exec(`ALTER TABLE site_appearance ADD COLUMN IF NOT EXISTS icons TEXT NOT NULL DEFAULT 'line'`)
+	_, _ = h.db.Exec(`ALTER TABLE site_appearance ADD COLUMN IF NOT EXISTS contrast TEXT NOT NULL DEFAULT 'standard'`)
+	_, _ = h.db.Exec(`ALTER TABLE site_appearance ADD COLUMN IF NOT EXISTS grain TEXT NOT NULL DEFAULT 'light'`)
+	_, _ = h.db.Exec(`ALTER TABLE site_appearance ADD COLUMN IF NOT EXISTS glow TEXT NOT NULL DEFAULT 'halo'`)
+	_, _ = h.db.Exec(`ALTER TABLE site_appearance ADD COLUMN IF NOT EXISTS motion TEXT NOT NULL DEFAULT 'gentle'`)
+	_, _ = h.db.Exec(`ALTER TABLE site_appearance ADD COLUMN IF NOT EXISTS tracking TEXT NOT NULL DEFAULT 'normal'`)
+	_, _ = h.db.Exec(`INSERT INTO site_appearance (id) VALUES (1) ON CONFLICT (id) DO NOTHING`)
 }
 
 func slugify(s string) string {
@@ -55,13 +81,29 @@ func slugify(s string) string {
 	return out
 }
 
+func (h *Handlers) bundleItemCSV(bundleID int) string {
+	rows, err := h.db.Query("SELECT product_id FROM bundle_items WHERE bundle_id=$1 ORDER BY sort_order ASC, id ASC", bundleID)
+	if err != nil {
+		return ""
+	}
+	defer rows.Close()
+	ids := []string{}
+	for rows.Next() {
+		var id int
+		if rows.Scan(&id) == nil && id > 0 {
+			ids = append(ids, strconv.Itoa(id))
+		}
+	}
+	return strings.Join(ids, ",")
+}
+
 func (h *Handlers) listProductsFiltered(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "12"))
 	if page < 1 {
 		page = 1
 	}
-	if perPage < 1 || perPage > 100 {
+	if perPage < 1 || perPage > 200 {
 		perPage = 12
 	}
 	offset := (page - 1) * perPage
@@ -121,15 +163,23 @@ func (h *Handlers) listProductsFiltered(c *gin.Context) {
 			args = append(args, v)
 		}
 	}
+	bannerOnly := c.Query("banner") == "1" || c.Query("banner") == "true"
+	if bannerOnly {
+		where += " AND COALESCE(p.banner_sort,0) > 0"
+	}
 
 	order := "p.pinned DESC, p.sort_order ASC, p.created_at DESC"
-	switch c.Query("sort") {
-	case "popular":
-		order = "p.pinned DESC, COALESCE(p.purchase_count,0) DESC, COALESCE(p.views,0) DESC, p.created_at DESC"
-	case "price_asc":
-		order = "p.pinned DESC, p.price_usd ASC"
-	case "price_desc":
-		order = "p.pinned DESC, p.price_usd DESC"
+	if bannerOnly {
+		order = "p.banner_sort ASC, p.id ASC"
+	} else {
+		switch c.Query("sort") {
+		case "popular":
+			order = "p.pinned DESC, COALESCE(p.purchase_count,0) DESC, COALESCE(p.views,0) DESC, p.created_at DESC"
+		case "price_asc":
+			order = "p.pinned DESC, p.price_usd ASC"
+		case "price_desc":
+			order = "p.pinned DESC, p.price_usd DESC"
+		}
 	}
 
 	var total int
@@ -144,7 +194,7 @@ func (h *Handlers) listProductsFiltered(c *gin.Context) {
 	offP := n
 	q := `SELECT p.id,p.title,p.slug,p.description,p.price_usd,p.status,p.created_at,p.updated_at,
 		p.category_id,p.image_url,p.stock_count,p.pinned,p.sort_order,p.digital_formats,p.tags,
-		p.is_pwyw,p.pwyw_min_price,p.pinned_at
+		p.is_pwyw,p.pwyw_min_price,p.pinned_at,COALESCE(p.banner_sort,0)
 		FROM products p WHERE ` + where + ` ORDER BY ` + order + fmt.Sprintf(" LIMIT $%d OFFSET $%d", limP, offP)
 	qargs := append(append([]interface{}{}, args...), perPage, offset)
 	rows, err := h.db.Query(q, qargs...)
@@ -160,7 +210,7 @@ func (h *Handlers) listProductsFiltered(c *gin.Context) {
 		var pinnedAt sql.NullTime
 		if rows.Scan(&p.ID, &p.Title, &p.Slug, &p.Description, &p.PriceUSD, &p.Status,
 			&p.CreatedAt, &p.UpdatedAt, &cid, &p.ImageURL, &p.StockCount, &p.Pinned, &p.SortOrder,
-			&p.DigitalFormats, &p.Tags, &p.IsPwyw, &p.PwywMinPrice, &pinnedAt) == nil {
+			&p.DigitalFormats, &p.Tags, &p.IsPwyw, &p.PwywMinPrice, &pinnedAt, &p.BannerSort) == nil {
 			if cid.Valid {
 				p.CategoryID = int(cid.Int64)
 			}
@@ -180,8 +230,26 @@ func (h *Handlers) listProductsFiltered(c *gin.Context) {
 
 func (h *Handlers) UnpinProduct(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	h.db.Exec("UPDATE products SET pinned = false, is_pinned = false, pinned_at = NULL WHERE id = $1", id)
+	h.db.Exec("UPDATE products SET pinned = false, is_pinned = false, pinned_at = NULL, banner_sort = 0 WHERE id = $1", id)
 	c.JSON(http.StatusOK, gin.H{"message": "product unpinned"})
+}
+
+func (h *Handlers) SetBanner(c *gin.Context) {
+	var req struct {
+		ProductIDs []int `json:"product_ids"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	_, _ = h.db.Exec("UPDATE products SET banner_sort = 0")
+	for i, id := range req.ProductIDs {
+		if id <= 0 {
+			continue
+		}
+		_, _ = h.db.Exec(`UPDATE products SET banner_sort = $1, pinned = true, is_pinned = true, pinned_at = NOW() WHERE id = $2`, i+1, id)
+	}
+	c.JSON(http.StatusOK, gin.H{"product_ids": req.ProductIDs, "message": "banner updated"})
 }
 
 func (h *Handlers) UpdateCategory(c *gin.Context) {
@@ -335,4 +403,87 @@ func (h *Handlers) UpdateProductRequest(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "request updated"})
+}
+
+type siteAppearance struct {
+	Palette  string `json:"palette"`
+	Font     string `json:"font"`
+	Radius   string `json:"radius"`
+	Density  string `json:"density"`
+	Icons    string `json:"icons"`
+	Contrast string `json:"contrast"`
+	Grain    string `json:"grain"`
+	Glow     string `json:"glow"`
+	Motion   string `json:"motion"`
+	Tracking string `json:"tracking"`
+}
+
+var appearancePalettes = []string{
+	"clay", "marble", "night", "moss", "ink", "ember", "dune", "frost",
+	"paper", "chalk", "linen", "mist", "petal", "foam", "porcelain", "sage",
+	"snow", "honey", "bone", "cloud", "wine", "violet", "ocean", "slate",
+}
+
+func defaultAppearance() siteAppearance {
+	return siteAppearance{
+		Palette: "clay", Font: "system", Radius: "soft", Density: "comfortable",
+		Icons: "line", Contrast: "standard", Grain: "light", Glow: "halo",
+		Motion: "gentle", Tracking: "normal",
+	}
+}
+
+func pickAllowed(v string, allowed []string, fallback string) string {
+	v = strings.ToLower(strings.TrimSpace(v))
+	for _, a := range allowed {
+		if v == a {
+			return a
+		}
+	}
+	return fallback
+}
+
+func normalizeAppearance(t siteAppearance) siteAppearance {
+	t.Palette = pickAllowed(t.Palette, appearancePalettes, "clay")
+	t.Font = pickAllowed(t.Font, []string{"system", "humanist", "serif", "mono", "display"}, "system")
+	t.Radius = pickAllowed(t.Radius, []string{"sharp", "soft", "round"}, "soft")
+	t.Density = pickAllowed(t.Density, []string{"compact", "comfortable", "roomy"}, "comfortable")
+	t.Icons = pickAllowed(t.Icons, []string{"line", "bold", "filled", "glyph"}, "line")
+	t.Contrast = pickAllowed(t.Contrast, []string{"soft", "standard", "punchy"}, "standard")
+	t.Grain = pickAllowed(t.Grain, []string{"off", "light", "heavy"}, "light")
+	t.Glow = pickAllowed(t.Glow, []string{"none", "halo", "bloom"}, "halo")
+	t.Motion = pickAllowed(t.Motion, []string{"still", "gentle"}, "gentle")
+	t.Tracking = pickAllowed(t.Tracking, []string{"tight", "normal", "wide"}, "normal")
+	return t
+}
+
+func (h *Handlers) GetAppearance(c *gin.Context) {
+	t := defaultAppearance()
+	err := h.db.QueryRow(`SELECT palette, font, radius, density,
+		COALESCE(icons,'line'), COALESCE(contrast,'standard'), COALESCE(grain,'light'),
+		COALESCE(glow,'halo'), COALESCE(motion,'gentle'), COALESCE(tracking,'normal')
+		FROM site_appearance WHERE id=1`).
+		Scan(&t.Palette, &t.Font, &t.Radius, &t.Density, &t.Icons, &t.Contrast, &t.Grain, &t.Glow, &t.Motion, &t.Tracking)
+	if err != nil {
+		_ = h.db.QueryRow(`SELECT palette, font, radius, density FROM site_appearance WHERE id=1`).
+			Scan(&t.Palette, &t.Font, &t.Radius, &t.Density)
+	}
+	c.JSON(http.StatusOK, normalizeAppearance(t))
+}
+
+func (h *Handlers) SetAppearance(c *gin.Context) {
+	var t siteAppearance
+	if err := c.ShouldBindJSON(&t); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	t = normalizeAppearance(t)
+	_, err := h.db.Exec(`INSERT INTO site_appearance (id, palette, font, radius, density, icons, contrast, grain, glow, motion, tracking, updated_at)
+		VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+		ON CONFLICT (id) DO UPDATE SET palette=$1, font=$2, radius=$3, density=$4, icons=$5, contrast=$6, grain=$7, glow=$8, motion=$9, tracking=$10, updated_at=NOW()`,
+		t.Palette, t.Font, t.Radius, t.Density, t.Icons, t.Contrast, t.Grain, t.Glow, t.Motion, t.Tracking)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save appearance"})
+		return
+	}
+	c.JSON(http.StatusOK, t)
 }

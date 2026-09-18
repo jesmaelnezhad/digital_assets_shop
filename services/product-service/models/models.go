@@ -21,6 +21,7 @@ type Product struct {
 	DigitalFormats      string    `json:"digital_formats"`
 	IsPinned            bool      `json:"is_pinned"`
 	Pinned             bool      `json:"pinned"`
+	BannerSort         int       `json:"banner_sort"`
 	Views              int       `json:"views"`
 	Downloads          int       `json:"downloads"`
 	PurchaseCount      int       `json:"purchase_count"`

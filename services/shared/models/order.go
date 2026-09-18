@@ -67,13 +67,18 @@ type PaymentInfo struct {
 
 // OrderStatus constants for order lifecycle.
 const (
-	OrderStatusPending    = "pending"
-	OrderStatusPaid       = "paid"
-	OrderStatusConfirmed  = "confirmed"
-	OrderStatusShipped    = "shipped"
-	OrderStatusCompleted  = "completed"
-	OrderStatusCancelled  = "cancelled"
-	OrderStatusRefunded   = "refunded"
+	OrderStatusPending          = "pending"
+	OrderStatusCreated          = "created"
+	OrderStatusAwaitingPayment  = "awaiting_payment"
+	OrderStatusPaid             = "paid"
+	OrderStatusPreparation      = "preparation"
+	OrderStatusDelivered        = "delivered"
+	OrderStatusConfirmed        = "confirmed"
+	OrderStatusShipped          = "shipped"
+	OrderStatusCompleted        = "completed"
+	OrderStatusCancelled        = "cancelled"
+	OrderStatusRefunded         = "refunded"
+	OrderStatusFailed           = "failed"
 )
 
 // OrderFilter defines query parameters for order listing.

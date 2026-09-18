@@ -6,7 +6,7 @@
     if (/^(data:|https?:|blob:)/i.test(file)) return file;
     return ROOT() + "shared/media/" + file;
   };
-  const KEY = "pawradise-proto-v4";
+  const KEY = "pawradise-proto-v6";
   const defaultSettings = {
     referral_commission_percent: "5.0",
     payment_address: "0xPAWRADISE_WALLET_BSC",
@@ -28,8 +28,102 @@
     { id: 4, slug: "audio", name: "Audio", desc: "Loops, kits, foley", parentId: 0, sort: 4, active: true },
     { id: 5, slug: "environments", name: "Environments", desc: "Scenes and world kits", parentId: 0, sort: 5, active: true },
     { id: 6, slug: "icons", name: "Icons & type", desc: "Icon sets and specimens", parentId: 0, sort: 6, active: true },
-    { id: 7, slug: "vfx", name: "VFX", desc: "Sprites, volumes, sequences", parentId: 0, sort: 7, active: true }
+    { id: 7, slug: "vfx", name: "VFX", desc: "Sprites, volumes, sequences", parentId: 0, sort: 7, active: true },
+    { id: 8, slug: "motion", name: "Motion", desc: "Loops, titles, and boards", parentId: 0, sort: 8, active: true },
+    { id: 9, slug: "print", name: "Print", desc: "Posters, editorial, layouts", parentId: 0, sort: 9, active: true },
+    { id: 10, slug: "photos", name: "Photos", desc: "Stills and plates", parentId: 0, sort: 10, active: true }
   ];
+  const volumeCats = ["3d", "ui", "textures", "audio", "environments", "icons", "vfx", "motion", "print", "photos"];
+  function volumeProducts() {
+    const out = [];
+    for (let i = 0; i < 36; i++) {
+      const b = catalogSeed[i % catalogSeed.length];
+      const n = 13 + i;
+      const price = Math.max(6, ((b.price + (i % 7) * 3) % 90) || 9);
+      out.push({
+        id: n,
+        slug: b.slug + "-vol-" + (i + 1),
+        title: b.title + " Vol. " + (i + 1),
+        category: volumeCats[i % volumeCats.length],
+        price,
+        fileType: b.fileType,
+        rating: Math.round((4 + (i % 10) / 10) * 10) / 10,
+        reviews: 8 + i,
+        pinned: false,
+        popular: 40 + i * 11,
+        created: "2026-" + String((i % 9) + 1).padStart(2, "0") + "-" + String((i % 27) + 1).padStart(2, "0"),
+        status: "active",
+        pwyw: false,
+        description: b.description,
+        images: b.images,
+        tiers: [{ id: "std-" + n, name: "Standard", price, note: "Full download" }]
+      });
+    }
+    return out;
+  }
+  function volumeUsers() {
+    const first = ["Asha", "Ben", "Cora", "Drew", "Eve", "Finn", "Gia", "Hugo", "Ivy", "Jules"];
+    const last = ["Okoye", "Singh", "Adler", "Ng", "Kovacs", "Berg", "Diaz", "Sato", "Khan", "Walsh"];
+    const avatars = ["p01.jpg", "p02.jpg", "p03.jpg", "p04.jpg", "p05.jpg", "p06.jpg", "p07.jpg", "p08.jpg", "p09.jpg", "p10.jpg", "p11.jpg", "p12.jpg"];
+    const out = [];
+    for (let i = 0; i < 76; i++) {
+      const id = 5 + i;
+      out.push({
+        id,
+        name: first[i % first.length] + " " + last[Math.floor(i / 10) % last.length],
+        email: "collector" + id + "@example.com",
+        password: "demo",
+        bio: "Collector #" + id + ". " + volumeCats[i % volumeCats.length] + " library.",
+        wallet: "",
+        avatar: avatars[i % avatars.length],
+        referral: "COL-" + id,
+        referredBy: (i % 4) + 1,
+        role: "customer",
+        staff_tabs: ""
+      });
+    }
+    return out;
+  }
+  function volumeSocial() {
+    const posts = [];
+    const comments = [];
+    const likes = [];
+    const follows = [];
+    let pid = 7;
+    let cid = 5;
+    const notes = [
+      "Just dropped a still from the courtyard.",
+      "Anyone pairing this with Glyph Factory?",
+      "The 8k chips hold up.",
+      "Jam weekend material.",
+      "Pinned on my board.",
+      "Need the studio tier.",
+      "Rain stems under marble.",
+      "HUD from Northline."
+    ];
+    for (let i = 0; i < 54; i++) {
+      const userId = 1 + (i % 40);
+      posts.push({
+        id: pid,
+        userId,
+        content: notes[i % notes.length] + " #" + pid,
+        created: "2026-09-" + String((i % 17) + 1).padStart(2, "0") + "T" + String(10 + (i % 8)).padStart(2, "0") + ":00:00Z"
+      });
+      if (i % 2 === 0) comments.push({ id: cid++, postId: pid, userId: 1 + ((i + 1) % 20), content: "Noted on #" + pid });
+      likes.push({ userId: 1 + ((i + 2) % 20), postId: pid });
+      if (i % 3 === 0) likes.push({ userId: 1 + ((i + 5) % 20), postId: pid });
+      pid++;
+    }
+    for (let i = 0; i < 16; i++) {
+      comments.push({ id: cid++, postId: 1, userId: 2 + (i % 10), content: "Thread note " + (i + 1) + " on the clay pin." });
+    }
+    for (let u = 5; u <= 80; u++) {
+      follows.push({ followerId: u, followingId: 1 + (u % 4) });
+      if (u % 2 === 0) follows.push({ followerId: u, followingId: 2 });
+      if (u % 5 === 0) follows.push({ followerId: 1, followingId: u });
+    }
+    return { posts, comments, likes, follows, nextPost: pid, nextComment: cid };
+  }
 
   const catalogSeed = [
     { id: 1, slug: "lunar-clay-characters", title: "Lunar Clay Characters", category: "3d", price: 48, fileType: "FBX", rating: 4.8, reviews: 126, pinned: true, popular: 910, created: "2026-08-02", status: "active", pwyw: false, description: "Twelve stylized clay figures, game-ready, 8k texture set, and a small turntable scene.", images: ["p01.jpg", "p11.jpg", "p12.jpg"], tiers: [{ id: "std", name: "Game-ready", price: 48, note: "FBX + 4k maps" }, { id: "studio", name: "Studio", price: 72, note: "Blend + 8k + turntable" }] },
@@ -46,23 +140,45 @@
     { id: 12, slug: "sketch-brushes", title: "Sketchbook Brushes", category: "ui", price: 8, fileType: "ABR", rating: 4.1, reviews: 18, pinned: false, popular: 70, created: "2026-09-10", status: "active", pwyw: true, pwywMin: 4, description: "Pay what you want, floor $4. Graphite and wash brushes.", images: ["p12.jpg"], tiers: [{ id: "abr", name: "Brush set", price: 8, note: "Minimum $4" }] }
   ];
 
+  function defaultOrderSteps() {
+    return [
+      { id: 1, slug: "created", label: "Created", sort_order: 10, is_system: true, is_terminal: false },
+      { id: 2, slug: "awaiting_payment", label: "Waiting for payment", sort_order: 20, is_system: true, is_terminal: false },
+      { id: 3, slug: "paid", label: "Paid", sort_order: 30, is_system: true, is_terminal: false },
+      { id: 4, slug: "preparation", label: "Preparation", sort_order: 40, is_system: false, is_terminal: false },
+      { id: 5, slug: "delivered", label: "Delivered", sort_order: 50, is_system: false, is_terminal: false },
+      { id: 6, slug: "cancelled", label: "Cancelled", sort_order: 90, is_system: true, is_terminal: true },
+      { id: 7, slug: "refunded", label: "Refunded", sort_order: 91, is_system: true, is_terminal: true },
+      { id: 8, slug: "failed", label: "Failed", sort_order: 92, is_system: true, is_terminal: true }
+    ];
+  }
+
+  function orderUnlocked(status) {
+    return !({ created: 1, awaiting_payment: 1, pending: 1, processing: 1, cancelled: 1, refunded: 1, failed: 1 })[status];
+  }
+
   function seedDb() {
+    const extraUsers = volumeUsers();
+    const social = volumeSocial();
     return {
-      v: 4,
+      v: 6,
       session: null,
       admin: false,
+      appearance: { palette: "clay", font: "system", radius: "soft", density: "comfortable" },
       cart: [],
       wishlist: [],
       compare: [],
       recentlyViewed: [],
-      products: JSON.parse(JSON.stringify(catalogSeed)),
+      banner: [1, 2, 5],
+      orderSteps: defaultOrderSteps(),
+      products: JSON.parse(JSON.stringify(catalogSeed.concat(volumeProducts()))),
       categories: JSON.parse(JSON.stringify(categorySeed)),
       users: [
-        { id: 1, name: "Nia Voss", email: "nia@example.com", password: "nia", bio: "Lookdev and clay. Buying once, downloading forever.", wallet: "0xNIA00…a4f", avatar: "avatar.jpg", referral: "NIA-STUDIO", referredBy: null },
-        { id: 2, name: "Leo Park", email: "leo@example.com", password: "leo", bio: "Ships small games on weekends.", wallet: "", avatar: "p10.jpg", referral: "LEO-BUSY", referredBy: 1 },
-        { id: 3, name: "Maya Chen", email: "maya@example.com", password: "maya", bio: "Environment lighting. Collects HDRIs and marble packs.", wallet: "0xMAYA…c2e", avatar: "p08.jpg", referral: "MAYA-LIGHT", referredBy: 1 },
-        { id: 4, name: "Owen Reid", email: "owen@example.com", password: "owen", bio: "UI kits into small tools. Quiet in the feed, loud in Figma.", wallet: "", avatar: "p02.jpg", referral: "OWEN-GRID", referredBy: 2 }
-      ],
+        { id: 1, name: "Nia Voss", email: "nia@example.com", password: "nia", bio: "Lookdev and clay. Buying once, downloading forever.", wallet: "0xNIA00…a4f", avatar: "avatar.jpg", referral: "NIA-STUDIO", referredBy: null, role: "admin", staff_tabs: "" },
+        { id: 2, name: "Leo Park", email: "leo@example.com", password: "leo", bio: "Ships small games on weekends.", wallet: "", avatar: "p10.jpg", referral: "LEO-BUSY", referredBy: 1, role: "staff", staff_tabs: "Products,Banner,Orders,Community" },
+        { id: 3, name: "Maya Chen", email: "maya@example.com", password: "maya", bio: "Environment lighting. Collects HDRIs and marble packs.", wallet: "0xMAYA…c2e", avatar: "p08.jpg", referral: "MAYA-LIGHT", referredBy: 1, role: "customer", staff_tabs: "" },
+        { id: 4, name: "Owen Reid", email: "owen@example.com", password: "owen", bio: "UI kits into small tools. Quiet in the feed, loud in Figma.", wallet: "", avatar: "p02.jpg", referral: "OWEN-GRID", referredBy: 2, role: "customer", staff_tabs: "" }
+      ].concat(extraUsers),
       posts: [
         { id: 1, userId: 1, content: "Pinned the clay set to the top of the library. If you render stills, use the studio tier — the turntable lights actually match the HDRIs.", created: "2026-09-12T10:00:00Z" },
         { id: 2, userId: 2, content: "Arcade Tile Kit + Glyph Factory is an entire jam weekend. Anyone bundling those?", created: "2026-09-14T16:20:00Z" },
@@ -70,14 +186,14 @@
         { id: 4, userId: 3, content: "If you pin marble + clay, the stills stack is basically the Studio Kit. Following Nia's notes on the 8k chips.", created: "2026-09-16T14:40:00Z" },
         { id: 5, userId: 4, content: "Northline's empty states are the reason I bought it. Anyone pairing it with Glyph Factory as a HUD?", created: "2026-09-17T09:05:00Z" },
         { id: 6, userId: 3, content: "Canopy + Concrete Atlas is a whole short. Dusk HDRI, then rain from Night Bus.", created: "2026-09-17T18:22:00Z" }
-      ],
+      ].concat(social.posts),
       comments: [
         { id: 1, postId: 2, userId: 1, content: "Studio Kit bundle already does that — 15% under buying separate." },
         { id: 2, postId: 1, userId: 2, content: "Grabbed studio. The 8k clay chips hold up at 300mm." },
         { id: 3, postId: 4, userId: 1, content: "Yes — that's why it's pinned." },
         { id: 4, postId: 5, userId: 3, content: "Do that. Owen, also follow Leo — he already shipped a jam that way." }
-      ],
-      likes: [{ userId: 2, postId: 1 }, { userId: 1, postId: 2 }, { userId: 3, postId: 1 }, { userId: 3, postId: 2 }, { userId: 4, postId: 5 }, { userId: 1, postId: 4 }],
+      ].concat(social.comments),
+      likes: [{ userId: 2, postId: 1 }, { userId: 1, postId: 2 }, { userId: 3, postId: 1 }, { userId: 3, postId: 2 }, { userId: 4, postId: 5 }, { userId: 1, postId: 4 }].concat(social.likes),
       follows: [
         { followerId: 2, followingId: 1 },
         { followerId: 3, followingId: 1 },
@@ -86,10 +202,13 @@
         { followerId: 4, followingId: 3 },
         { followerId: 4, followingId: 1 },
         { followerId: 2, followingId: 4 }
-      ],
+      ].concat(social.follows),
       bundles: [
         { id: 1, slug: "studio-kit", title: "Studio Kit", description: "Clay characters, marble, and HDRIs — the stills stack.", price: 72, productIds: [1, 3, 11], status: "active" },
-        { id: 2, slug: "jam-pack", title: "Jam Pack", description: "Tiles, icons, and lo-fi for a weekend ship.", price: 28, productIds: [10, 6, 4], status: "active" }
+        { id: 2, slug: "jam-pack", title: "Jam Pack", description: "Tiles, icons, and lo-fi for a weekend ship.", price: 28, productIds: [10, 6, 4], status: "active" },
+        { id: 3, slug: "lookdev-stack", title: "Lookdev Stack", description: "Courtyard, canopy, and marble for stills.", price: 96, productIds: [5, 8, 3], status: "active" },
+        { id: 4, slug: "weekend-hud", title: "Weekend HUD", description: "UI kit, icons, and type for a HUD jam.", price: 58, productIds: [2, 6, 7], status: "active" },
+        { id: 5, slug: "forest-set", title: "Forest Set", description: "Canopy plus VFX plates.", price: 54, productIds: [8, 9], status: "active" }
       ],
       coupons: [
         { id: 1, code: "SAVE12", type: "percentage", value: 12, min: 20, usageLimit: 200, used: 14, expires: "2027-01-01", productId: null, active: true },
@@ -98,7 +217,9 @@
       ],
       orders: [
         { id: 101, userId: 1, email: "nia@example.com", status: "paid", total: 19, discount: 0, coupon: null, created: "2026-08-20T12:00:00Z", paidAt: "2026-08-20T12:04:00Z", chain: "BSC", crypto: 0.031, address: "0xPAWR…BSC", items: [{ productId: 3, title: "Obsidian Marble Pack", slug: "obsidian-marble-pack", tier: "Full pack", qty: 1, unit: 19 }] },
-        { id: 102, userId: 2, email: "leo@example.com", status: "paid", total: 9, discount: 0, coupon: null, created: "2026-09-02T09:00:00Z", paidAt: "2026-09-02T09:03:00Z", chain: "BSC", crypto: 0.015, address: "0xPAWR…BSC", items: [{ productId: 10, title: "Arcade Tile Kit", slug: "arcade-tile-kit", tier: "Pixel pack", qty: 1, unit: 9 }] }
+        { id: 102, userId: 2, email: "leo@example.com", status: "preparation", total: 9, discount: 0, coupon: null, created: "2026-09-02T09:00:00Z", paidAt: "2026-09-02T09:03:00Z", chain: "BSC", crypto: 0.015, address: "0xPAWR…BSC", items: [{ productId: 10, title: "Arcade Tile Kit", slug: "arcade-tile-kit", tier: "Pixel pack", qty: 1, unit: 9 }] },
+        { id: 103, userId: 3, email: "maya@example.com", status: "awaiting_payment", total: 12, discount: 0, coupon: null, created: "2026-09-12T11:00:00Z", paidAt: null, chain: "BSC", crypto: 0.02, address: "0xPAWR…BSC", items: [{ productId: 8, title: "Clay Fox Bust", slug: "clay-fox-bust", tier: "Bust", qty: 1, unit: 12 }] },
+        { id: 104, userId: 4, email: "owen@example.com", status: "delivered", total: 14, discount: 0, coupon: null, created: "2026-09-05T16:00:00Z", paidAt: "2026-09-05T16:08:00Z", chain: "ETH", crypto: 0.004, address: "0xPAWR…ETH", items: [{ productId: 2, title: "Studio HDRI Set", slug: "studio-hdri-set", tier: "Full", qty: 1, unit: 14 }] }
       ],
       guestOrders: [],
       reviews: [
@@ -115,14 +236,20 @@
       requests: [
         { id: 1, title: "Custom lunar fox", description: "A fox in the clay character style, game-ready.", category: "3d", budget_usd: 80, email: "buyer@example.com", status: "open", created: "2026-09-10T12:00:00Z" }
       ],
-      nextIds: { user: 5, post: 7, comment: 5, order: 200, coupon: 4, bundle: 3, product: 13, cart: 1, request: 2, tier: 40, category: 8 }
+      nextIds: { user: 81, post: social.nextPost, comment: social.nextComment, order: 200, coupon: 4, bundle: 6, product: 49, cart: 1, request: 2, tier: 80, category: 11, step: 20 }
     };
   }
 
   function load() {
     try {
       const raw = JSON.parse(localStorage.getItem(KEY));
-      if (raw && raw.v === 4) {
+      if (raw && raw.v === 6) {
+        raw.settings = Object.assign({}, defaultSettings, raw.settings || {});
+        if (!raw.appearance) raw.appearance = { palette: "clay", font: "system", radius: "soft", density: "comfortable" };
+        (raw.users || []).forEach((u) => {
+          if (!u.role) u.role = u.id === 1 ? "admin" : (u.id === 2 ? "staff" : "customer");
+          if (u.staff_tabs == null) u.staff_tabs = u.role === "staff" ? "Products,Banner,Orders,Community" : "";
+        });
         raw.settings = Object.assign({}, defaultSettings, raw.settings || {});
         if (!raw.requests) raw.requests = [];
         if (!raw.nextIds) raw.nextIds = {};
@@ -130,6 +257,10 @@
         if (!raw.nextIds.tier) raw.nextIds.tier = 40;
         if (!raw.categories) raw.categories = JSON.parse(JSON.stringify(categorySeed));
         if (!raw.nextIds.category) raw.nextIds.category = (raw.categories.reduce((n, c) => Math.max(n, c.id), 0) || 0) + 1;
+        if (!raw.orderSteps || !raw.orderSteps.length) raw.orderSteps = defaultOrderSteps();
+        if (!raw.nextIds.step) raw.nextIds.step = (raw.orderSteps.reduce((n, s) => Math.max(n, s.id || 0), 0) || 0) + 1;
+        const statusMap = { pending: "awaiting_payment", processing: "awaiting_payment", confirmed: "paid", shipped: "delivered", completed: "delivered" };
+        (raw.orders || []).forEach((o) => { if (statusMap[o.status]) o.status = statusMap[o.status]; });
         (raw.categories || []).forEach((c) => {
           if (c.parentId == null) c.parentId = 0;
           if (c.sort == null) c.sort = c.id;
@@ -237,17 +368,23 @@
     if (q.rating) rows = rows.filter((p) => hydrate(p).rating >= Number(q.rating));
     if (q.price_min) rows = rows.filter((p) => p.price >= Number(q.price_min));
     if (q.price_max) rows = rows.filter((p) => p.price <= Number(q.price_max));
-    const sort = q.sort || "newest";
-    rows.sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      if (sort === "price_asc") return a.price - b.price;
-      if (sort === "price_desc") return b.price - a.price;
-      if (sort === "popular") return b.popular - a.popular;
-      return String(b.created).localeCompare(String(a.created));
-    });
+    const bannerOn = q.banner === 1 || q.banner === "1" || q.banner === true;
+    if (bannerOn) {
+      const order = db.banner || [];
+      rows = order.map((id) => rows.find((p) => p.id === Number(id))).filter(Boolean);
+    } else {
+      const sort = q.sort || "newest";
+      rows.sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        if (sort === "price_asc") return a.price - b.price;
+        if (sort === "price_desc") return b.price - a.price;
+        if (sort === "popular") return b.popular - a.popular;
+        return String(b.created).localeCompare(String(a.created));
+      });
+    }
     const total = rows.length;
     const page = Math.max(1, Number(q.page) || 1);
-    const per = Math.min(24, Number(q.per_page) || 9);
+    const per = Math.min(200, Math.max(1, Number(q.per_page) || 9));
     const start = (page - 1) * per;
     return { products: rows.slice(start, start + per).map(hydrate), total, page, per_page: per };
   }
@@ -334,7 +471,7 @@
       id: db.nextIds.order++,
       userId: u ? u.id : null,
       email,
-      status: "pending",
+      status: "awaiting_payment",
       total, discount, coupon,
       created: new Date().toISOString(),
       paidAt: null,
@@ -398,12 +535,12 @@
   function hasPurchased(productId) {
     const u = me();
     if (!u) return false;
-    return load().orders.some((o) => o.userId === u.id && o.status === "paid" && o.items.some((i) => i.productId === productId));
+    return load().orders.some((o) => o.userId === u.id && orderUnlocked(o.status) && o.items.some((i) => i.productId === productId));
   }
 
   function downloadBlob(orderId, itemIndex) {
     const o = getOrder(orderId, me() && me().email);
-    if (!o || o.status !== "paid") throw new Error("Not available");
+    if (!o || !orderUnlocked(o.status)) throw new Error("Not available");
     const item = o.items[itemIndex];
     if (!item) throw new Error("Missing item");
     const blob = new Blob(["Pawradise prototype file for " + item.title + " / " + item.tier + "\nBuy once, download forever.\n"], { type: "text/plain" });
@@ -437,7 +574,7 @@
       const ref = db.users.find((u) => u.referral.toLowerCase() === String(referral).toLowerCase());
       if (ref) referredBy = ref.id;
     }
-    const u = { id: db.nextIds.user, name: name || email.split("@")[0], email, password, bio: "", wallet: "", avatar: null, referral: (name || "USER").slice(0, 3).toUpperCase() + "-" + db.nextIds.user, referredBy };
+    const u = { id: db.nextIds.user, name: name || email.split("@")[0], email, password, bio: "", wallet: "", avatar: null, referral: (name || "USER").slice(0, 3).toUpperCase() + "-" + db.nextIds.user, referredBy, role: "customer", staff_tabs: "" };
     patch((d) => { d.users.push(u); d.session = { userId: u.id }; d.nextIds.user += 1; });
     return publicUser(u);
   }
@@ -592,7 +729,52 @@
     patch((d) => { d.admin = true; });
   }
   function requireAdmin() {
-    if (!load().admin) deny(401, "unauthorized");
+    if (load().admin) return;
+    const u = me();
+    if (u && (u.role === "admin" || u.role === "staff")) return;
+    deny(401, "unauthorized");
+  }
+  function requireOperator() {
+    if (!load().admin) deny(403, "Operator token required");
+    const u = me();
+    if (u && u.role !== "admin") deny(403, "Operator token required");
+  }
+  function setUserAccess(id, role, tabs) {
+    requireOperator();
+    role = role === "admin" || role === "staff" ? role : "customer";
+    const list = Array.isArray(tabs) ? tabs : String(tabs || "").split(",");
+    const allow = ["Stats","Users","Products","Banner","Categories","Bundles","Coupons","Orders","Guest","Community","Referrals","Rates","Settings","SEO","Export","Requests","Appearance"];
+    const clean = [];
+    list.forEach((t) => {
+      t = String(t || "").trim();
+      if (allow.indexOf(t) >= 0 && clean.indexOf(t) < 0) clean.push(t);
+    });
+    const staffTabs = role === "staff" ? clean.join(",") : "";
+    patch((d) => {
+      const admins = d.users.filter((x) => x.role === "admin");
+      const u = d.users.find((x) => x.id === Number(id));
+      if (!u) deny(404, "not found");
+      if (u.role === "admin" && role !== "admin" && admins.length <= 1) {
+        deny(400, "cannot demote the last admin");
+      }
+      u.role = role;
+      u.staff_tabs = staffTabs;
+    });
+    const u = userById(id);
+    return { id: u.id, role: u.role, staff_tabs: u.staff_tabs };
+  }
+  function appearance() {
+    return Object.assign({ palette: "clay", font: "system", radius: "soft", density: "comfortable" }, load().appearance || {});
+  }
+  function saveAppearance(t) {
+    requireAdmin();
+    const next = appearance();
+    if (t.palette) next.palette = t.palette;
+    if (t.font) next.font = t.font;
+    if (t.radius) next.radius = t.radius;
+    if (t.density) next.density = t.density;
+    patch((d) => { d.appearance = next; });
+    return next;
   }
 
   function uniqueSlug(rows, slug, exceptId, strict) {
@@ -679,7 +861,7 @@
 
   function stats() {
     const db = load();
-    const paid = db.orders.filter((o) => o.status === "paid");
+    const paid = db.orders.filter((o) => orderUnlocked(o.status));
     const views = db.products.reduce((n, p) => n + (p.popular || 0), 0) || 1;
     const carts = Math.max(db.cart.length, paid.length + 1);
     const checkouts = db.orders.length || 1;
@@ -722,28 +904,80 @@
         view_to_cart: Math.round((carts / views) * 1000) / 10,
         cart_to_checkout: Math.round((checkouts / carts) * 1000) / 10,
         checkout_to_purchase: Math.round((purchases / checkouts) * 1000) / 10
-      }
+      },
+      order_by_step: (db.orderSteps || defaultOrderSteps()).map((s) => ({
+        slug: s.slug, label: s.label, count: db.orders.filter((o) => o.status === s.slug).length, is_terminal: !!s.is_terminal
+      }))
     };
   }
 
   function setOrderStatus(id, status) {
     requireAdmin();
-    const legal = {
-      pending: ["paid", "processing", "cancelled", "failed", "refunded"],
-      processing: ["shipped", "paid", "cancelled", "refunded"],
-      shipped: ["delivered", "refunded"],
-      delivered: ["refunded"],
-      paid: ["completed", "refunded", "processing"],
-      completed: ["refunded"],
-      cancelled: [],
-      failed: [],
-      refunded: []
-    };
+    const steps = load().orderSteps || defaultOrderSteps();
+    if (!steps.some((s) => s.slug === status)) throw new Error("unknown step");
     patch((d) => {
       const o = d.orders.find((x) => x.id === Number(id));
       if (!o) throw new Error("Order not found");
-      if (!(legal[o.status] || []).includes(status)) throw new Error("Illegal status transition");
       o.status = status;
+    });
+  }
+
+  function listOrderSteps() {
+    requireAdmin();
+    return (load().orderSteps || defaultOrderSteps()).slice().sort((a, b) => a.sort_order - b.sort_order);
+  }
+
+  function createOrderStep(label) {
+    requireAdmin();
+    const slug = String(label || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+    if (!slug) throw new Error("label required");
+    if (listOrderSteps().some((s) => s.slug === slug)) throw new Error("step already exists");
+    let saved;
+    patch((d) => {
+      const steps = d.orderSteps || defaultOrderSteps();
+      const term = steps.filter((s) => s.is_terminal).reduce((n, s) => Math.min(n, s.sort_order), 80);
+      saved = { id: d.nextIds.step++, slug, label: String(label).trim(), sort_order: Math.max(31, term - 1), is_system: false, is_terminal: false };
+      steps.push(saved);
+      d.orderSteps = steps;
+    });
+    return saved;
+  }
+
+  function saveOrderSteps(rows) {
+    requireAdmin();
+    patch((d) => {
+      const cur = d.orderSteps || defaultOrderSteps();
+      const byId = {};
+      cur.forEach((s) => { byId[s.id] = s; });
+      rows.forEach((row, i) => {
+        const hit = byId[row.id];
+        if (!hit) return;
+        if (row.label) hit.label = row.label;
+        hit.sort_order = i + 1;
+      });
+      d.orderSteps = cur;
+    });
+    return listOrderSteps();
+  }
+
+  function renameOrderStep(id, label) {
+    requireAdmin();
+    patch((d) => {
+      const hit = (d.orderSteps || []).find((s) => s.id === Number(id));
+      if (!hit) throw new Error("step not found");
+      hit.label = String(label).trim();
+    });
+  }
+
+  function deleteOrderStep(id) {
+    requireAdmin();
+    patch((d) => {
+      const hit = (d.orderSteps || []).find((s) => s.id === Number(id));
+      if (!hit) throw new Error("step not found");
+      if (hit.is_system) throw new Error("cannot delete a system step");
+      const n = d.orders.filter((o) => o.status === hit.slug).length;
+      if (n) throw new Error(n + " orders still use this step");
+      d.orderSteps = d.orderSteps.filter((s) => s.id !== Number(id));
     });
   }
 
@@ -836,11 +1070,13 @@
     setting(key) { return load().settings[key]; },
     settings() { return Object.assign({}, load().settings); },
     stats, adminUnlock, adminLock() { patch((d) => { d.admin = false; }); },
+    setUserAccess, appearance, saveAppearance,
     users() { requireAdmin(); return load().users.map((u) => publicUser(u)); },
     deleteUser(id) { requireAdmin(); patch((d) => { d.users = d.users.filter((u) => u.id !== Number(id)); }); },
     resetPassword(id) { requireAdmin(); patch((d) => { const u = d.users.find((x) => x.id === Number(id)); if (u) u.password = "reset123"; }); return "reset123"; },
     allOrders() { requireAdmin(); return load().orders.slice().sort((a, b) => b.id - a.id); },
     setOrderStatus,
+    listOrderSteps, createOrderStep, saveOrderSteps, renameOrderStep, deleteOrderStep,
     allPosts() { requireAdmin(); return listPosts(); },
     adminDeletePost(id) { requireAdmin(); patch((d) => { d.posts = d.posts.filter((p) => p.id !== Number(id)); }); },
     coupons() { return load().coupons.slice(); },
@@ -865,7 +1101,28 @@
         }
       });
     },
-    pinProduct(id, pinned) { requireAdmin(); patch((d) => { const p = d.products.find((x) => x.id === Number(id)); if (p) p.pinned = !!pinned; }); },
+    pinProduct(id, pinned) {
+      requireAdmin();
+      patch((d) => {
+        const p = d.products.find((x) => x.id === Number(id));
+        if (!p) return;
+        p.pinned = !!pinned;
+        d.banner = d.banner || [];
+        if (pinned) {
+          if (d.banner.indexOf(p.id) < 0) d.banner.push(p.id);
+        } else {
+          d.banner = d.banner.filter((x) => x !== p.id);
+        }
+      });
+    },
+    setBanner(ids) {
+      requireAdmin();
+      patch((d) => {
+        const wanted = (ids || []).map(Number).filter((n) => d.products.some((p) => p.id === n));
+        d.banner = wanted;
+        d.products.forEach((p) => { p.pinned = wanted.indexOf(p.id) >= 0; });
+      });
+    },
     saveProduct(p) {
       requireAdmin();
       patch((d) => {

@@ -7,7 +7,7 @@
 
 ## Architecture Overview
 
-Pawradise uses a microservice architecture with 8 backend services. Each service owns its domain and exposes a REST API under `/api/v1/` **on that service** (the architecture doc’s `/internal/v1` names were never used). All services are stateless and should communicate via HTTP or events, not shared tables.
+Pawradise uses a microservice architecture with 9 backend services. Each service owns its domain and exposes a REST API under `/api/v1/` **on that service** (the architecture doc’s `/internal/v1` names were never used). All services are stateless and should communicate via HTTP or events, not shared tables.
 
 With domain-based routing (v2, 2026-09-10+), environments are separated by hostname:
 
@@ -35,6 +35,7 @@ Host Nginx (port 80/443) ──► ingress-nginx (NodePort 30758)
 | Payment | 8086 | payment_db | Payments, exchange rates, crypto calc |
 | Admin | 8087 | admin_db | Stats, moderation, settings, email export |
 | Media | 8088 | — (PV) | File upload/download, previews |
+| Events | 8089 | MongoDB `events` | Frontend event ingest + TTL |
 
 ---
 
@@ -102,7 +103,10 @@ ADMIN_TOKEN=<production-admin-token>
 ### Token Format
 
 - **Type**: JWT (HS256)
-- **Claims**: `{ user_id: int, email: string, role: string, exp: int }`
+- **Claims**: `{ user_id: int, email: string, role: string, tabs?: string, exp: int }`
+- **Roles**: `customer` (default), `staff`, `admin`. Legacy `user` maps to `customer`.
+- **Staff tabs**: comma-separated desk sections in `tabs` (copied from `users.staff_tabs` at login).
+- **Operator token**: `X-Admin-Token` matching `ADMIN_TOKEN`, required with an admin JWT to change roles/tabs. Static `Authorization: Bearer <ADMIN_TOKEN>` remains a full-admin API bypass.
 
 ---
 
@@ -112,7 +116,9 @@ These routes exist so the live MFEs match `frontend/prototype`:
 
 | Method | Path | Service |
 |---|---|---|
-| GET | `/products?search=&category=&sort=&file_type=&price_min=&price_max=` | product |
+| GET | `/products?search=&category=&sort=&file_type=&price_min=&price_max=&banner=` | product. `banner=1` returns homepage slider slides ordered by `banner_sort` |
+| GET/PUT | `/products/appearance` | product. Public GET; admin/staff PUT `{palette,font,radius,density,icons,contrast,grain,glow,motion,tracking}` |
+| PUT | `/products/banner` | product (admin/staff Banner) — body `{product_ids:[…]}` replaces slider order |
 | GET | `/products/:id/tiers` | product |
 | PUT/DELETE | `/categories/:id` | product (admin) |
 | GET | `/categories?all=1` | product (includes inactive + `product_count`) |
@@ -120,9 +126,16 @@ These routes exist so the live MFEs match `frontend/prototype`:
 | POST/GET | `/product-requests` | admin |
 | GET/PUT | `/admin/product-requests` | admin |
 | GET | `/admin/guest-orders` | admin (reads commerce_db when connected) |
+| GET | `/admin/orders?status=&q=` | admin ops desk. `status` is a pipeline slug; `q` matches id or email. Returns `orders`, `total`, `by_step` |
+| PUT | `/admin/orders/:id/status` | admin. Body `{status}` moves the order to any defined pipeline slug |
+| GET/POST/PUT/DELETE | `/admin/order-steps` | admin. Pipeline editor. GET also allowed with the Orders tab so staff can filter/move. Writes need the Steps tab |
+| GET | `/admin/stats` | admin. Includes `order_by_step: [{slug,label,count}]` |
+| PUT | `/admin/users/:id/access` | admin — `{role, staff_tabs}` requires admin JWT + `X-Admin-Token` |
 | PUT | `/cart/items/:id` | commerce |
 | POST | `/wishlist/toggle` body `{product_id}` | commerce |
-| GET | `/community/users`, `/followers`, `/following`, `/suggestions` | community |
+| GET | `/community/users`, `/followers`, `/following`, `/suggestions` | community. People directory paginates (`page`, `per_page`, `total`) |
 | GET | `/settings/:key` | payment (public) |
+| POST | `/events` | events-service. `{name,session_id,path,properties}`. Names: `product_view`, `checkout_click`. Optional auth. 202. |
+| GET/PUT | `/admin/events`, `/admin/events/ttl` | events-service. Ingress **before** `/api/v1/admin`. TTL default 3600s. |
 
-Demo buyers on staging: `nia@example.com` / `nia`, `leo@example.com` / `leo`, `maya@example.com` / `maya`, `owen@example.com` / `owen`. Coupons: `SAVE12`, `WELCOME`, `MARBLE`.
+Demo buyers on staging: `nia@example.com` / `nia` (admin), `leo@example.com` / `leo` (staff: Products, Banner, Orders, Community), `maya@example.com` / `maya`, `owen@example.com` / `owen`. Coupons: `SAVE12`, `WELCOME`, `MARBLE`. Operator token for Access: `admin_secret_staging_2026`.

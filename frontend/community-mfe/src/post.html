@@ -15,10 +15,12 @@
   <footer id="site-footer"></footer>
     <script src="/assets/api.js"></script>
   <script src="/assets/ui.js"></script>
+  <script src="/assets/events.js"></script>
   <script src="/assets/chrome.js"></script>
   <script>
     const id = new URLSearchParams(location.search).get("id") || (location.pathname.match(/\/post\/(\d+)/) || [])[1];
     const api = Pawradise.api;
+    let shown = 8;
     async function render() {
       const root = document.getElementById("root");
       let me = null;
@@ -28,6 +30,7 @@
         const p = data.post;
         const author = data.author || {};
         const comments = data.comments || [];
+        const visible = comments.slice(0, shown);
         root.innerHTML = PawUI.communityNav("feed", me && me.id) + `<div class="kicker">Community</div>
           <article class="post">
             <div class="post-head">
@@ -43,7 +46,7 @@
             <div class="post-actions">
               <button class="btn ${p.liked ? "is-on" : ""}" id="like">${p.like_count || 0} likes</button>
             </div>
-            ${comments.map((c) => `<div class="comment">
+            ${visible.map((c) => `<div class="comment">
               ${PawUI.avatar(c.user)}
               <div>
                 <a href="/profile/${c.user_id}"><b>${PawUI.esc((c.user && c.user.name) || "User")}</b></a>
@@ -51,6 +54,7 @@
                 ${me && c.user_id === me.id ? `<button class="btn" data-delc="${c.id}">Delete</button>` : ""}
               </div>
             </div>`).join("")}
+            ${comments.length > shown ? `<p style="margin-top:12px"><button class="btn" id="more-cmt">Show more comments</button></p>` : ""}
             ${me ? `<form id="cmt" class="field-col" style="margin-top:16px">Comment
               <textarea name="content" maxlength="500"></textarea>
               <button class="btn">Reply</button>
@@ -72,6 +76,8 @@
           catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
         };
         PawUI.bindFollow(root, render);
+        const moreC = document.getElementById("more-cmt");
+        if (moreC) moreC.onclick = () => { shown += 8; render(); };
         root.querySelectorAll("[data-delc]").forEach((b) => b.onclick = async () => {
           try { await api.community.deleteComment(p.id, b.dataset.delc); render(); }
           catch (e) { PawUI.toast(e.message); }

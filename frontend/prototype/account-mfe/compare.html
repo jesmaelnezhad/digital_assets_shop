@@ -15,6 +15,7 @@
   <script src="../shared/mock-api.js"></script>
   <script src="../shared/api-client.js"></script>
   <script src="../shared/ui.js"></script>
+  <script src="../shared/events.js"></script>
   <script src="../shared/chrome.js"></script>
   <script>
     async function render() {
@@ -35,10 +36,10 @@
           ["PWYW", (p) => p.is_pwyw ? "yes, min " + PawUI.money(p.pwyw_min_price) : "no"]
         ];
         root.innerHTML = PawUI.accountNav("compare") + `<div class="kicker">Account</div><h1 class="page-title">Compare</h1>
-          <table class="table"><thead><tr><th></th>${products.map((p) => `<th>${PawUI.esc(p.title)}</th>`).join("")}</tr></thead>
+          <div class="table-wrap"><table class="table"><thead><tr><th></th>${products.map((p) => `<th>${PawUI.esc(p.title)}</th>`).join("")}</tr></thead>
           <tbody>${rows.map(([label, fn]) => `<tr><td>${label}</td>${products.map((p) => `<td>${fn(p)}</td>`).join("")}</tr>`).join("")}
           <tr><td></td>${products.map((p) => `<td><button class="btn" data-rm="${p.id}">Remove</button></td>`).join("")}</tr>
-          </tbody></table>`;
+          </tbody></table></div>`;
         root.querySelectorAll("[data-rm]").forEach((b) => b.onclick = async () => {
           await Pawradise.api.compare.toggle(Number(b.dataset.rm));
           PawChrome.mount();

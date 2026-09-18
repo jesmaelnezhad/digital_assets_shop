@@ -17,7 +17,7 @@
     <label class="field-col">Password <input name="password" type="password" required /></label>
     <label class="field-col">Referral code <input name="referral_code" placeholder="NIA-STUDIO" /></label>
     <p class="form-error"></p>
-    <button class="btn btn-accent" style="width:100%">Register</button>
+    <button type="submit" class="btn btn-accent" style="width:100%">Register</button>
     <p style="margin-top:14px"><a href="login.html">Already have an account</a></p>
   </form>
   <footer id="site-footer"></footer>
@@ -25,6 +25,7 @@
   <script src="../shared/mock-api.js"></script>
   <script src="../shared/api-client.js"></script>
   <script src="../shared/ui.js"></script>
+  <script src="../shared/events.js"></script>
   <script src="../shared/chrome.js"></script>
   <script>
     const params = new URLSearchParams(location.search);

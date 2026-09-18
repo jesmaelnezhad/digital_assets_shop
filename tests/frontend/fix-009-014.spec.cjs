@@ -62,7 +62,9 @@ test.describe('FIX-009 to FIX-014: Verify product-service fixes', () => {
     });
 
     test('FIX-014: recommendations returns JSON not HTML', async ({ request }) => {
-        const res = await request.get(BASE + '/api/v1/recommendations/1');
+        const list = await request.get(BASE + '/api/v1/products?per_page=1');
+        const id = (await list.json()).products[0].id;
+        const res = await request.get(BASE + '/api/v1/recommendations/' + id);
         expect(res.status()).toBe(200);
 
         const contentType = res.headers()['content-type'];

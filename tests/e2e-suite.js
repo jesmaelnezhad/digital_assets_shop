@@ -175,6 +175,7 @@ async function runAuthTests() {
     assertStatus(res, 200, 'Get profile');
     const data = res.json();
     assert(data.email === email, 'Profile email mismatch');
+    assert(data.role === 'customer' || data.role === 'staff' || data.role === 'admin', 'Profile role');
   });
 
   await test('GET /me rejects without token', async () => {
@@ -235,6 +236,47 @@ async function runProductTests() {
     assertStatus(res, 200, 'Paginated products');
     const data = res.json();
     assert(data.products.length <= 5, 'Page size exceeded');
+    assert(data.total > 12, `Need catalog volume for pager, total=${data.total}`);
+  });
+
+  await test('GET /products page 2 is a different slice', async () => {
+    const a = (await request(`${API_BASE}/products?page=1&per_page=12`)).json();
+    const b = (await request(`${API_BASE}/products?page=2&per_page=12`)).json();
+    assert(a.products.length > 0 && b.products.length > 0, 'both pages need products');
+    assert(a.products[0].id !== b.products[0].id, 'page 2 should not repeat page 1');
+  });
+
+  await test('GET /products?banner=1 returns ordered slider slides', async () => {
+    const res = await request(`${API_BASE}/products?banner=1&per_page=24`);
+    assertStatus(res, 200, 'Banner list');
+    const data = res.json();
+    assertArray(data, 'products', 'Banner products');
+    assert(data.products.length >= 2, `banner needs 2+ slides, got ${data.products.length}`);
+    const sorts = data.products.map((p) => p.banner_sort || 0);
+    for (let i = 1; i < sorts.length; i++) {
+      assert(sorts[i] >= sorts[i - 1], 'banner_sort should be ascending');
+    }
+  });
+
+  await test('PUT /products/banner reorders slider and can restore', async () => {
+    const current = (await request(`${API_BASE}/products?banner=1&per_page=24`)).json().products || [];
+    const ids = current.map((p) => p.id);
+    assert(ids.length >= 2, 'need banner slides to reorder');
+    const swapped = [ids[1], ids[0]].concat(ids.slice(2));
+    const put = await request(`${API_BASE}/products/banner`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${ADMIN_TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ product_ids: swapped }),
+    });
+    assertStatus(put, 200, 'Set banner');
+    const after = (await request(`${API_BASE}/products?banner=1&per_page=24`)).json().products || [];
+    assert(after[0] && after[0].id === swapped[0], 'first slide should match saved order');
+    const restore = await request(`${API_BASE}/products/banner`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${ADMIN_TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ product_ids: ids }),
+    });
+    assertStatus(restore, 200, 'Restore banner');
   });
 
   await test('GET /products supports search query', async () => {
@@ -425,6 +467,38 @@ async function runOrderTests(authToken) {
       assertField(data.order, 'id', 'Order id');
       assertField(data, 'total_usd', 'Order total');
     }
+  });
+
+  await test('POST /orders with 100% coupon is paid and zero_due', async () => {
+    if (!authToken) throw new Error('No auth token available');
+    const code = `FREE${Date.now()}`;
+    const coupon = await request(`${API_ROOT}/api/v1/admin/coupons`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${ADMIN_TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        code,
+        discount_type: 'percentage',
+        discount_value: 100,
+        expires_at: '2027-12-31',
+        usage_limit: 50,
+        min_purchase_usd: 0,
+        is_active: true,
+      }),
+    });
+    assertStatus(coupon, 201, 'Create 100% coupon');
+    const res = await request(`${API_BASE}/orders`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        coupon_code: code,
+        items: [{ product_id: 1, quantity: 1, price_usd: 12 }],
+      }),
+    });
+    assertStatus(res, 201, 'Create zero-due order');
+    const data = res.json();
+    assert(data.zero_due === true, 'zero_due should be true');
+    assert(data.order && data.order.status === 'paid', 'order should be paid');
+    assert(Number(data.total_usd) === 0, 'total should be 0');
   });
 
   await test('POST /orders rejects without auth', async () => {
@@ -736,6 +810,26 @@ async function runCommunityTests(authToken) {
     assertStatus(res, 200, 'Post feed');
     const data = res.json();
     assertArray(data, 'posts', 'Posts feed');
+    assertField(data, 'total', 'Feed total');
+    assert(data.total > 10, `feed volume for Show more, total=${data.total}`);
+  });
+
+  await test('GET /community/posts paginates', async () => {
+    const res = await request(`${API_BASE}/community/posts?page=1&per_page=10`);
+    assertStatus(res, 200, 'Feed page');
+    const data = res.json();
+    assert(data.posts.length <= 10, 'feed page size');
+    assert(data.total > data.posts.length, 'more posts than one page');
+  });
+
+  await test('GET /community/users paginates people directory', async () => {
+    const res = await request(`${API_BASE}/community/users?page=1&per_page=12`);
+    assertStatus(res, 200, 'People');
+    const data = res.json();
+    assertArray(data, 'users', 'People users');
+    assertField(data, 'total', 'People total');
+    assert(data.users.length <= 12, 'people page size');
+    assert(data.total > 12, `people volume for Show more, total=${data.total}`);
   });
 
   await test('POST /community/posts creates a post', async () => {
@@ -769,7 +863,8 @@ async function runCommunityTests(authToken) {
       const res = await request(`${API_BASE}/community/posts/${postId}`);
       assertStatus(res, 200, 'Post detail');
       const data = res.json();
-      assertField(data, 'id', 'Post detail id');
+      const post = data.post || data;
+      assertField(post, 'id', 'Post detail id');
       assertArray(data, 'comments', 'Post comments');
     }
   });
@@ -869,11 +964,12 @@ async function runCouponTests() {
 async function runBundleTests() {
   section('Bundles');
 
-  await test('GET /bundles returns bundle list', async () => {
+  await test('GET /bundles returns several bundles', async () => {
     const res = await request(`${API_BASE}/bundles`);
     assertStatus(res, 200, 'Bundles list');
     const data = res.json();
     assertArray(data, 'bundles', 'Bundles');
+    assert(data.bundles.length >= 3, `bundle volume, got ${data.bundles.length}`);
   });
 
   await test('GET /bundles/:id returns bundle detail', async () => {
@@ -884,8 +980,9 @@ async function runBundleTests() {
       const res = await request(`${API_BASE}/bundles/${bundleId}`);
       assertStatus(res, 200, 'Bundle detail');
       const data = res.json();
-      assertField(data, 'title', 'Bundle title');
-      assertArray(data, 'products', 'Bundle products');
+      const bundle = data.bundle || data;
+      assertField(bundle, 'title', 'Bundle title');
+      assert(bundle.items != null || Array.isArray(bundle.products), 'Bundle items');
     }
   });
 }
@@ -1025,6 +1122,11 @@ async function runRecommendationTests() {
         assert(Array.isArray(data.products), 'Recommended products should be array');
       }
     }
+  });
+
+  await test('GET /recommendations/:productId 404s for a missing product', async () => {
+    const res = await request(`${API_BASE}/recommendations/999999999`);
+    assertStatus(res, 404, 'Missing recommendations');
   });
 }
 
@@ -1252,12 +1354,13 @@ async function runAdminTests() {
     assertArray(data, 'coupons', 'Admin coupons array');
   });
 
-  await test('POST /admin/coupons creates coupon', async () => {
+  await test('POST /admin/coupons creates coupon that checkout can validate', async () => {
+    const code = `E2E${Date.now()}`;
     const res = await request(`${API_ROOT}/api/v1/admin/coupons`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${ADMIN_TOKEN}`, 'content-type': 'application/json' },
       body: JSON.stringify({
-        code: `E2E${Date.now()}`,
+        code,
         discount_type: 'percentage',
         discount_value: 10,
         expires_at: '2027-12-31',
@@ -1267,6 +1370,13 @@ async function runAdminTests() {
       }),
     });
     assertStatus(res, 201, 'Create coupon');
+    const val = await request(`${API_BASE}/coupons/validate`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code, cart_total: 50 }),
+    });
+    assertStatus(val, 200, 'Validate admin-created coupon');
+    assert(val.json().valid === true, 'created coupon should be valid at checkout');
   });
 
   section('Admin - Orders');
@@ -1294,6 +1404,81 @@ async function runAdminTests() {
       });
       assert(res.status === 200 || res.status === 400, `Unexpected status ${res.status}`);
     }
+  });
+
+  await test('GET /admin/order-steps lists the pipeline', async () => {
+    const res = await request(`${API_ROOT}/api/v1/admin/order-steps`, {
+      headers: { Authorization: `Bearer ${ADMIN_TOKEN}` },
+    });
+    assertStatus(res, 200, 'Order steps');
+    const data = res.json();
+    assertArray(data, 'steps', 'Pipeline steps');
+    const slugs = (data.steps || []).map((s) => s.slug);
+    assert(slugs.indexOf('awaiting_payment') >= 0, 'waiting-for-payment step');
+    assert(slugs.indexOf('paid') >= 0, 'paid step');
+    assert(slugs.indexOf('preparation') >= 0, 'preparation step');
+    assert(slugs.indexOf('delivered') >= 0, 'delivered step');
+  });
+
+  await test('GET /admin/orders?status= filters by pipeline slug', async () => {
+    const res = await request(`${API_ROOT}/api/v1/admin/orders?status=paid`, {
+      headers: { Authorization: `Bearer ${ADMIN_TOKEN}` },
+    });
+    assertStatus(res, 200, 'Filter orders');
+    const data = res.json();
+    assertArray(data, 'orders', 'Filtered orders');
+    assertArray(data, 'by_step', 'by_step counts');
+    (data.orders || []).forEach((o) => {
+      assert(o.status === 'paid', `expected paid, got ${o.status}`);
+    });
+  });
+
+  await test('PUT /admin/orders/:id/status rejects unknown steps', async () => {
+    const listRes = await request(`${API_ROOT}/api/v1/admin/orders`, {
+      headers: { Authorization: `Bearer ${ADMIN_TOKEN}` },
+    });
+    const orders = listRes.json().orders || [];
+    if (!orders.length) return;
+    const res = await request(`${API_ROOT}/api/v1/admin/orders/${orders[0].id}/status`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${ADMIN_TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ status: 'not_a_real_step' }),
+    });
+    assertStatus(res, 400, 'Unknown step');
+  });
+
+  await test('POST /admin/order-steps then DELETE the custom step', async () => {
+    const label = 'OpsQA ' + Date.now();
+    const created = await request(`${API_ROOT}/api/v1/admin/order-steps`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${ADMIN_TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ label }),
+    });
+    assert(created.status === 201 || created.status === 409, `create step ${created.status}`);
+    const listed = await request(`${API_ROOT}/api/v1/admin/order-steps`, {
+      headers: { Authorization: `Bearer ${ADMIN_TOKEN}` },
+    });
+    const hit = (listed.json().steps || []).find((s) => s.label === label || s.slug && s.slug.indexOf('opsqa') === 0);
+    if (hit && !hit.is_system) {
+      const del = await request(`${API_ROOT}/api/v1/admin/order-steps/${hit.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${ADMIN_TOKEN}` },
+      });
+      assertStatus(del, 200, 'Delete custom step');
+    }
+  });
+
+  await test('DELETE /admin/order-steps rejects system steps', async () => {
+    const listed = await request(`${API_ROOT}/api/v1/admin/order-steps`, {
+      headers: { Authorization: `Bearer ${ADMIN_TOKEN}` },
+    });
+    const sys = (listed.json().steps || []).find((s) => s.is_system);
+    assert(sys, 'need a system step');
+    const del = await request(`${API_ROOT}/api/v1/admin/order-steps/${sys.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${ADMIN_TOKEN}` },
+    });
+    assertStatus(del, 400, 'System step delete');
   });
 
   section('Admin - Community');
@@ -1344,6 +1529,7 @@ async function runAdminTests() {
     assertField(data, 'total_users', 'Total users');
     assertField(data, 'total_orders', 'Total orders');
     assertField(data, 'total_revenue', 'Total revenue');
+    assertArray(data, 'order_by_step', 'Orders by step');
   });
 
   section('Admin - Settings');
@@ -1406,6 +1592,223 @@ async function runAdminTests() {
   });
 }
 
+async function runAppearanceAndRbacTests() {
+  section('Appearance');
+
+  await test('GET /products/appearance is public', async () => {
+    const res = await request(`${API_BASE}/products/appearance`);
+    assertStatus(res, 200, 'Appearance');
+    const data = res.json();
+    assertField(data, 'palette', 'palette');
+    assertField(data, 'font', 'font');
+    assertField(data, 'radius', 'radius');
+    assertField(data, 'density', 'density');
+  });
+
+  await test('PUT /products/appearance accepts admin token', async () => {
+    const cur = await request(`${API_BASE}/products/appearance`);
+    const body = Object.assign({ palette: 'clay', font: 'system', radius: 'soft', density: 'comfortable' }, cur.json());
+    const res = await request(`${API_BASE}/products/appearance`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${ADMIN_TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    assertStatus(res, 200, 'Save appearance');
+  });
+
+  section('RBAC - roles and operator token');
+
+  const nia = await request(`${API_BASE}/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'nia@example.com', password: 'nia' }),
+  });
+  const leo = await request(`${API_BASE}/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'leo@example.com', password: 'leo' }),
+  });
+  const maya = await request(`${API_BASE}/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'maya@example.com', password: 'maya' }),
+  });
+
+  await test('Nia login is admin', async () => {
+    assertStatus(nia, 200, 'Nia login');
+    assert(nia.json().user.role === 'admin', 'Nia should be admin');
+  });
+
+  await test('Leo login is staff', async () => {
+    assertStatus(leo, 200, 'Leo login');
+    assert(leo.json().user.role === 'staff', 'Leo should be staff');
+  });
+
+  await test('Maya customer cannot hit admin stats', async () => {
+    assertStatus(maya, 200, 'Maya login');
+    const res = await request(`${API_ROOT}/api/v1/admin/stats`, {
+      headers: { Authorization: `Bearer ${maya.json().token}` },
+    });
+    assert(res.status === 403, `customer stats ${res.status}`);
+  });
+
+  await test('Staff JWT can use assigned tabs without operator token', async () => {
+    const products = await request(`${API_ROOT}/api/v1/admin/products`, {
+      headers: { Authorization: `Bearer ${leo.json().token}` },
+    });
+    assertStatus(products, 200, 'Staff products');
+    const steps = await request(`${API_ROOT}/api/v1/admin/order-steps`, {
+      headers: { Authorization: `Bearer ${leo.json().token}` },
+    });
+    assertStatus(steps, 200, 'Staff order-steps read via Orders tab');
+    const write = await request(`${API_ROOT}/api/v1/admin/order-steps`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${leo.json().token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ label: 'ShouldFail' }),
+    });
+    assert(write.status === 403, `staff step write ${write.status}`);
+  });
+
+  await test('Staff JWT is denied unassigned tabs', async () => {
+    const res = await request(`${API_ROOT}/api/v1/admin/stats`, {
+      headers: { Authorization: `Bearer ${leo.json().token}` },
+    });
+    assert(res.status === 403, `staff stats ${res.status}`);
+  });
+
+  await test('Admin JWT can use the desk without operator token', async () => {
+    const res = await request(`${API_ROOT}/api/v1/admin/stats`, {
+      headers: { Authorization: `Bearer ${nia.json().token}` },
+    });
+    assertStatus(res, 200, 'Admin JWT stats');
+  });
+
+  await test('Changing access without operator token is forbidden', async () => {
+    const list = await request(`${API_ROOT}/api/v1/admin/users`, {
+      headers: { Authorization: `Bearer ${nia.json().token}` },
+    });
+    assertStatus(list, 200, 'Admin users via JWT');
+    const staff = (list.json().users || []).find((u) => u.email === 'leo@example.com');
+    assert(staff, 'leo exists');
+    const res = await request(`${API_ROOT}/api/v1/admin/users/${staff.id}/access`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${nia.json().token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ role: 'staff', staff_tabs: ['Products', 'Banner', 'Orders', 'Community'] }),
+    });
+    assert(res.status === 403, `access without operator ${res.status}`);
+  });
+
+  await test('Changing access with admin JWT plus X-Admin-Token succeeds', async () => {
+    const list = await request(`${API_ROOT}/api/v1/admin/users`, {
+      headers: { Authorization: `Bearer ${nia.json().token}` },
+    });
+    const staff = (list.json().users || []).find((u) => u.email === 'leo@example.com');
+    const res = await request(`${API_ROOT}/api/v1/admin/users/${staff.id}/access`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${nia.json().token}`,
+        'X-Admin-Token': ADMIN_TOKEN,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ role: 'staff', staff_tabs: ['Products', 'Banner', 'Orders', 'Community'] }),
+    });
+    assertStatus(res, 200, 'Access with operator token');
+  });
+
+  await test('Customer JWT cannot write appearance', async () => {
+    const res = await request(`${API_BASE}/products/appearance`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${maya.json().token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ palette: 'night', font: 'system', radius: 'soft', density: 'comfortable' }),
+    });
+    assert(res.status === 403, `customer appearance ${res.status}`);
+  });
+
+  await test('Admin users list includes role', async () => {
+    const list = await request(`${API_ROOT}/api/v1/admin/users`, {
+      headers: { Authorization: `Bearer ${nia.json().token}` },
+    });
+    assertStatus(list, 200, 'Users list');
+    const leoRow = (list.json().users || []).find((u) => u.email === 'leo@example.com');
+    assert(leoRow && leoRow.role === 'staff', 'leo role on users list');
+  });
+
+  await test('Staff cannot change access even with operator header', async () => {
+    const list = await request(`${API_ROOT}/api/v1/admin/users`, {
+      headers: { Authorization: `Bearer ${nia.json().token}` },
+    });
+    const owen = (list.json().users || []).find((u) => u.email === 'owen@example.com');
+    const res = await request(`${API_ROOT}/api/v1/admin/users/${owen.id}/access`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${leo.json().token}`,
+        'X-Admin-Token': ADMIN_TOKEN,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ role: 'staff', staff_tabs: ['Products'] }),
+    });
+    assert(res.status === 403, `staff access ${res.status}`);
+  });
+}
+
+async function runEventsTests() {
+  section('Events collector');
+
+  await test('POST /events accepts product_view', async () => {
+    const res = await request(`${API_BASE}/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'product_view',
+        session_id: 'e2e-session',
+        path: '/product/lunar-clay-characters',
+        properties: { product_id: 1 },
+      }),
+    });
+    assert(res.status === 202 || res.status === 200, `ingest ${res.status}`);
+  });
+
+  await test('POST /events accepts checkout_click', async () => {
+    const res = await request(`${API_BASE}/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'checkout_click',
+        session_id: 'e2e-session',
+        path: '/cart',
+        properties: { item_count: 1 },
+      }),
+    });
+    assert(res.status === 202 || res.status === 200, `ingest checkout_click ${res.status}`);
+  });
+
+  await test('POST /events rejects unknown names', async () => {
+    const res = await request(`${API_BASE}/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'page_view' }),
+    });
+    assertStatus(res, 400, 'unknown event');
+  });
+
+  await test('GET /admin/events/ttl is readable', async () => {
+    const res = await request(`${API_ROOT}/api/v1/admin/events/ttl`, {
+      headers: { Authorization: `Bearer ${ADMIN_TOKEN}` },
+    });
+    assertStatus(res, 200, 'events ttl');
+    const data = res.json();
+    assert(typeof data.seconds === 'number', 'ttl seconds');
+  });
+
+  await test('GET /admin/events lists stored events', async () => {
+    const res = await request(`${API_ROOT}/api/v1/admin/events?limit=5`, {
+      headers: { Authorization: `Bearer ${ADMIN_TOKEN}` },
+    });
+    assertStatus(res, 200, 'admin events');
+    assertArray(res.json(), 'events', 'events array');
+  });
+}
+
 // ============================================================
 // MAIN RUNNER
 // ============================================================
@@ -1436,6 +1839,8 @@ async function main() {
   await runCompareTests(authToken);
   await runRecommendationTests();
   await runAdminTests();
+  await runAppearanceAndRbacTests();
+  await runEventsTests();
 
   console.log('\n╔══════════════════════════════════════════════════════════╗');
   console.log('║  RESULTS                                                ║');

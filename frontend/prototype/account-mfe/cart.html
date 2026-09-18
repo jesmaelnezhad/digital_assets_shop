@@ -15,6 +15,7 @@
   <script src="../shared/mock-api.js"></script>
   <script src="../shared/api-client.js"></script>
   <script src="../shared/ui.js"></script>
+  <script src="../shared/events.js"></script>
   <script src="../shared/chrome.js"></script>
   <script>
     async function render() {
@@ -32,15 +33,19 @@
         }
         const sub = items.reduce((n, i) => n + i.unit * (i.quantity || 1), 0);
         root.innerHTML = PawUI.accountNav("cart") + `<div class="kicker">Account</div><h1 class="page-title">Cart</h1>
-          <table class="table"><thead><tr><th>Asset</th><th>Qty</th><th>Line</th><th></th></tr></thead>
+          <div class="table-wrap"><table class="table"><thead><tr><th>Asset</th><th>Qty</th><th>Line</th><th></th></tr></thead>
           <tbody>${items.map((i) => `<tr>
             <td>${PawUI.esc((i.product && i.product.title) || ("#"+i.product_id))}</td>
             <td><input class="qty" type="number" min="1" value="${i.quantity}" data-qty="${i.id}" /></td>
             <td class="price">${PawUI.money(i.unit * i.quantity)}</td>
             <td><button class="btn" data-rm="${i.id}">Remove</button></td>
-          </tr>`).join("")}</tbody></table>
+          </tr>`).join("")}</tbody></table></div>
           <p style="margin:20px 0;text-align:right" class="price">Subtotal ${PawUI.money(sub)}</p>
-          <a class="btn btn-accent" href="../checkout-mfe/index.html">Checkout</a>`;
+          <a class="btn btn-accent" href="../checkout-mfe/index.html" id="go-checkout">Checkout</a>`;
+        const go = document.getElementById("go-checkout");
+        if (go) go.addEventListener("click", () => {
+          if (window.PawEvents) PawEvents.track("checkout_click", { item_count: items.length, subtotal: sub });
+        });
         root.querySelectorAll("[data-rm]").forEach((b) => b.onclick = async () => { await Pawradise.api.cart.remove(b.dataset.rm); PawChrome.mount(); render(); });
         root.querySelectorAll("[data-qty]").forEach((inp) => inp.onchange = async () => {
           try { await Pawradise.api.cart.setQty(inp.dataset.qty, Number(inp.value)); PawChrome.mount(); render(); }

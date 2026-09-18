@@ -2,11 +2,15 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pawradise/shared/auth"
+	"github.com/pawradise/shared/middleware"
 )
 
 func (h *AdminHandler) ensureExtras() {
@@ -26,6 +30,8 @@ func (h *AdminHandler) ensureExtras() {
 func (h *AdminHandler) UseCommerceDB(db *sql.DB) {
 	if db != nil {
 		h.commerceDB = db
+		h.stepsReady = false
+		h.ensureOrderSteps()
 	}
 }
 
@@ -216,4 +222,58 @@ func (h *AdminHandler) ListAdminCategories(c *gin.Context) {
 		cats = []gin.H{}
 	}
 	c.JSON(http.StatusOK, gin.H{"categories": cats})
+}
+
+func (h *AdminHandler) SetUserAccess(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+	var req struct {
+		Role      string          `json:"role"`
+		StaffTabs json.RawMessage `json:"staff_tabs"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	role := auth.NormalizeRole(req.Role)
+	tabs := ""
+	if role == "staff" {
+		parsed := []string{}
+		if len(req.StaffTabs) > 0 && string(req.StaffTabs) != "null" {
+			if req.StaffTabs[0] == '[' {
+				_ = json.Unmarshal(req.StaffTabs, &parsed)
+			} else {
+				var s string
+				if json.Unmarshal(req.StaffTabs, &s) == nil {
+					parsed = strings.Split(s, ",")
+				}
+			}
+		}
+		tabs = middleware.JoinTabs(parsed)
+	}
+
+	var current string
+	if err := h.identityDB.QueryRow(`SELECT COALESCE(role,'customer') FROM users WHERE id=$1`, id).Scan(&current); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+	current = auth.NormalizeRole(current)
+	if current == "admin" && role != "admin" {
+		var n int
+		_ = h.identityDB.QueryRow(`SELECT COUNT(*) FROM users WHERE role='admin'`).Scan(&n)
+		if n <= 1 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "cannot demote the last admin"})
+			return
+		}
+	}
+
+	_, err = h.identityDB.Exec(`UPDATE users SET role=$1, staff_tabs=$2, updated_at=NOW() WHERE id=$3`, role, tabs, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update access"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"id": id, "role": role, "staff_tabs": tabs, "message": "access updated"})
 }

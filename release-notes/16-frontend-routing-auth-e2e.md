@@ -39,7 +39,9 @@ leaked to production, no product detail pages, and no UI path created an order.
 - 008_create_settings.sql — settings KV, seeded payment_address placeholder
 - 009_invalidate_tokens.sql — JWT blocklist + expiry index
 
-## E2E (curl-based, BLUE -> RED, all passing both envs)
+## E2E (curl-based, BLUE -> RED)
+
+Current pass/fail counts live in [`../tests/REPORT.md`](../tests/REPORT.md). Historical customer-journeys.sh / admin-ops.sh scripts are not the live suite.
 
 - e2e/common.sh — shared harness (HTTP_CODE/BODY globals, assertions)
 - e2e/customer-journeys.sh — C01..C20: register/login/profile, browse,

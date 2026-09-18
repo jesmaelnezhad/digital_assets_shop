@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node e2e-suite.js",
     "test:e2e": "node e2e-suite.js",
-    "test:e2e:playwright": "playwright test"
+    "test:e2e:playwright": "playwright test --config playwright.config.cjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0"

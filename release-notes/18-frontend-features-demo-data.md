@@ -53,9 +53,7 @@ Applied refined demo seed scripts (`backend/seeds/staging_demo_part1.sql`, `back
 
 ## Verification
 
-### e2e tests (staging) — all passing
-- customer-journeys.sh: **40 passed, 0 failed**
-- admin-ops.sh: **37 passed, 0 failed**
+Current pass/fail counts live in [`../tests/REPORT.md`](../tests/REPORT.md).
 
 ### Frontend page HTTP status (staging + production)
 All 9 pages return 200 with correct titles on both environments:

@@ -6,8 +6,9 @@
 >
 > Live services expose public `/api/v1/*` (the `/internal/v1` names below were
 > never implemented). There is no Shell MFE — seven Alpine HTML apps duplicate
-> chrome. Admin currently copies other services’ tables; events in
-> `services/shared/events` are not published from handlers.
+> chrome. Admin currently copies other services’ tables; the `services/shared/events`
+> bus is still unpublished from most handlers. Frontend collector events go to
+> **events-service** + MongoDB (`product_view`, `checkout_click`), not that bus.
 
 ---
 
@@ -79,6 +80,7 @@ implemented**. Do not add a rewrite layer; keep `/api/v1` on each service.
 | 6 | Payment Service | Payments, exchange rates | 8086 | payment_db |
 | 7 | Admin Service | Admin operations, stats, settings | 8087 | admin_db |
 | 8 | Media Service | File storage, image processing | 8088 | — (PV) |
+| 9 | Events Service | Frontend event ingest, TTL | 8089 | MongoDB `events` |
 
 ### 2.2 Service Detail: Identity Service
 
@@ -346,6 +348,29 @@ implemented**. Do not add a rewrite layer; keep `/api/v1` on each service.
 - Files on PersistentVolume
 - Image metadata references stored in Product Service
 
+### 2.10 Service Detail: Events Service
+
+**Responsibilities:**
+- Ingest frontend analytics events into MongoDB
+- Enforce an allowlist of event names (`product_view`, `checkout_click` for now)
+- Apply a configurable TTL (default 1 hour, set from admin Events tab)
+- List recent events for the admin desk
+
+**API routes (public `/api/v1`):**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | /api/v1/events | Ingest one event (optional JWT). 202. Unknown name 400. |
+| GET | /api/v1/admin/events | List recent events (`name`, `limit`) |
+| GET | /api/v1/admin/events/ttl | Read TTL seconds/hours |
+| PUT | /api/v1/admin/events/ttl | Set TTL (`seconds` or `hours`). Clamped 60s–30d. |
+
+**Data Ownership:**
+- MongoDB database `events` (collections `events`, `meta`)
+- One Mongo instance for staging and production for now, same sharing pattern as Postgres
+
+**Ingress:** `/api/v1/admin/events` must be registered **before** `/api/v1/admin`.
+
 ---
 
 ## 3. Microfrontends
@@ -512,6 +537,7 @@ instance. Cross-service data access is via **API calls**, not JOINs.
 | Review Service | review_db | reviews |
 | Payment Service | payment_db | exchange_rates |
 | Admin Service | admin_db | settings |
+| Events Service | MongoDB `events` (shared instance) | events, meta (TTL) |
 
 ### 5.2 Cross-Service Data Consistency
 
@@ -541,6 +567,7 @@ production namespace
 ├── payment-service (deployment, NodePort 8086)
 ├── admin-service (deployment, NodePort 8087)
 ├── media-service (deployment, NodePort 8088)
+├── events-service (deployment, port 8089)
 ├── shell-mfe (deployment, nginx:alpine, NodePort 80:30084)
 ├── shop-mfe (deployment, nginx:alpine, NodePort 80:30085)
 ├── product-mfe (deployment, nginx:alpine, NodePort 80:30086)
@@ -553,7 +580,7 @@ production namespace
 
 ### 6.2 Resource Constraints
 
-Total backend: 8 services × 2 namespaces. Frontend: **7** MFE deployments per namespace (no Shell). `k8s/shell-mfe-deployment.yaml` is leftover — do not treat it as a running app.
+Total backend: 9 services × 2 namespaces (events-service uses the shared Mongo instance). Frontend: **7** MFE deployments per namespace (no Shell). `k8s/shell-mfe-deployment.yaml` is leftover — do not treat it as a running app.
 
 ---
 
@@ -610,6 +637,8 @@ tests/
       settings_test.go
     media-service/
       upload_test.go
+    events-service/
+      handlers_test.go
       download_test.go
       image_processing_test.go
   integration/

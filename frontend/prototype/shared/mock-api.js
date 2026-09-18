@@ -8,6 +8,10 @@
   const realFetch = global.fetch ? global.fetch.bind(global) : null;
   const TOKEN_KEY = "pawradise_proto_token";
   const ADMIN_TOKENS = ["admin_secret_staging_2026", "studio-admin"];
+  let currentMethod = "GET";
+  let currentPath = "";
+
+  const eventLog = { ttl: 3600, rows: [] };
 
   function json(status, body) {
     return new Response(body == null ? "" : JSON.stringify(body), {
@@ -45,10 +49,51 @@
     return null;
   }
 
+  function operatorUnlocked(init, input) {
+    const t = bearer(init, input);
+    const x = headersOf(init, input)["x-admin-token"] || "";
+    if (ADMIN_TOKENS.indexOf(t) >= 0 || ADMIN_TOKENS.indexOf(x) >= 0) return true;
+    return !!Paw.isAdmin();
+  }
+
+  function tabForPath(method, path) {
+    const p = String(path || "").toLowerCase();
+    const m = String(method || "GET").toUpperCase();
+    if (p.indexOf("/products/appearance") >= 0 || /\/appearance$/.test(p)) return "Appearance";
+    if (p.indexOf("/products/banner") >= 0) return "Banner";
+    if (p.indexOf("/admin/product-requests") >= 0) return "Requests";
+    if (p.indexOf("/admin/guest") >= 0) return "Guest";
+    if (p.indexOf("/admin/order-steps") >= 0) return m === "GET" ? "OrderStepsRead" : "Steps";
+    if (p.indexOf("/admin/orders") >= 0) return "Orders";
+    if (p.indexOf("/admin/community") >= 0) return "Community";
+    if (p.indexOf("/admin/referrals") >= 0) return "Referrals";
+    if (p.indexOf("/exchange-rates") >= 0) return "Rates";
+    if (p.indexOf("/admin/coupons") >= 0) return "Coupons";
+    if (p.indexOf("/admin/bundles") >= 0 || (p.indexOf("/bundles") >= 0 && m !== "GET")) return "Bundles";
+    if (p.indexOf("/admin/categories") >= 0 || (p.indexOf("/categories") >= 0 && m !== "GET")) return "Categories";
+    if (p.indexOf("/admin/export") >= 0) return "Export";
+    if (p.indexOf("/admin/stats") >= 0 || p.indexOf("/products/stats") >= 0) return "Stats";
+    if (p.indexOf("/admin/users") >= 0) return "Users";
+    if (p.indexOf("/admin/settings") >= 0) {
+      if (m === "GET") return "SettingsRead";
+      return "Settings";
+    }
+    if (p.indexOf("/admin/products") >= 0 || (p.indexOf("/products") >= 0 && m !== "GET")) return "Products";
+    return "";
+  }
+
+  function staffHas(u, want) {
+    const tabs = String((u && u.staff_tabs) || "").split(",").map((s) => s.trim()).filter(Boolean);
+    if (want === "SettingsRead") return tabs.some((t) => t === "Settings" || t === "SEO" || t === "Appearance");
+    if (want === "OrderStepsRead") return tabs.indexOf("Orders") >= 0 || tabs.indexOf("Steps") >= 0;
+    return tabs.indexOf(want) >= 0;
+  }
+
   function isAdmin(init, input) {
     const t = bearer(init, input);
     if (ADMIN_TOKENS.indexOf(t) >= 0) return true;
-    return !!Paw.isAdmin();
+    const u = authUser(init, input);
+    return !!(u && (u.role === "admin" || u.role === "staff"));
   }
 
   function needUser(init, input) {
@@ -58,9 +103,24 @@
     return u;
   }
   function needAdmin(init, input) {
-    if (!isAdmin(init, input)) throw Object.assign(new Error("Admin authorization required"), { status: 401 });
-    if (!Paw.isAdmin()) {
-      try { Paw.adminUnlock(bearer(init, input) || "studio-admin"); } catch (e) { /* ignore */ }
+    const t = bearer(init, input);
+    if (ADMIN_TOKENS.indexOf(t) >= 0) return;
+    const u = authUser(init, input);
+    if (!u) throw Object.assign(new Error("unauthorized"), { status: 401, code: 401 });
+    if (Paw.adoptSession) Paw.adoptSession(u.id);
+    const role = u.role === "admin" || u.role === "staff" ? u.role : "customer";
+    if (role === "customer") throw Object.assign(new Error("Staff or admin access required"), { status: 403 });
+    const privileged = /\/admin\/users\/\d+\/(access|role)$/.test(currentPath || "");
+    if (privileged) {
+      if (role !== "admin" || !operatorUnlocked(init, input)) {
+        throw Object.assign(new Error("Operator token required"), { status: 403 });
+      }
+      return;
+    }
+    if (role === "admin") return;
+    const tab = tabForPath(currentMethod, currentPath);
+    if (!staffHas(u, tab)) {
+      throw Object.assign(new Error("This section is not assigned to your account"), { status: 403 });
     }
   }
 
@@ -187,7 +247,7 @@
 
   function userPublic(u, withTimes) {
     if (!u) return null;
-    const out = { id: u.id, email: u.email, name: u.name };
+    const out = { id: u.id, email: u.email, name: u.name, role: u.role || "customer", staff_tabs: u.staff_tabs || "" };
     if (withTimes) {
       out.created_at = "2026-01-01T00:00:00Z";
       out.updated_at = "2026-01-01T00:00:00Z";
@@ -334,6 +394,8 @@
     const p = parts.slice(2);
     const seg = (i) => p[i] || "";
     const M = method.toUpperCase();
+    currentMethod = M;
+    currentPath = path;
 
     if (M === "GET" && (path === "/api/v1/health" || path === "/health")) {
       return json(200, { status: "ok", service: "prototype-mock" });
@@ -343,17 +405,17 @@
     if (M === "POST" && path === "/api/v1/register") {
       const b = bodyOf(init);
       const u = Paw.register({ name: b.name, email: b.email, password: b.password, referral: b.referral_code });
-      const token = "mock." + u.id + ".user";
-      localStorage.setItem(TOKEN_KEY, token);
       const full = Paw.db().users.find((x) => x.id === u.id);
+      const token = "mock." + u.id + "." + ((full && full.role) || "customer");
+      localStorage.setItem(TOKEN_KEY, token);
       return json(201, { user: userPublic(full, true), token });
     }
     if (M === "POST" && path === "/api/v1/login") {
       const b = bodyOf(init);
       const pub = Paw.login(b.email, b.password);
-      const token = "mock." + pub.id + ".user";
-      localStorage.setItem(TOKEN_KEY, token);
       const u = Paw.db().users.find((x) => x.id === pub.id);
+      const token = "mock." + pub.id + "." + ((u && u.role) || "customer");
+      localStorage.setItem(TOKEN_KEY, token);
       return json(200, { user: userPublic(u, false), token });
     }
     if (M === "POST" && path === "/api/v1/logout") {
@@ -416,6 +478,9 @@
     }
 
     // ---- products ----
+    if (M === "GET" && path === "/api/v1/products/appearance") {
+      return json(200, Paw.appearance());
+    }
     if (M === "GET" && path === "/api/v1/products") {
       const res = Paw.listProducts({
         search: q.search || q.q,
@@ -426,7 +491,8 @@
         price_max: q.price_max,
         file_type: q.file_type,
         page: q.page,
-        per_page: q.per_page || 20
+        per_page: q.per_page || 20,
+        banner: q.banner
       });
       return json(200, {
         products: res.products.map((x) => productJSON(x)),
@@ -434,6 +500,16 @@
         page: res.page,
         per_page: res.per_page
       });
+    }
+    if (M === "PUT" && path === "/api/v1/products/appearance") {
+      needAdmin(init, input);
+      return json(200, Paw.saveAppearance(bodyOf(init)));
+    }
+    if (M === "PUT" && path === "/api/v1/products/banner") {
+      needAdmin(init, input);
+      const ids = bodyOf(init).product_ids || [];
+      Paw.setBanner(ids);
+      return json(200, { message: "banner updated", product_ids: ids });
     }
     if (M === "GET" && seg(0) === "products" && seg(2) === "tiers") {
       const prod = Paw.products.find((x) => x.id === Number(seg(1))) || Paw.getProduct(seg(1));
@@ -586,6 +662,31 @@
       const before = Paw.db().compare.includes(id);
       Paw.toggleCompare(id);
       return json(200, { message: before ? "removed from compare" : "added to compare" });
+    }
+
+    if (M === "POST" && path === "/api/v1/events") {
+      const b = bodyOf(init);
+      if (b.name !== "product_view" && b.name !== "checkout_click") return err(400, "unknown event");
+      eventLog.rows.unshift({
+        id: String(eventLog.rows.length + 1),
+        name: b.name,
+        session_id: b.session_id || "",
+        path: b.path || "",
+        properties: b.properties || {},
+        occurred_at: b.occurred_at || new Date().toISOString(),
+        received_at: new Date().toISOString(),
+        expire_at: new Date(Date.now() + eventLog.ttl * 1000).toISOString()
+      });
+      return json(202, { ok: true, name: b.name });
+    }
+    if (path === "/api/v1/admin/events/ttl") {
+      if (M === "GET") return json(200, { seconds: eventLog.ttl, hours: eventLog.ttl / 3600 });
+      const b = bodyOf(init);
+      eventLog.ttl = Math.max(60, Number(b.seconds || b.hours * 3600) || 3600);
+      return json(200, { seconds: eventLog.ttl, hours: eventLog.ttl / 3600 });
+    }
+    if (M === "GET" && path === "/api/v1/admin/events") {
+      return json(200, { events: eventLog.rows.slice(0, Number(q.limit) || 20), total: eventLog.rows.length });
     }
 
     if (M === "POST" && path === "/api/v1/coupons/validate") {
@@ -820,13 +921,23 @@
           users = users.filter((u) => ((u.name || "") + " " + (u.bio || "") + " " + (u.email || "")).toLowerCase().includes(s));
         }
         users.sort((a, b) => (b.follower_count || 0) - (a.follower_count || 0));
-        return json(200, { users, total: users.length });
+        const page = Math.max(1, Number(q.page) || 1);
+        const perPage = Math.min(50, Math.max(1, Number(q.per_page) || 12));
+        const total = users.length;
+        const slice = users.slice((page - 1) * perPage, page * perPage);
+        return json(200, { users: slice, total, page, per_page: perPage });
       }
       if (M === "GET" && rest[0] === "users" && rest[2] === "followers") {
-        return json(200, { users: Paw.listFollowers(rest[1]).map((x) => memberJSON(x)), total: Paw.listFollowers(rest[1]).length });
+        const all = Paw.listFollowers(rest[1]).map((x) => memberJSON(x));
+        const page = Math.max(1, Number(q.page) || 1);
+        const perPage = Math.min(50, Math.max(1, Number(q.per_page) || 12));
+        return json(200, { users: all.slice((page-1)*perPage, page*perPage), total: all.length, page, per_page: perPage });
       }
       if (M === "GET" && rest[0] === "users" && rest[2] === "following") {
-        return json(200, { users: Paw.listFollowing(rest[1]).map((x) => memberJSON(x)), total: Paw.listFollowing(rest[1]).length });
+        const all = Paw.listFollowing(rest[1]).map((x) => memberJSON(x));
+        const page = Math.max(1, Number(q.page) || 1);
+        const perPage = Math.min(50, Math.max(1, Number(q.per_page) || 12));
+        return json(200, { users: all.slice((page-1)*perPage, page*perPage), total: all.length, page, per_page: perPage });
       }
       if (M === "GET" && rest[0] === "users" && rest[1] && !rest[2]) {
         const u = Paw.profile(rest[1]);
@@ -943,8 +1054,11 @@
     // ---- admin ----
     if (seg(0) === "admin") {
       needAdmin(init, input);
-      if (!Paw.isAdmin()) {
-        try { Paw.adminUnlock("studio-admin"); } catch (e) { /* ignore */ }
+
+      if (M === "PUT" && seg(1) === "users" && seg(3) === "access") {
+        const b = bodyOf(init);
+        const saved = Paw.setUserAccess(seg(2), b.role, b.staff_tabs);
+        return json(200, Object.assign({ message: "access updated" }, saved));
       }
 
       if (M === "GET" && (path === "/api/v1/admin/stats" || path === "/api/v1/admin/products/stats")) {
@@ -960,7 +1074,8 @@
           total_downloads: s.downloads,
           revenue_daily: s.revenue_daily,
           top_products: s.top_products,
-          conversions: s.conversions
+          conversions: s.conversions,
+          order_by_step: s.order_by_step || []
         });
       }
       if (M === "GET" && path === "/api/v1/admin/users") {
@@ -1032,6 +1147,16 @@
         });
         return json(201, { id: Paw.db().nextIds.product - 1, message: "product created" });
       }
+      if (M === "PUT" && ((seg(0) === "products" && seg(1) === "appearance") || (seg(1) === "products" && seg(2) === "appearance"))) {
+        needAdmin(init, input);
+        return json(200, Paw.saveAppearance(bodyOf(init)));
+      }
+      if (M === "PUT" && ((seg(0) === "products" && seg(1) === "banner") || (seg(1) === "products" && seg(2) === "banner"))) {
+        needAdmin(init, input);
+        const ids = bodyOf(init).product_ids || [];
+        Paw.setBanner(ids);
+        return json(200, { message: "banner updated", product_ids: ids });
+      }
       if (M === "PUT" && seg(1) === "products" && seg(2) && !seg(3)) {
         const b = bodyOf(init);
         Paw.saveProduct({
@@ -1102,13 +1227,41 @@
         Paw.archiveProduct(seg(2));
         return json(200, { message: "product deleted" });
       }
+      if (M === "GET" && path === "/api/v1/admin/order-steps") {
+        return json(200, { steps: Paw.listOrderSteps() });
+      }
+      if (M === "POST" && path === "/api/v1/admin/order-steps") {
+        const s = Paw.createOrderStep(bodyOf(init).label);
+        return json(201, s);
+      }
+      if (M === "PUT" && path === "/api/v1/admin/order-steps") {
+        return json(200, { steps: Paw.saveOrderSteps(bodyOf(init).steps || []) });
+      }
+      if (M === "PUT" && seg(1) === "order-steps" && seg(2) && !seg(3)) {
+        Paw.renameOrderStep(seg(2), bodyOf(init).label);
+        return json(200, { id: Number(seg(2)), label: bodyOf(init).label });
+      }
+      if (M === "DELETE" && seg(1) === "order-steps" && seg(2)) {
+        Paw.deleteOrderStep(seg(2));
+        return json(200, { message: "step deleted" });
+      }
       if (M === "GET" && path === "/api/v1/admin/orders") {
-        const orders = Paw.db().orders.map((o) => {
+        const steps = Paw.listOrderSteps();
+        const labels = {};
+        steps.forEach((s) => { labels[s.slug] = s.label; });
+        let rows = Paw.db().orders.slice();
+        if (q.status) rows = rows.filter((o) => o.status === q.status);
+        if (q.q) {
+          const needle = String(q.q).toLowerCase();
+          rows = rows.filter((o) => String(o.id).indexOf(needle) >= 0 || String(o.email || "").toLowerCase().indexOf(needle) >= 0);
+        }
+        const orders = rows.sort((a, b) => b.id - a.id).map((o) => {
           const u = Paw.db().users.find((x) => x.id === o.userId);
           return {
             id: o.id,
             user_id: o.userId || 0,
             status: o.status,
+            status_label: labels[o.status] || o.status,
             total_usd: o.total,
             total_crypto: String(o.crypto || 0),
             crypto_chain: o.chain || "BSC",
@@ -1118,10 +1271,14 @@
             created_at: iso(o.created),
             updated_at: iso(o.paidAt || o.created),
             user_email: o.email,
+            email: o.email,
             user_name: u ? u.name : ""
           };
         });
-        return json(200, { orders, total: orders.length });
+        const by_step = steps.map((s) => ({
+          slug: s.slug, label: s.label, count: Paw.db().orders.filter((o) => o.status === s.slug).length, is_terminal: !!s.is_terminal
+        }));
+        return json(200, { orders, total: orders.length, by_step });
       }
       if (M === "GET" && seg(1) === "orders" && seg(2) && !seg(3)) {
         const o = Paw.getOrder(seg(2));

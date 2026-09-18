@@ -1,12 +1,28 @@
 package handlers
 
 import (
+	"math"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pawradise/shared/middleware"
 )
+
+func applyCouponDiscount(discountType, discountValue string, sub float64) float64 {
+	v, err := strconv.ParseFloat(discountValue, 64)
+	if err != nil || v <= 0 || sub <= 0 {
+		return 0
+	}
+	if strings.EqualFold(discountType, "percentage") {
+		return math.Round(sub*v) / 100
+	}
+	if v > sub {
+		return sub
+	}
+	return v
+}
 
 func productIDFromRequest(c *gin.Context) int {
 	if id, err := strconv.Atoi(c.Param("id")); err == nil && id > 0 {

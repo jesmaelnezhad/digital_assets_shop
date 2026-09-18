@@ -19,7 +19,11 @@ import (
 
 type AuthHandler struct{ db *sql.DB }
 
-func NewAuthHandler(db *sql.DB) *AuthHandler { return &AuthHandler{db} }
+func NewAuthHandler(db *sql.DB) *AuthHandler {
+	h := &AuthHandler{db}
+	h.ensureRoles()
+	return h
+}
 
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req struct {
@@ -53,14 +57,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 			h.db.Exec("INSERT INTO user_referrals (user_id, referral_link_id) VALUES ($1,$2) ON CONFLICT DO NOTHING", id, linkID)
 		}
 	}
-	tok, _ := auth.GenerateJWT(id, req.Email, "user")
+	tok, _ := auth.GenerateJWT(id, req.Email, "customer")
 	now := time.Now().UTC()
 	
 	// Set session cookie for browser auth (ADR-2)
 	setSessionCookie(c, tok)
 	
 	c.JSON(http.StatusCreated, gin.H{
-		"user": models.User{ID: id, Email: req.Email, Name: req.Name, CreatedAt: now, UpdatedAt: now},
+		"user": models.User{ID: id, Email: req.Email, Name: req.Name, Role: "customer", CreatedAt: now, UpdatedAt: now},
 		"token": tok,
 	})
 }
@@ -75,10 +79,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 	var id int
-	var email, name, hash string
+	var email, name, hash, role, tabs string
 	if err := h.db.QueryRow(
-		"SELECT id,email,password_hash,name FROM users WHERE email=$1", req.Email).
-		Scan(&id, &email, &hash, &name); err == sql.ErrNoRows {
+		`SELECT id,email,password_hash,name,COALESCE(NULLIF(role,''),'customer'),COALESCE(staff_tabs,'') FROM users WHERE email=$1`, req.Email).
+		Scan(&id, &email, &hash, &name, &role, &tabs); err == sql.ErrNoRows {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	} else if err != nil {
@@ -89,12 +93,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
-	tok, _ := auth.GenerateJWT(id, email, "user")
+	role = normalizeStoredRole(role)
+	tok, _ := auth.GenerateJWT(id, email, role, tabs)
 	
 	// Set session cookie for browser auth (ADR-2)
 	setSessionCookie(c, tok)
 	
-	c.JSON(http.StatusOK, gin.H{"user": models.User{ID: id, Email: email, Name: name}, "token": tok})
+	c.JSON(http.StatusOK, gin.H{"user": models.User{ID: id, Email: email, Name: name, Role: role, StaffTabs: tabs}, "token": tok})
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
@@ -155,8 +160,8 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 	var u models.User
 	var nc, nu sql.NullTime
 	if err := h.db.QueryRow(
-		"SELECT id,email,name,created_at,updated_at FROM users WHERE id=$1", id).
-		Scan(&u.ID, &u.Email, &u.Name, &nc, &nu); err == sql.ErrNoRows {
+		`SELECT id,email,name,COALESCE(NULLIF(role,''),'customer'),COALESCE(staff_tabs,''),created_at,updated_at FROM users WHERE id=$1`, id).
+		Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.StaffTabs, &nc, &nu); err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	} else if err != nil {
@@ -165,6 +170,7 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 	}
 	if nc.Valid { u.CreatedAt = nc.Time }
 	if nu.Valid { u.UpdatedAt = nu.Time }
+	u.Role = normalizeStoredRole(u.Role)
 	var p models.UserProfile
 	if err := h.db.QueryRow(
 		"SELECT user_id,display_name,avatar_url,bio,wallet_address,social_links,preferred_currency,newsletter_enabled FROM user_profiles WHERE user_id=$1",
@@ -267,29 +273,32 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 }
 
 func (h *AuthHandler) ListUsers(c *gin.Context) {
-	rows, _ := h.db.Query("SELECT id,email,name,created_at,updated_at FROM users ORDER BY created_at DESC")
+	rows, _ := h.db.Query(`SELECT id,email,name,COALESCE(NULLIF(role,''),'customer'),COALESCE(staff_tabs,''),created_at,updated_at FROM users ORDER BY created_at DESC`)
 	defer rows.Close()
 	users := []models.User{}
 	for rows.Next() {
 		var u models.User
 		var nc, nu sql.NullTime
-		if rows.Scan(&u.ID,&u.Email,&u.Name,&nc,&nu) == nil {
+		if rows.Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.StaffTabs, &nc, &nu) == nil {
 			if nc.Valid { u.CreatedAt = nc.Time }
 			if nu.Valid { u.UpdatedAt = nu.Time }
+			u.Role = normalizeStoredRole(u.Role)
 			users = append(users, u)
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"users": users})
 }
 
-// getUserIDFromToken extracts user_id from JWT without checking revocation.
-// Used by referral endpoints that should work even after token logout.
+// getUserIDFromToken reads the session the same way /me does: middleware
+// context first, then Bearer or the pawradise_session cookie.
 func getUserIDFromToken(c *gin.Context) (int, bool) {
-	authHeader := c.GetHeader("Authorization")
-	if !strings.HasPrefix(authHeader, "Bearer ") {
+	if id, ok := middleware.GetUserIDFromContext(c); ok && id > 0 {
+		return id, true
+	}
+	tokenString := extractToken(c)
+	if tokenString == "" {
 		return 0, false
 	}
-	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		secret = "default-secret-change-in-production"

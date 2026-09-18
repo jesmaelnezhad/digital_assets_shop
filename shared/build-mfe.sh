@@ -13,6 +13,7 @@ find src -maxdepth 1 -type f \( -name '*.html' -o -name '*.xml' -o -name '*.txt'
 cp "$ROOT/shared/theme/theme.css" dist/assets/theme.css
 cp "$ROOT/shared/lib/api.js" dist/assets/api.js
 cp "$ROOT/shared/lib/ui.js" dist/assets/ui.js
+cp "$ROOT/shared/lib/events.js" dist/assets/events.js
 cp "$ROOT/shared/chrome/chrome.js" dist/assets/chrome.js
 cp "$ROOT/shared/chrome/app.js" dist/assets/app.js 2>/dev/null || true
 if [ -f "$ROOT/frontend/shop-mfe/src/assets/favicon.svg" ]; then

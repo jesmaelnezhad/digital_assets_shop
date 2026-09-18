@@ -10,7 +10,7 @@
 | Server | IP | Role | Key Software |
 |--------|-----|------|--------------|
 | **BLUE** | 130.185.121.83 | Build & compile box | Go 1.22.2, Docker, git |
-| **RED** | 130.185.123.156 | Serving cluster | k3s v1.36.4+k3s1, PostgreSQL 16, Docker registry, host nginx (SSL) |
+| **RED** | 130.185.123.156 | Serving cluster | k3s v1.36.4+k3s1, PostgreSQL 16, MongoDB 7, Docker registry, host nginx (SSL) |
 
 ---
 
@@ -23,7 +23,7 @@
 | `ingress-nginx` | Single ingress-nginx controller (the API gateway) |
 | `production` | Production backend pods + services |
 | `staging` | Staging backend pods + services |
-| `database` | PostgreSQL instance with 16 logical databases |
+| `database` | PostgreSQL instance with 16 logical databases, plus one MongoDB instance shared by staging and production |
 | `registry` | Docker registry for pushing images from BLUE |
 
 ### 2.2 Key Components on RED
@@ -53,6 +53,7 @@
 | payment-service | 8086 | payment-service |
 | admin-service | 8087 | admin-service |
 | media-service | 8088 | media-service |
+| events-service | 8089 | events-service |
 
 #### Per-Service Kubernetes Services
 
@@ -68,6 +69,7 @@ Each service selects pods by label `app: <service-name>` and routes to the corre
 | payment-service | 80 | 8086 |
 | admin-service | 80 | 8087 |
 | media-service | 80 | 8088 |
+| events-service | 8089 | 8089 |
 
 > **Note**: The legacy `backend-pod` service (with all 8 ports) still exists but is not used by ingress.
 
@@ -77,7 +79,17 @@ Each service selects pods by label `app: <service-name>` and routes to the corre
 - **Image**: `docker.io/library/postgres:16-alpine`
 - **Service**: `postgres.database.svc.cluster.local:5432`
 - **User**: `app`
-- **16 logical databases**: `appdb_{service}_{environment}` for each of 8 services × 2 environments
+- **16 logical databases**: `appdb_{service}_{environment}` for each of 8 Postgres-backed services × 2 environments
+
+#### MongoDB
+
+Live staging/production currently share **one host Docker MongoDB** on RED (`:27017`), the same operational pattern as Postgres (`:5432` on the host). `k8s/database/mongodb.yaml` is the cluster form (StatefulSet in `database`, NodePort `30017`) for when databases move fully into k3s.
+
+- **Host container**: `mongodb` / image `mongo:7` / volume `mongodata`
+- **Auth**: root user `paw` / password in `mongodb-secret` (and host env)
+- **One instance** for staging and production for now
+- **Database**: `events` (collections `events`, `meta`). TTL index on `events.expire_at`
+- **events-service URI**: `mongodb://paw:<password>@130.185.123.156:27017/?authSource=admin`
 
 #### Registry
 
@@ -354,12 +366,14 @@ configs:
 
 | Variable | Value |
 |----------|-------|
-| `PORT` | Container-specific (8081-8088) |
+| `PORT` | Container-specific (8081-8089) |
 | `DB_HOST` | `postgres.database.svc.cluster.local` |
 | `DB_PORT` | `5432` |
 | `DB_USER` | `app` |
 | `DB_PASSWORD` | (from secret `postgres-secret`) |
 | `DB_NAME` | `appdb_<service>_<environment>` |
+| `MONGO_URI` | `mongodb://paw:<password>@mongodb.database.svc.cluster.local:27017/?authSource=admin` (events-service) |
+| `MONGO_DB` | `events` |
 | `JWT_SECRET` | (from secret `pawradise-secrets`) |
 | `ADMIN_TOKEN` | (from secret `pawradise-secrets`) |
 | `ENV_NAME` | `staging` or `production` (controls CORS, env detection) |

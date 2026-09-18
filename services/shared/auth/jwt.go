@@ -19,6 +19,19 @@ type TokenClaims struct {
 	UserID int    `json:"user_id"`
 	Email  string `json:"email"`
 	Role   string `json:"role"`
+	Tabs   string `json:"tabs,omitempty"`
+}
+
+// NormalizeRole maps stored/legacy role strings onto customer|staff|admin.
+func NormalizeRole(r string) string {
+	switch strings.ToLower(strings.TrimSpace(r)) {
+	case "admin":
+		return "admin"
+	case "staff":
+		return "staff"
+	default:
+		return "customer"
+	}
 }
 
 // ValidatableToken extends TokenClaims with JWT validation methods.
@@ -62,11 +75,19 @@ func getRevocationDB() *sql.DB {
 }
 
 // GenerateJWT creates a signed JWT for the given user credentials.
+// extras[0] is role (customer|staff|admin); extras[1] is staff tab list.
 // Default expiry is 24 hours.
-func GenerateJWT(userID int, email string, role ...string) (string, error) {
-	r := "user"
-	if len(role) > 0 && role[0] != "" {
-		r = role[0]
+func GenerateJWT(userID int, email string, extras ...string) (string, error) {
+	r := "customer"
+	tabs := ""
+	if len(extras) > 0 && extras[0] != "" {
+		r = NormalizeRole(extras[0])
+	}
+	if len(extras) > 1 {
+		tabs = extras[1]
+	}
+	if r != "staff" {
+		tabs = ""
 	}
 
 	claims := ValidatableToken{
@@ -74,6 +95,7 @@ func GenerateJWT(userID int, email string, role ...string) (string, error) {
 			UserID: userID,
 			Email:  email,
 			Role:   r,
+			Tabs:   tabs,
 		},
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),

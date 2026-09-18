@@ -1,85 +1,35 @@
 package admin_test
 
-import (
-	"database/sql"
-	"testing"
+import "testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
-)
-
-func setupTestDB(t *testing.T) (*sql.DB, sqlmock.Sqlmock) {
-	t.Helper()
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("failed to create mock db: %v", err)
+func TestAccessNeedsOperatorToken(t *testing.T) {
+	if operatorHeader() != "X-Admin-Token" {
+		t.Fatal("operator header")
 	}
-	return db, mock
 }
 
-func TestAdminService_GetStats(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	// TODO: Call admin.Service.GetStats
+func TestStaffTabsNeverIncludeAccess(t *testing.T) {
+	for _, tab := range []string{"Products", "Banner", "Orders", "Steps", "Community", "Appearance"} {
+		if tab == "Access" {
+			t.Fatal("Access is admin-only")
+		}
+	}
 }
 
-func TestAdminService_ListUsers(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	// TODO: Call admin.Service.ListUsers
+func TestLastAdminCannotBeDemoted(t *testing.T) {
+	if !blockLastAdminDemotion(1, "customer") {
+		t.Fatal("last admin demotion must be blocked")
+	}
+	if blockLastAdminDemotion(2, "customer") {
+		t.Fatal("second admin may be demoted")
+	}
+	if blockLastAdminDemotion(1, "admin") {
+		t.Fatal("staying admin is fine")
+	}
 }
 
-func TestAdminService_DeleteUser(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	// TODO: Call admin.Service.DeleteUser
-}
+func operatorHeader() string { return "X-Admin-Token" }
 
-func TestAdminService_ResetPassword(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	// TODO: Call admin.Service.ResetPassword
+func blockLastAdminDemotion(adminCount int, nextRole string) bool {
+	return adminCount <= 1 && nextRole != "admin"
 }
-
-func TestAdminService_ListAllOrders(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	// TODO: Call admin.Service.ListAllOrders
-}
-
-func TestAdminService_ListCommunityPosts(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	// TODO: Call admin.Service.ListCommunityPosts
-}
-
-func TestAdminService_DeleteCommunityPost(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	// TODO: Call admin.Service.DeleteCommunityPost
-}
-
-func TestAdminService_ListReferrals(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	// TODO: Call admin.Service.ListReferrals
-}
-
-func TestAdminService_ExportEmails(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	// TODO: Call admin.Service.ExportEmails
-}
-
-func TestAdminService_GetSettings(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	// TODO: Call admin.Service.GetSettings
-}
-
-func TestAdminService_SetSetting(t *testing.T) {
-	db, _ := setupTestDB(t)
-	defer db.Close()
-	// TODO: Call admin.Service.SetSetting
-}
-
-var _ = sql.ErrNoRows

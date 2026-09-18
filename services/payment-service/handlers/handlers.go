@@ -154,7 +154,7 @@ func (h *PaymentHandler) ConfirmPayment(c *gin.Context) {
 	var orderID int
 	if _, err := strconv.Atoi(idStr); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"}); return }
 	orderID, _ = strconv.Atoi(idStr)
-	result, err := h.db.Exec("UPDATE orders SET status = 'paid', paid_at = NOW() WHERE id = $1 AND status = 'pending'", orderID)
+	result, err := h.db.Exec("UPDATE orders SET status = 'paid', paid_at = NOW() WHERE id = $1 AND status IN ('pending','created','awaiting_payment','processing')", orderID)
 	if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": "confirm failed"}); return }
 	rows, _ := result.RowsAffected()
 	if rows == 0 { c.JSON(http.StatusOK, gin.H{"message": "already paid or not pending"}); return }

@@ -111,8 +111,8 @@
             unfollow: (userId) => apiFetch(`/community/follow/${userId}`, { method: 'DELETE' }),
             getProfile: (userId) => apiFetch(`/community/users/${userId}`),
             listPeople: (params) => apiFetch('/community/users' + (params ? '?' + new URLSearchParams(params).toString() : '')),
-            getFollowers: (userId) => apiFetch(`/community/users/${userId}/followers`),
-            getFollowing: (userId) => apiFetch(`/community/users/${userId}/following`),
+            getFollowers: (userId, params) => apiFetch(`/community/users/${userId}/followers` + (params ? '?' + new URLSearchParams(params).toString() : '')),
+            getFollowing: (userId, params) => apiFetch(`/community/users/${userId}/following` + (params ? '?' + new URLSearchParams(params).toString() : '')),
             suggestions: () => apiFetch('/community/suggestions'),
         },
 
@@ -203,6 +203,9 @@
             createCategory: (data) => apiFetch('/categories', { method: 'POST', body: JSON.stringify(data), headers: adminHeaders() }),
             updateCategory: (id, data) => apiFetch('/categories/' + id, { method: 'PUT', body: JSON.stringify(data), headers: adminHeaders() }),
             deleteCategory: (id) => apiFetch('/categories/' + id, { method: 'DELETE', headers: adminHeaders() }),
+            events: (params = {}) => apiFetch('/admin/events?' + new URLSearchParams(params).toString(), { headers: adminHeaders() }),
+            eventsTtl: () => apiFetch('/admin/events/ttl', { headers: adminHeaders() }),
+            setEventsTtl: (data) => apiFetch('/admin/events/ttl', { method: 'PUT', body: JSON.stringify(data), headers: adminHeaders() }),
         }
     };
 

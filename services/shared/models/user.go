@@ -14,6 +14,7 @@ type User struct {
 	ReferralCode   string    `json:"referral_code,omitempty" db:"referral_code"`
 	ReferredBy     *int      `json:"referred_by,omitempty" db:"referred_by"`
 	Role           string    `json:"role" db:"role"`
+	StaffTabs      string    `json:"staff_tabs,omitempty" db:"staff_tabs"`
 	LastLoginAt    *time.Time `json:"last_login_at,omitempty" db:"last_login_at"`
 	CreatedAt      time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`

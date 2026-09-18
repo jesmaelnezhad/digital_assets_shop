@@ -131,7 +131,7 @@ func sanitizeForNotify(s string) string {
 	result := ""
 	for _, c := range s {
 		if c == '\'' {
-			result += "\'\'"
+			result += "''"
 		} else {
 			result += string(c)
 		}

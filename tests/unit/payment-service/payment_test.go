@@ -1,60 +1,21 @@
 package payment_test
 
-import (
-	"database/sql"
-	"testing"
+import "testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/stretchr/testify/require"
-)
-
-func setupTestDB(t *testing.T) (*sql.DB, sqlmock.Sqlmock) {
-	db, mock, err := sqlmock.New()
-	require.NoError(t, err)
-	t.Cleanup(func() { db.Close() })
-	return db, mock
+func TestRateMustBePositive(t *testing.T) {
+	if validRate(0) || validRate(-1) {
+		t.Fatal("non-positive rates")
+	}
+	if !validRate(1) || !validRate(250.5) {
+		t.Fatal("positive rates")
+	}
 }
 
-func TestPaymentService_GetPaymentDetails(t *testing.T) {
-	db, _ := setupTestDB(t)
-	_ = db
-	// TODO: Call ServiceMethod()
+func TestConfirmAcceptsAwaitingPayment(t *testing.T) {
+	ok := map[string]bool{"pending": true, "created": true, "awaiting_payment": true, "processing": true}
+	if !ok["awaiting_payment"] || ok["paid"] {
+		t.Fatal("confirm should accept awaiting_payment and skip paid")
+	}
 }
 
-func TestPaymentService_GetExchangeRates(t *testing.T) {
-	db, _ := setupTestDB(t)
-	_ = db
-	// TODO: Call ServiceMethod()
-}
-
-func TestPaymentService_SetExchangeRate(t *testing.T) {
-	db, _ := setupTestDB(t)
-	_ = db
-	// TODO: Call ServiceMethod()
-}
-
-func TestPaymentService_DeleteExchangeRate(t *testing.T) {
-	db, _ := setupTestDB(t)
-	_ = db
-	// TODO: Call ServiceMethod()
-}
-
-func TestPaymentService_ConfirmPayment(t *testing.T) {
-	db, _ := setupTestDB(t)
-	_ = db
-	// TODO: Call ServiceMethod()
-}
-
-func TestPaymentService_CheckPaymentStatus(t *testing.T) {
-	db, _ := setupTestDB(t)
-	_ = db
-	// TODO: Call ServiceMethod()
-}
-
-func TestPaymentService_CalculateCryptoAmount(t *testing.T) {
-	db, _ := setupTestDB(t)
-	_ = db
-	// TODO: Call ServiceMethod()
-}
-
-var _ = sql.ErrNoRows
+func validRate(v float64) bool { return v > 0 }

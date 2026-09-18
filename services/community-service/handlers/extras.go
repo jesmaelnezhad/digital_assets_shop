@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -52,11 +53,37 @@ func (h *CommunityHandler) ListPeople(c *gin.Context) {
 	q := c.Query("q")
 	sqlStr := `SELECT u.id FROM users u LEFT JOIN user_profiles up ON up.user_id = u.id`
 	args := []interface{}{}
+	n := 0
 	if q != "" {
-		sqlStr += " WHERE u.name ILIKE $1 OR COALESCE(up.bio,'') ILIKE $1 OR u.email ILIKE $1"
+		n++
+		sqlStr += fmt.Sprintf(" WHERE u.name ILIKE $%d OR COALESCE(up.bio,'') ILIKE $%d OR u.email ILIKE $%d", n, n, n)
 		args = append(args, "%"+q+"%")
 	}
-	sqlStr += " ORDER BY (SELECT COUNT(*) FROM follows f WHERE f.following_id = u.id) DESC, u.id ASC LIMIT 50"
+	countSQL := "SELECT COUNT(*) FROM users u LEFT JOIN user_profiles up ON up.user_id = u.id"
+	if q != "" {
+		countSQL += " WHERE u.name ILIKE $1 OR COALESCE(up.bio,'') ILIKE $1 OR u.email ILIKE $1"
+	}
+	var total int
+	if q != "" {
+		_ = h.db.QueryRow(countSQL, "%"+q+"%").Scan(&total)
+	} else {
+		_ = h.db.QueryRow("SELECT COUNT(*) FROM users").Scan(&total)
+	}
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "12"))
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 50 {
+		perPage = 12
+	}
+	offset := (page - 1) * perPage
+	n++
+	limP := n
+	n++
+	offP := n
+	sqlStr += fmt.Sprintf(" ORDER BY (SELECT COUNT(*) FROM follows f WHERE f.following_id = u.id) DESC, u.id ASC LIMIT $%d OFFSET $%d", limP, offP)
+	args = append(args, perPage, offset)
 	rows, err := h.db.Query(sqlStr, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
@@ -77,7 +104,19 @@ func (h *CommunityHandler) ListPeople(c *gin.Context) {
 	if users == nil {
 		users = []memberJSON{}
 	}
-	c.JSON(http.StatusOK, gin.H{"users": users, "total": len(users)})
+	c.JSON(http.StatusOK, gin.H{"users": users, "total": total, "page": page, "per_page": perPage})
+}
+
+func pageParams(c *gin.Context, defPer, maxPer int) (page, per, offset int) {
+	page, _ = strconv.Atoi(c.DefaultQuery("page", "1"))
+	per, _ = strconv.Atoi(c.DefaultQuery("per_page", strconv.Itoa(defPer)))
+	if page < 1 {
+		page = 1
+	}
+	if per < 1 || per > maxPer {
+		per = defPer
+	}
+	return page, per, (page - 1) * per
 }
 
 func (h *CommunityHandler) listFollowGraph(c *gin.Context, following bool) {
@@ -87,11 +126,15 @@ func (h *CommunityHandler) listFollowGraph(c *gin.Context, following bool) {
 		return
 	}
 	viewer, _ := middleware.GetUserIDFromContext(c)
+	page, perPage, offset := pageParams(c, 12, 50)
+	var total int
 	var rows *sql.Rows
 	if following {
-		rows, err = h.db.Query("SELECT following_id FROM follows WHERE follower_id = $1", id)
+		_ = h.db.QueryRow("SELECT COUNT(*) FROM follows WHERE follower_id = $1", id).Scan(&total)
+		rows, err = h.db.Query("SELECT following_id FROM follows WHERE follower_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3", id, perPage, offset)
 	} else {
-		rows, err = h.db.Query("SELECT follower_id FROM follows WHERE following_id = $1", id)
+		_ = h.db.QueryRow("SELECT COUNT(*) FROM follows WHERE following_id = $1", id).Scan(&total)
+		rows, err = h.db.Query("SELECT follower_id FROM follows WHERE following_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3", id, perPage, offset)
 	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
@@ -112,7 +155,7 @@ func (h *CommunityHandler) listFollowGraph(c *gin.Context, following bool) {
 	if users == nil {
 		users = []memberJSON{}
 	}
-	c.JSON(http.StatusOK, gin.H{"users": users, "total": len(users)})
+	c.JSON(http.StatusOK, gin.H{"users": users, "total": total, "page": page, "per_page": perPage})
 }
 
 func (h *CommunityHandler) ListFollowers(c *gin.Context) {
