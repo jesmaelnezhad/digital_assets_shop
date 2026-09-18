@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pawradise/shared/models"
+	"github.com/store4bots/shared/models"
 )
 
 type ReviewHandler struct{ db *sql.DB }

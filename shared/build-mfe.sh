@@ -86,6 +86,6 @@ case "$MFE" in
     ;;
 esac
 
-TAG="${IMAGE_TAG:-server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/${MFE}:latest}"
+TAG="${IMAGE_TAG:-server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/store4bots/${MFE}:latest}"
 docker build -t "$TAG" .
 echo "Built $TAG"

@@ -54,7 +54,7 @@ npx playwright test --config frontend/playwright.config.cjs
 |---|---|---|---|---|
 | Auth register/login/JWT role+tabs | identity extras, shared jwt | RBAC login | e2e-suite Auth + RBAC | theme-rbac, e2e.spec |
 | Cookie session vs Bearer | identity GetReferrals context | — | e2e-suite referrals Bearer | session-checkout `#root` after loginAs |
-| Appearance palettes/fonts/icons/dims | product extras + tests/unit/product | appearance public/PUT | e2e-suite Appearance | theme-rbac, pawradise styling |
+| Appearance palettes/fonts/icons/dims | product extras + tests/unit/product | appearance public/PUT | e2e-suite Appearance | theme-rbac, store4bots styling |
 | Homepage banner slider | product extras | banner contract | e2e-suite banner PUT | banner-mobile, e2e.spec |
 | RBAC staff tabs / Access operator token | middleware rbac, admin access | access operator | e2e-suite RBAC | theme-rbac Access |
 | Access search + 1/2/3 col grid | — (client) | users list roles | users list role | Access search + wide/phone grid |

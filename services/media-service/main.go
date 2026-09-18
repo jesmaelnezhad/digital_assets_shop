@@ -9,8 +9,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
-	"github.com/pawradise/shared/middleware"
-	"github.com/pawradise/media-service/handlers"
+	"github.com/store4bots/shared/middleware"
+	"github.com/store4bots/media-service/handlers"
 )
 
 func main() {

@@ -1,5 +1,5 @@
 // Package auth provides JWT generation, validation, and token revocation
-// utilities shared across all Pawradise microservices.
+// utilities shared across all Store4bots microservices.
 package auth
 
 import (
@@ -14,7 +14,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// TokenClaims holds the standard JWT claims used by Pawradise.
+// TokenClaims holds the standard JWT claims used by Store4bots.
 type TokenClaims struct {
 	UserID int    `json:"user_id"`
 	Email  string `json:"email"`
@@ -101,7 +101,7 @@ func GenerateJWT(userID int, email string, extras ...string) (string, error) {
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    "pawradise",
+			Issuer:    "store4bots",
 			Subject:   fmt.Sprintf("%d", userID),
 		},
 	}

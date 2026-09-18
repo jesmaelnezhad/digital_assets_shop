@@ -1,5 +1,5 @@
 // Package events defines event types and payloads for inter-service
-// communication in the Pawradise microservice architecture.
+// communication in the Store4bots microservice architecture.
 package events
 
 import "time"

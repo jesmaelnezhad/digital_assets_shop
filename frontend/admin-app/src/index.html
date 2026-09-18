@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin — Pawradise</title>
+  <title>Admin — Store4bots</title>
     <script>window.SITE_PAGE="admin";</script>
   <link rel="icon" href="/assets/favicon.svg" sizes="any" />
-  <link rel="stylesheet" href="/assets/theme.css?v=9" />
+  <link rel="stylesheet" href="/assets/theme.css?v=11" />
   <script src="/env.js"></script>
 </head>
 <body>
@@ -27,7 +27,7 @@
   <script src="/assets/events.js"></script>
   <script src="/assets/chrome.js"></script>
   <script>
-    const api = Pawradise.api;
+    const api = Store4bots.api;
     const SEO_KEYS = ["site_title", "site_description", "site_keywords", "og_image", "canonical_host", "robots_index"];
     const SETTING_KEYS = ["referral_commission_percent", "payment_address", "site_name", "download_policy", "default_currency"];
     const ALL_TABS = ["Stats", "Users", "Products", "Banner", "Categories", "Bundles", "Coupons", "Orders", "Steps", "Guest", "Community", "Referrals", "Rates", "Settings", "SEO", "Export", "Requests", "Appearance", "Events"];
@@ -39,15 +39,15 @@
     let orderQ = "";
 
     function token() {
-      return sessionStorage.getItem("admin_token") || localStorage.getItem("pawradise_admin_token") || "";
+      return sessionStorage.getItem("admin_token") || localStorage.getItem("store4bots_admin_token") || "";
     }
     function setToken(t) {
       sessionStorage.setItem("admin_token", t);
-      localStorage.setItem("pawradise_admin_token", t);
+      localStorage.setItem("store4bots_admin_token", t);
     }
     function clearToken() {
       sessionStorage.removeItem("admin_token");
-      localStorage.removeItem("pawradise_admin_token");
+      localStorage.removeItem("store4bots_admin_token");
     }
     function staffTabsOf(u) {
       const raw = u && (u.staff_tabs || u.staffTabs);
@@ -982,7 +982,7 @@
           cur[b.dataset.themeKind] = b.dataset.themeId;
           const saved = await api.appearance.set(cur);
           PawUI.applyTheme(saved);
-          try { localStorage.setItem("pawradise_theme", JSON.stringify(saved)); } catch (e) { /* ignore */ }
+          try { localStorage.setItem("store4bots_theme", JSON.stringify(saved)); } catch (e) { /* ignore */ }
           PawUI.toast("Look saved");
           render();
         };

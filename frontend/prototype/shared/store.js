@@ -1,4 +1,4 @@
-/* Pawradise prototype — in-browser backend. Persist in localStorage. */
+/* Store4bots prototype — in-browser backend. Persist in localStorage. */
 (function (global) {
   const ROOT = () => global.PROTOTYPE_ROOT || "./";
   const media = (file) => {
@@ -6,16 +6,16 @@
     if (/^(data:|https?:|blob:)/i.test(file)) return file;
     return ROOT() + "shared/media/" + file;
   };
-  const KEY = "pawradise-proto-v6";
+  const KEY = "store4bots-proto-v7";
   const defaultSettings = {
     referral_commission_percent: "5.0",
-    payment_address: "0xPAWRADISE_WALLET_BSC",
-    site_name: "Pawradise",
-    site_title: "Pawradise — digital assets",
+    payment_address: "0xSTORE4BOTS_WALLET_BSC",
+    site_name: "Store4bots",
+    site_title: "Store4bots — digital assets",
     site_description: "Buy once, download forever. Clay characters, UI kits, textures, and scenes.",
     site_keywords: "digital assets, 3d, ui kits, textures, environments",
     og_image: "",
-    canonical_host: "https://pawradise.ir",
+    canonical_host: "https://store4bots.xyz",
     download_policy: "Buy once, download forever. Unlimited re-downloads on paid orders.",
     default_currency: "USD",
     robots_index: "true"
@@ -109,6 +109,14 @@
         content: notes[i % notes.length] + " #" + pid,
         created: "2026-09-" + String((i % 17) + 1).padStart(2, "0") + "T" + String(10 + (i % 8)).padStart(2, "0") + ":00:00Z"
       });
+      if (i % 7 === 0) {
+        posts[posts.length - 1].link_url = "https://example.com/pack/" + pid;
+        posts[posts.length - 1].link_title = "example.com";
+        posts[posts.length - 1].link_description = "A digital asset pack";
+        posts[posts.length - 1].link_image = media("p03.jpg");
+        posts[posts.length - 1].content += " https://example.com/pack/" + pid;
+      }
+      if (i % 11 === 0) posts[posts.length - 1].image = ["p01.jpg", "p05.jpg", "p08.jpg"][i % 3];
       if (i % 2 === 0) comments.push({ id: cid++, postId: pid, userId: 1 + ((i + 1) % 20), content: "Noted on #" + pid });
       likes.push({ userId: 1 + ((i + 2) % 20), postId: pid });
       if (i % 3 === 0) likes.push({ userId: 1 + ((i + 5) % 20), postId: pid });
@@ -180,8 +188,8 @@
         { id: 4, name: "Owen Reid", email: "owen@example.com", password: "owen", bio: "UI kits into small tools. Quiet in the feed, loud in Figma.", wallet: "", avatar: "p02.jpg", referral: "OWEN-GRID", referredBy: 2, role: "customer", staff_tabs: "" }
       ].concat(extraUsers),
       posts: [
-        { id: 1, userId: 1, content: "Pinned the clay set to the top of the library. If you render stills, use the studio tier — the turntable lights actually match the HDRIs.", created: "2026-09-12T10:00:00Z" },
-        { id: 2, userId: 2, content: "Arcade Tile Kit + Glyph Factory is an entire jam weekend. Anyone bundling those?", created: "2026-09-14T16:20:00Z" },
+        { id: 1, userId: 1, content: "Pinned the clay set to the top of the library. If you render stills, use the studio tier — the turntable lights actually match the HDRIs.", created: "2026-09-12T10:00:00Z", image: "p01.jpg" },
+        { id: 2, userId: 2, content: "Arcade Tile Kit + Glyph Factory is an entire jam weekend. Anyone bundling those? https://example.com/jam", created: "2026-09-14T16:20:00Z", link_url: "https://example.com/jam", link_title: "example.com", link_description: "A weekend jam pack", link_image: media("p10.jpg") },
         { id: 3, userId: 1, content: "Night Bus stems sit under a marble lookdev surprisingly well. Film the courtyard, add rain.", created: "2026-09-16T08:11:00Z" },
         { id: 4, userId: 3, content: "If you pin marble + clay, the stills stack is basically the Studio Kit. Following Nia's notes on the 8k chips.", created: "2026-09-16T14:40:00Z" },
         { id: 5, userId: 4, content: "Northline's empty states are the reason I bought it. Anyone pairing it with Glyph Factory as a HUD?", created: "2026-09-17T09:05:00Z" },
@@ -543,7 +551,7 @@
     if (!o || !orderUnlocked(o.status)) throw new Error("Not available");
     const item = o.items[itemIndex];
     if (!item) throw new Error("Missing item");
-    const blob = new Blob(["Pawradise prototype file for " + item.title + " / " + item.tier + "\nBuy once, download forever.\n"], { type: "text/plain" });
+    const blob = new Blob(["Store4bots prototype file for " + item.title + " / " + item.tier + "\nBuy once, download forever.\n"], { type: "text/plain" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = item.slug + ".txt";
@@ -579,7 +587,7 @@
     return publicUser(u);
   }
   function logout() {
-    try { localStorage.removeItem("pawradise_proto_token"); } catch (e) { /* ignore */ }
+    try { localStorage.removeItem("store4bots_proto_token"); } catch (e) { /* ignore */ }
     patch((d) => { d.session = null; d.admin = false; });
   }
   function updateMe(fields) {
@@ -609,12 +617,31 @@
       comments: db.comments.filter((c) => c.postId === p.id).map((c) => ({ ...c, author: publicUser(userById(c.userId)) }))
     };
   }
-  function addPost(content) {
+  function addPost(content, extra) {
     const u = requireUser();
-    if (!content || content.length > 500) throw new Error("Posts are 1–500 characters");
+    extra = extra || {};
+    content = String(content || "").trim();
+    const imageURL = extra.image_url || extra.image || "";
+    if (!content && !imageURL) throw new Error("Write something or add a photo");
+    if (content.length > 500) throw new Error("Posts are 1–500 characters");
+    const m = content.match(/https?:\/\/[^\s<>"'\)\]]+/);
+    const linkURL = m ? m[0].replace(/[.,;:!?]+$/, "") : "";
+    let host = "";
+    try { if (linkURL) host = new URL(linkURL).hostname.replace(/^www\./, ""); } catch (e) { /* keep */ }
     let post;
     patch((d) => {
-      post = { id: d.nextIds.post++, userId: u.id, content, created: new Date().toISOString() };
+      post = {
+        id: d.nextIds.post++,
+        userId: u.id,
+        content,
+        created: new Date().toISOString(),
+        image: imageURL,
+        image_url: imageURL,
+        link_url: linkURL,
+        link_title: host,
+        link_description: host ? "Link preview" : "",
+        link_image: host ? media("p03.jpg") : ""
+      };
       d.posts.unshift(post);
     });
     return decoratePost(post);
@@ -1029,14 +1056,18 @@
     wishlist() { return load().wishlist; },
     wishlistProducts() { return load().wishlist.map((id) => hydrate(load().products.find((p) => p.id === id))).filter(Boolean); },
     toggleCompare(productId) {
+      let blocked = false;
       patch((d) => {
         const i = d.compare.indexOf(productId);
         if (i >= 0) d.compare.splice(i, 1);
-        else {
-          if (d.compare.length >= 4) d.compare.shift();
-          d.compare.push(productId);
-        }
+        else if (d.compare.length >= 4) blocked = true;
+        else d.compare.push(productId);
       });
+      if (blocked) {
+        const err = new Error("compare up to 4 assets");
+        err.status = 400;
+        throw err;
+      }
       return load().compare;
     },
     compare() { return load().compare.map((id) => hydrate(load().products.find((p) => p.id === id))).filter(Boolean); },
@@ -1326,7 +1357,7 @@
       return load().users.filter((u) => u.referredBy).map((u) => ({ user: publicUser(u), referrer: publicUser(userById(u.referredBy)) }));
     },
     resetDemo() {
-      try { localStorage.removeItem("pawradise_proto_token"); } catch (e) { /* ignore */ }
+      try { localStorage.removeItem("store4bots_proto_token"); } catch (e) { /* ignore */ }
       localStorage.removeItem(KEY);
       location.reload();
     }

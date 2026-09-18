@@ -1,9 +1,9 @@
-module pawradise-tests
+module store4bots-tests
 
 go 1.22
 
 require (
-	github.com/pawradise/shared v0.1.0
+	github.com/store4bots/shared v0.1.0
 	golang.org/x/crypto v0.23.0
 )
 
@@ -38,4 +38,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/pawradise/shared => ../services/shared
+replace github.com/store4bots/shared => ../services/shared

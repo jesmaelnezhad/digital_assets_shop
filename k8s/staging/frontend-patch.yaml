@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: registry.local/pawradise-frontend:local
+        image: registry.local/store4bots-frontend:local
         volumeMounts:
         - name: nginx-config
           mountPath: /etc/nginx/http.d

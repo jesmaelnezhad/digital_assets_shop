@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pawradise/shared/middleware"
-	"github.com/pawradise/shared/models"
+	"github.com/store4bots/shared/middleware"
+	"github.com/store4bots/shared/models"
 )
 
 type CommunityHandler struct {
@@ -42,6 +42,7 @@ func (h *CommunityHandler) GetFeed(c *gin.Context) {
 		rows, err = h.db.Query(
 			`SELECT cp.id, cp.user_id, cp.content, cp.community_type, cp.is_public, cp.is_pinned,
 			cp.like_count, cp.comment_count, cp.created_at, cp.updated_at,
+			COALESCE(cp.image_url,''), COALESCE(cp.link_url,''), COALESCE(cp.link_title,''), COALESCE(cp.link_description,''), COALESCE(cp.link_image,''),
 			COALESCE(u.email, ''), COALESCE(u.name, ''), COALESCE(up.display_name, ''), COALESCE(up.avatar_url, ''),
 			(SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = cp.user_id)) as following,
 			(SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = cp.user_id AND following_id = $1)) as follows_you,
@@ -58,6 +59,7 @@ func (h *CommunityHandler) GetFeed(c *gin.Context) {
 		rows, err = h.db.Query(
 			`SELECT cp.id, cp.user_id, cp.content, cp.community_type, cp.is_public, cp.is_pinned,
 			cp.like_count, cp.comment_count, cp.created_at, cp.updated_at,
+			COALESCE(cp.image_url,''), COALESCE(cp.link_url,''), COALESCE(cp.link_title,''), COALESCE(cp.link_description,''), COALESCE(cp.link_image,''),
 			COALESCE(u.email, ''), COALESCE(u.name, ''), COALESCE(up.display_name, ''), COALESCE(up.avatar_url, ''),
 			(SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = cp.user_id)) as following,
 			(SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = cp.user_id AND following_id = $1)) as follows_you,
@@ -75,6 +77,7 @@ func (h *CommunityHandler) GetFeed(c *gin.Context) {
 			rows, err = h.db.Query(
 				`SELECT cp.id, cp.user_id, cp.content, cp.community_type, cp.is_public, cp.is_pinned,
 				cp.like_count, cp.comment_count, cp.created_at, cp.updated_at,
+				COALESCE(cp.image_url,''), COALESCE(cp.link_url,''), COALESCE(cp.link_title,''), COALESCE(cp.link_description,''), COALESCE(cp.link_image,''),
 				COALESCE(u.email, ''), COALESCE(u.name, ''), COALESCE(up.display_name, ''), COALESCE(up.avatar_url, ''),
 				false, false, false
 				FROM community_posts cp
@@ -87,6 +90,7 @@ func (h *CommunityHandler) GetFeed(c *gin.Context) {
 			rows, err = h.db.Query(
 				`SELECT cp.id, cp.user_id, cp.content, cp.community_type, cp.is_public, cp.is_pinned,
 				cp.like_count, cp.comment_count, cp.created_at, cp.updated_at,
+				COALESCE(cp.image_url,''), COALESCE(cp.link_url,''), COALESCE(cp.link_title,''), COALESCE(cp.link_description,''), COALESCE(cp.link_image,''),
 				COALESCE(u.email, ''), COALESCE(u.name, ''), COALESCE(up.display_name, ''), COALESCE(up.avatar_url, ''),
 				(SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = cp.user_id)) as following,
 				(SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = cp.user_id AND following_id = $1)) as follows_you,
@@ -114,10 +118,15 @@ func (h *CommunityHandler) GetFeed(c *gin.Context) {
 		Type        string `json:"type"`
 		IsPublic    bool   `json:"is_public"`
 		IsPinned    bool   `json:"is_pinned"`
-		LikeCount   int    `json:"like_count"`
-		CommentCount int   `json:"comment_count"`
-		CreatedAt   string `json:"created_at"`
-		UpdatedAt   string `json:"updated_at"`
+		LikeCount        int    `json:"like_count"`
+		CommentCount     int    `json:"comment_count"`
+		CreatedAt        string `json:"created_at"`
+		UpdatedAt        string `json:"updated_at"`
+		ImageURL         string `json:"image_url"`
+		LinkURL          string `json:"link_url"`
+		LinkTitle        string `json:"link_title"`
+		LinkDescription  string `json:"link_description"`
+		LinkImage        string `json:"link_image"`
 		Author      struct {
 			ID        int    `json:"id"`
 			Email     string `json:"email"`
@@ -137,6 +146,7 @@ func (h *CommunityHandler) GetFeed(c *gin.Context) {
 		var following, followsYou, liked bool
 		if err := rows.Scan(&p.ID, &p.UserID, &p.Content, &p.Type, &p.IsPublic, &p.IsPinned,
 			&p.LikeCount, &p.CommentCount, &createdAt, &updatedAt,
+			&p.ImageURL, &p.LinkURL, &p.LinkTitle, &p.LinkDescription, &p.LinkImage,
 			&p.Author.Email, &p.Author.Name, &display, &avatar, &following, &followsYou, &liked); err != nil { continue }
 		if createdAt.Valid { p.CreatedAt = createdAt.Time.Format(time.RFC3339) }
 		if updatedAt.Valid { p.UpdatedAt = updatedAt.Time.Format(time.RFC3339) }
@@ -161,16 +171,27 @@ func (h *CommunityHandler) CreatePost(c *gin.Context) {
 	}
 
 	var req struct {
-		Content  string `json:"content" binding:"required"`
+		Content  string `json:"content"`
 		Type     string `json:"type"`
 		IsPublic *bool  `json:"is_public"`
 		IsPinned *bool  `json:"is_pinned"`
+		ImageURL string `json:"image_url"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	req.Content = strings.TrimSpace(req.Content)
+	imageURL := sanitizeImageURL(req.ImageURL)
+	if strings.TrimSpace(req.ImageURL) != "" && imageURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "picture must be a png, jpeg, gif, or webp under 900KB"})
+		return
+	}
+	if req.Content == "" && imageURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "content required"})
+		return
+	}
 	if len(req.Content) > 500 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "content too long"})
 		return
@@ -178,6 +199,11 @@ func (h *CommunityHandler) CreatePost(c *gin.Context) {
 
 	if req.Type == "" { req.Type = "post" }
 	if req.IsPublic == nil { req.IsPublic = new(bool); *req.IsPublic = true }
+	linkURL := publicLinkURL(extractHTTPURL(req.Content))
+	linkTitle, linkDesc, linkImage := "", "", ""
+	if linkURL != "" {
+		linkTitle, linkDesc, linkImage = fetchLinkPreview(linkURL)
+	}
 
 	// Ensure user exists in community DB
 	var existingUserID int
@@ -190,9 +216,9 @@ func (h *CommunityHandler) CreatePost(c *gin.Context) {
 
 	var id int
 	err = h.db.QueryRow(
-		`INSERT INTO community_posts (user_id, content, community_type, is_public, is_pinned)
-		 VALUES ($1, $2, $3, $4, COALESCE($5, false)) RETURNING id`,
-		uid, req.Content, req.Type, *req.IsPublic, req.IsPinned,
+		`INSERT INTO community_posts (user_id, content, community_type, is_public, is_pinned, image_url, link_url, link_title, link_description, link_image)
+		 VALUES ($1, $2, $3, $4, COALESCE($5, false), $6, $7, $8, $9, $10) RETURNING id`,
+		uid, req.Content, req.Type, *req.IsPublic, req.IsPinned, imageURL, linkURL, linkTitle, linkDesc, linkImage,
 	).Scan(&id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create post"})
@@ -201,7 +227,11 @@ func (h *CommunityHandler) CreatePost(c *gin.Context) {
 
 	h.db.Exec("UPDATE user_profiles SET updated_at = NOW() WHERE user_id = $1", uid)
 
-	c.JSON(http.StatusCreated, gin.H{"id": id, "user_id": uid, "content": req.Content, "type": req.Type})
+	c.JSON(http.StatusCreated, gin.H{
+		"id": id, "user_id": uid, "content": req.Content, "type": req.Type,
+		"image_url": imageURL, "link_url": linkURL, "link_title": linkTitle,
+		"link_description": linkDesc, "link_image": linkImage,
+	})
 }
 
 func (h *CommunityHandler) GetPost(c *gin.Context) {
@@ -216,11 +246,13 @@ func (h *CommunityHandler) GetPost(c *gin.Context) {
 	var createdAt, updatedAt sql.NullTime
 	err = h.db.QueryRow(
 		`SELECT cp.id, cp.user_id, cp.content, cp.community_type, cp.is_public, cp.is_pinned,
-		cp.like_count, cp.comment_count, cp.created_at, cp.updated_at
+		cp.like_count, cp.comment_count, cp.created_at, cp.updated_at,
+		COALESCE(cp.image_url,''), COALESCE(cp.link_url,''), COALESCE(cp.link_title,''), COALESCE(cp.link_description,''), COALESCE(cp.link_image,'')
 		FROM community_posts cp WHERE cp.id = $1`,
 		postID,
 	).Scan(&p.ID, &p.UserID, &p.Content, &p.Type, &p.IsPublic, &p.IsPinned,
-		&p.LikeCount, &p.CommentCount, &createdAt, &updatedAt)
+		&p.LikeCount, &p.CommentCount, &createdAt, &updatedAt,
+		&p.ImageURL, &p.LinkURL, &p.LinkTitle, &p.LinkDescription, &p.LinkImage)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "post not found"})
 		return

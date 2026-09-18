@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Guest order — Pawradise</title>
-  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="account"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <title>Guest order — Store4bots</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="account"; window.__STORE4BOTS_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
   <link rel="stylesheet" href="../shared/theme.css" />
 </head>
 <body>
@@ -32,7 +32,7 @@
       e.preventDefault();
       const f = new FormData(e.target);
       try {
-        const o = await Pawradise.api.orders.getGuestOrder(f.get("id"), f.get("email"));
+        const o = await Store4bots.api.orders.getGuestOrder(f.get("id"), f.get("email"));
         document.getElementById("out").innerHTML = `<div class="note" style="margin-top:20px">
           Order #${o.id} · ${PawUI.esc(o.status)} · ${PawUI.money(o.total_usd)} · ${PawUI.esc(o.email)}</div>`;
       } catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }

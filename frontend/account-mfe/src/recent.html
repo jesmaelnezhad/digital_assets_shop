@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Recently viewed — Pawradise</title>
+  <title>Recently viewed — Store4bots</title>
     <script>window.SITE_PAGE="account";</script>
   <link rel="icon" href="/assets/favicon.svg" sizes="any" />
-  <link rel="stylesheet" href="/assets/theme.css?v=9" />
+  <link rel="stylesheet" href="/assets/theme.css?v=11" />
   <script src="/env.js"></script>
 </head>
 <body>
@@ -21,9 +21,10 @@
     async function render() {
       const root = document.getElementById("root");
       try {
+        await PawUI.lists.refresh();
         await PawUI.catalog.load();
-        const res = await Pawradise.api.recentlyViewed.list();
-        const products = (res.products || []).map((x) => PawUI.catalog.byId[x.product_id]).filter(Boolean);
+        const res = await Store4bots.api.recentlyViewed.list();
+        const products = await PawUI.catalog.byIdsAsync((res.products || []).map((x) => x.product_id));
         root.innerHTML = PawUI.accountNav("recent") + `<div class="kicker">Account</div><h1 class="page-title">Recently viewed</h1>
           ${products.length ? `<div class="grid">${products.map((p) => PawUI.card(p)).join("")}</div>` : '<p class="note">Open a product while logged in to record it.</p>'}`;
         if (products.length) PawUI.bindCards(root.querySelector(".grid"));

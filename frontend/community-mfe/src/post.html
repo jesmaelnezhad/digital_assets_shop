@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Post — Pawradise</title>
+  <title>Post — Store4bots</title>
     <script>window.SITE_PAGE="community";</script>
   <link rel="icon" href="/assets/favicon.svg" sizes="any" />
-  <link rel="stylesheet" href="/assets/theme.css?v=9" />
+  <link rel="stylesheet" href="/assets/theme.css?v=11" />
   <script src="/env.js"></script>
 </head>
 <body>
@@ -19,7 +19,7 @@
   <script src="/assets/chrome.js"></script>
   <script>
     const id = new URLSearchParams(location.search).get("id") || (location.pathname.match(/\/post\/(\d+)/) || [])[1];
-    const api = Pawradise.api;
+    const api = Store4bots.api;
     let shown = 8;
     async function render() {
       const root = document.getElementById("root");
@@ -42,7 +42,8 @@
               </div>
               ${PawUI.followControl(author, me && me.id)}
             </div>
-            <p>${PawUI.esc(p.content)}</p>
+            ${p.content ? `<p>${PawUI.postText(p.content)}</p>` : ""}
+            ${PawUI.postMedia(p)}
             <div class="post-actions">
               <button class="btn ${p.liked ? "is-on" : ""}" id="like">${p.like_count || 0} likes</button>
             </div>

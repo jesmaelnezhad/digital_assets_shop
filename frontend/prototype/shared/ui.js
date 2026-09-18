@@ -1,6 +1,6 @@
 (function (global) {
   const root = () => global.PROTOTYPE_ROOT || "./";
-  const api = () => global.Pawradise && Pawradise.api;
+  const api = () => global.Store4bots && Store4bots.api;
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
@@ -55,6 +55,62 @@
     },
     byIds(ids) {
       return (ids || []).map((id) => this.decorate(this.byId[id])).filter(Boolean);
+    },
+    async byIdsAsync(ids) {
+      await this.load();
+      const out = [];
+      for (const raw of ids || []) {
+        const id = Number(raw);
+        if (!id) continue;
+        let p = this.byId[id];
+        if (!p) {
+          try {
+            const r = await api().products.get(String(id));
+            p = (r && r.product) || null;
+            if (p && p.id) this.byId[p.id] = p;
+          } catch (e) { p = null; }
+        }
+        if (p) out.push(this.decorate(p));
+      }
+      return out;
+    }
+  };
+
+  const lists = {
+    wish: new Set(),
+    compare: new Set(),
+    cart: new Map(),
+    loaded: false,
+    hasWish(id) { return this.wish.has(Number(id)); },
+    hasCompare(id) { return this.compare.has(Number(id)); },
+    inCart(id) { return this.cart.has(Number(id)); },
+    setWish(id, on) { id = Number(id); if (on) this.wish.add(id); else this.wish.delete(id); },
+    setCompare(id, on) { id = Number(id); if (on) this.compare.add(id); else this.compare.delete(id); },
+    setCart(id, on, itemId) {
+      id = Number(id);
+      if (on) this.cart.set(id, itemId || true);
+      else this.cart.delete(id);
+    },
+    async refresh() {
+      const a = api();
+      this.wish = new Set();
+      this.compare = new Set();
+      this.cart = new Map();
+      if (!a) { this.loaded = true; return this; }
+      try {
+        const w = await a.wishlist.get();
+        this.wish = new Set((w.products || []).map((x) => Number(x.product_id)).filter(Boolean));
+      } catch (e) { /* guest */ }
+      try {
+        const c = await a.compare.list();
+        this.compare = new Set((c.products || []).map((x) => Number(x.product_id)).filter(Boolean));
+      } catch (e) { /* guest */ }
+      try {
+        const cart = await a.cart.get();
+        (cart.items || []).forEach((i) => this.cart.set(Number(i.product_id), i.id));
+      } catch (e) { /* guest */ }
+      this.loaded = true;
+      return this;
     }
   };
 
@@ -71,17 +127,22 @@
     if (/^https?:|^\/\/|^javascript:/i.test(raw)) return root() + "shop-mfe/index.html";
     return raw;
   }
+  async function readImageFromForm(form, fileName) {
+    const input = form.querySelector("[name=" + (fileName || "photo") + "]");
+    const file = input && input.files && input.files[0];
+    if (!file) return "";
+    if (file.size > 900000) throw new Error("Picture must be under 900KB in the prototype");
+    if (file.type && file.type.indexOf("image/") !== 0) throw new Error("Choose an image file");
+    return await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(new Error("Could not read picture"));
+      r.readAsDataURL(file);
+    });
+  }
   async function readAvatarFromForm(form) {
-    const file = form.querySelector("[name=avatar_file]") && form.querySelector("[name=avatar_file]").files[0];
-    if (file) {
-      if (file.size > 900000) throw new Error("Picture must be under 900KB in the prototype");
-      return await new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(r.result);
-        r.onerror = () => reject(new Error("Could not read picture"));
-        r.readAsDataURL(file);
-      });
-    }
+    const uploaded = await readImageFromForm(form, "avatar_file");
+    if (uploaded) return uploaded;
     const url = form.querySelector("[name=avatar_url]");
     return url ? String(url.value || "").trim() : "";
   }
@@ -131,6 +192,41 @@
       ${followControl(u, meId)}
     </article>`;
   }
+  function postText(text) {
+    const re = /https?:\/\/[^\s<]+/g;
+    const s = String(text || "");
+    let out = "", last = 0, m;
+    while ((m = re.exec(s))) {
+      out += esc(s.slice(last, m.index));
+      let raw = m[0];
+      raw = raw.replace(/[),.;!?]+$/, "");
+      out += `<a class="post-url" href="${esc(raw)}" target="_blank" rel="noopener noreferrer">${esc(raw)}</a>`;
+      last = m.index + raw.length;
+      re.lastIndex = last;
+    }
+    return out + esc(s.slice(last));
+  }
+  function postMedia(p) {
+    if (!p) return "";
+    let html = "";
+    if (p.image_url) html += `<img class="post-photo" src="${esc(p.image_url)}" alt="" />`;
+    if (p.link_url) {
+      let host = p.link_url;
+      try { host = new URL(p.link_url).hostname.replace(/^www\./, ""); } catch (e) { /* keep */ }
+      const thumb = p.link_image
+        ? `<img src="${esc(p.link_image)}" alt="" />`
+        : `<span class="post-link-mark">${esc(host.slice(0, 1).toUpperCase())}</span>`;
+      html += `<a class="post-link" href="${esc(p.link_url)}" target="_blank" rel="noopener noreferrer">
+        ${thumb}
+        <span>
+          <strong>${esc(p.link_title || host)}</strong>
+          ${p.link_description ? `<em>${esc(p.link_description)}</em>` : ""}
+          <small>${esc(host)}</small>
+        </span>
+      </a>`;
+    }
+    return html;
+  }
   function postCard(p, meId) {
     const a = p.author || {};
     return `<article class="post">
@@ -143,12 +239,60 @@
         </div>
         ${followControl(a, meId)}
       </div>
-      <p>${esc(p.content)}</p>
+      ${p.content ? `<p>${postText(p.content)}</p>` : ""}
+      ${postMedia(p)}
       <div class="post-actions">
         <button class="btn ${p.liked ? "is-on" : ""}" data-like="${p.id}" data-liked="${p.liked ? "1" : ""}">${p.like_count || 0} likes</button>
         <a class="btn" href="${root()}community-mfe/post.html?id=${p.id}">${p.comment_count || 0} comments</a>
       </div>
     </article>`;
+  }
+  function bindComposer(form, onPosted) {
+    if (!form) return;
+    const ta = form.querySelector("textarea");
+    const cc = form.querySelector("#cc") || form.querySelector(".char-count span");
+    const thumb = form.querySelector(".composer-thumb");
+    const file = form.querySelector("[name=photo]");
+    const drop = form.querySelector("[data-drop-photo]");
+    if (ta && cc) ta.oninput = () => { cc.textContent = ta.value.length; };
+    function clearPhoto() {
+      if (file) file.value = "";
+      if (thumb) {
+        thumb.hidden = true;
+        const img = thumb.querySelector("img");
+        if (img) img.removeAttribute("src");
+      }
+    }
+    if (file && thumb) {
+      file.onchange = () => {
+        const f = file.files && file.files[0];
+        if (!f) { clearPhoto(); return; }
+        const r = new FileReader();
+        r.onload = () => {
+          thumb.hidden = false;
+          thumb.querySelector("img").src = r.result;
+        };
+        r.readAsDataURL(f);
+      };
+    }
+    if (drop) drop.onclick = (e) => { e.preventDefault(); clearPhoto(); };
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const errEl = form.querySelector(".form-error");
+      if (errEl) errEl.textContent = "";
+      try {
+        const image = await readImageFromForm(form, "photo");
+        await api().community.createPost((ta && ta.value) || "", "post", image ? { image_url: image } : {});
+        form.reset();
+        if (cc) cc.textContent = "0";
+        clearPhoto();
+        if (onPosted) onPosted();
+      } catch (ex) {
+        if (ex && ex.status === 401) { toast("Log in to do that"); location.href = loginHref(); return; }
+        if (errEl) errEl.textContent = ex.message;
+        else toast(ex.message);
+      }
+    };
   }
   async function bindFollow(el, after) {
     el._pawAfter = after;
@@ -182,15 +326,19 @@
 
   function card(p) {
     p = catalog.decorate(p);
+    const id = Number(p.id);
+    const wished = lists.hasWish(id);
+    const compared = lists.hasCompare(id);
+    const inCart = lists.inCart(id);
     return `<article class="card">
       <a class="card-still" href="${productUrl(p.slug)}">
         ${pinned(p) ? '<span class="pin">Pinned</span>' : ""}
         <span class="file-tag">${esc(fileType(p))}</span>
         <img src="${img(p)}" alt="" />
         <div class="card-actions">
-          <button class="pill" data-wish="${p.id}">Save</button>
-          <button class="pill" data-compare="${p.id}">Compare</button>
-          <button class="pill" data-cart="${p.id}">Add</button>
+          <button type="button" class="pill${wished ? " is-on" : ""}" data-wish="${id}" aria-pressed="${wished}">${wished ? "Unsave" : "Save"}</button>
+          <button type="button" class="pill${compared ? " is-on" : ""}" data-compare="${id}" aria-pressed="${compared}">${compared ? "Compared" : "Compare"}</button>
+          <button type="button" class="pill${inCart ? " is-on" : ""}" data-cart="${id}" aria-pressed="${inCart}">${inCart ? "In cart" : "Add"}</button>
         </div>
       </a>
       <div class="card-body">
@@ -213,23 +361,151 @@
   }
 
   function bindCards(el) {
+    if (!el || el._pawCardsBound) return;
+    el._pawCardsBound = true;
     el.addEventListener("click", async (e) => {
       const wish = e.target.closest("[data-wish]");
       const cart = e.target.closest("[data-cart]");
       const cmp = e.target.closest("[data-compare]");
       if (!wish && !cart && !cmp) return;
       e.preventDefault();
+      e.stopPropagation();
       try {
-        if (wish) await api().wishlist.toggle(Number(wish.dataset.wish));
-        if (cmp) await api().compare.toggle(Number(cmp.dataset.compare));
-        if (cart) { await api().cart.add(Number(cart.dataset.cart), 1); toast("Added to cart"); }
+        if (wish) {
+          const id = Number(wish.dataset.wish);
+          const res = await api().wishlist.toggle(id);
+          const on = !!(res && res.added);
+          lists.setWish(id, on);
+          wish.classList.toggle("is-on", on);
+          wish.setAttribute("aria-pressed", on ? "true" : "false");
+          wish.textContent = on ? "Unsave" : "Save";
+          toast(on ? "Saved to wishlist" : "Removed from wishlist");
+          if (!on && /wishlist/.test(location.pathname)) el.dispatchEvent(new Event("paw-refresh"));
+        }
+        if (cmp) {
+          const id = Number(cmp.dataset.compare);
+          if (!lists.hasCompare(id) && lists.compare.size >= 4) {
+            toast("Compare up to 4 assets");
+            return;
+          }
+          const res = await api().compare.toggle(id);
+          const on = !!(res && res.added);
+          lists.setCompare(id, on);
+          cmp.classList.toggle("is-on", on);
+          cmp.setAttribute("aria-pressed", on ? "true" : "false");
+          cmp.textContent = on ? "Compared" : "Compare";
+          toast(on ? "Added to compare" : "Removed from compare");
+        }
+        if (cart) {
+          const id = Number(cart.dataset.cart);
+          const res = await api().cart.toggle(id, 1);
+          await lists.refresh();
+          const on = lists.inCart(id);
+          cart.classList.toggle("is-on", on);
+          cart.setAttribute("aria-pressed", on ? "true" : "false");
+          cart.textContent = on ? "In cart" : "Add";
+          toast(res.added ? "Added to cart" : "Removed from cart");
+        }
         if (global.PawChrome) PawChrome.mount();
-        el.dispatchEvent(new Event("paw-refresh"));
       } catch (err) {
         if (err.status === 401) { toast("Log in to do that"); location.href = loginHref(); }
         else toast(err.message);
       }
     });
+  }
+
+  function syncBuyButtons(p) {
+    if (!p) return;
+    const id = Number(p.id);
+    const inCart = lists.inCart(id);
+    const wished = lists.hasWish(id);
+    const compared = lists.hasCompare(id);
+    const add = document.getElementById("add");
+    const wish = document.getElementById("wish");
+    const cmp = document.getElementById("cmp");
+    if (add) {
+      add.textContent = inCart ? "Remove from cart" : "Add to cart";
+      add.classList.toggle("btn-accent", !inCart);
+      add.classList.toggle("is-on", inCart);
+    }
+    if (wish) {
+      wish.textContent = wished ? "Unsave" : "Save to wishlist";
+      wish.classList.toggle("is-on", wished);
+    }
+    if (cmp) {
+      cmp.textContent = compared ? "Compared" : "Compare";
+      cmp.classList.toggle("is-on", compared);
+    }
+  }
+
+  function bindBuy(p, opts) {
+    opts = opts || {};
+    syncBuyButtons(p);
+    const add = document.getElementById("add");
+    const wish = document.getElementById("wish");
+    const cmp = document.getElementById("cmp");
+    if (add) add.onclick = async () => {
+      try {
+        const extra = typeof opts.extra === "function" ? opts.extra() : (opts.extra || {});
+        const tierId = typeof opts.tierId === "function" ? opts.tierId() : opts.tierId;
+        const res = await api().cart.toggle(p.id, 1, tierId, extra);
+        await lists.refresh();
+        syncBuyButtons(p);
+        toast(res.added ? "Added to cart" : "Removed from cart");
+        if (global.PawChrome) PawChrome.mount();
+      } catch (err) {
+        if (err.status === 401) location.href = loginHref();
+        else toast(err.message);
+      }
+    };
+    if (wish) wish.onclick = async () => {
+      try {
+        const res = await api().wishlist.toggle(p.id);
+        lists.setWish(p.id, !!(res && res.added));
+        syncBuyButtons(p);
+        toast(res.added ? "Saved to wishlist" : "Removed from wishlist");
+      } catch (err) {
+        if (err.status === 401) location.href = loginHref();
+        else toast(err.message);
+      }
+    };
+    if (cmp) cmp.onclick = async () => {
+      try {
+        if (!lists.hasCompare(p.id) && lists.compare.size >= 4) {
+          toast("Compare up to 4 assets");
+          return;
+        }
+        const res = await api().compare.toggle(p.id);
+        lists.setCompare(p.id, !!(res && res.added));
+        syncBuyButtons(p);
+        toast(res.added ? "Added to compare" : "Removed from compare");
+        if (global.PawChrome) PawChrome.mount();
+      } catch (err) {
+        if (err.status === 401) location.href = loginHref();
+        else toast(err.message);
+      }
+    };
+  }
+
+  function compareBoard(products) {
+    const specs = [
+      ["Price", (p) => `<span class="price">${money(price(p))}</span>`],
+      ["Format", (p) => esc(fileType(p) || "—")],
+      ["Category", (p) => esc(catName(p) || "—")],
+      ["PWYW", (p) => pwyw(p) ? "yes, min " + money(p.pwyw_min_price) : "no"]
+    ];
+    const still = products.map((p) => `<a class="compare-still" href="${productUrl(p.slug)}"><img src="${esc(img(p))}" alt=""></a>`).join("");
+    const titles = products.map((p) => `<div class="compare-title"><a href="${productUrl(p.slug)}">${esc(p.title)}</a></div>`).join("");
+    const specRows = specs.map(([label, fn]) =>
+      `<div class="compare-label">${label}</div>` + products.map((p) => `<div class="compare-cell">${fn(p)}</div>`).join("")
+    ).join("");
+    const actions = products.map((p) => `<div class="compare-cell"><button type="button" class="btn" data-rm="${p.id}">Remove</button></div>`).join("");
+    return `<div class="compare-board" style="--cols:${products.length}">
+      <div class="compare-label compare-label-still"></div>${still}
+      <div class="compare-label">Title</div>${titles}
+      ${specRows}
+      <div class="compare-label"></div>${actions}
+    </div>`;
   }
 
   function accountNav(on) {
@@ -344,16 +620,16 @@
   }
   function bootTheme(apiObj) {
     try {
-      const cached = JSON.parse(localStorage.getItem("pawradise_theme") || "null");
+      const cached = JSON.parse(localStorage.getItem("store4bots_theme") || "null");
       if (cached) applyTheme(cached);
     } catch (e) { /* ignore */ }
     const client = apiObj || api();
     if (!client || !client.appearance) return;
     client.appearance.get().then((t) => {
       applyTheme(t);
-      try { localStorage.setItem("pawradise_theme", JSON.stringify(t)); } catch (e) { /* ignore */ }
+      try { localStorage.setItem("store4bots_theme", JSON.stringify(t)); } catch (e) { /* ignore */ }
     }).catch(() => {});
   }
 
-  global.PawUI = { esc, money, stars, card, bindCards, productUrl, bundleUrl, orderUrl, toast, img, price, root, catalog, couponOff, accountNav, communityNav, avatar, personRow, postCard, bindFollow, followControl, relationPills, loginHref, authGate, safeNext, readAvatarFromForm, avatarFields, mountHeroSlider, THEME, applyTheme, defaultTheme, bootTheme };
+  global.PawUI = { esc, money, stars, card, bindCards, bindBuy, syncBuyButtons, compareBoard, productUrl, bundleUrl, orderUrl, toast, img, price, root, catalog, lists, couponOff, accountNav, communityNav, avatar, personRow, postCard, postText, postMedia, bindComposer, bindFollow, followControl, relationPills, loginHref, authGate, safeNext, readAvatarFromForm, readImageFromForm, avatarFields, mountHeroSlider, THEME, applyTheme, defaultTheme, bootTheme };
 })(window);

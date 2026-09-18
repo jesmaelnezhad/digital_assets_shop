@@ -1,5 +1,5 @@
 // Package database provides a shared PostgreSQL connection pool for all
-// Pawradise microservices.  Use InitDB to open the pool, GetDB to retrieve
+// Store4bots microservices.  Use InitDB to open the pool, GetDB to retrieve
 // the singleton, and CloseDB to shut it down gracefully.
 package database
 

@@ -2,14 +2,14 @@ import https from 'https';
 import http from 'http';
 
 // ============================================================
-// Pawradise E2E Test Suite (TDD)
+// Store4bots E2E Test Suite (TDD)
 // Tests define EXPECTED behavior per PRODUCT-SPEC.md v1.1
 // Tests are NOT expected to pass until implementation is complete.
 // ============================================================
 
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'admin_secret_staging_2026';
 const STAGING_DOMAIN = 'server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir';
-const PRODUCTION_DOMAIN = 'pawradise.ir'; // placeholder
+const PRODUCTION_DOMAIN = 'store4bots.xyz'; // placeholder
 const ENV_NAME = process.env.ENV_NAME || 'staging';
 const API_HOST = ENV_NAME === 'production' ? PRODUCTION_DOMAIN : STAGING_DOMAIN;
 const API_BASE = `https://${API_HOST}/api/v1`;
@@ -728,8 +728,8 @@ async function runWishlistTests(authToken) {
       });
       assertStatus(res, 200, 'Toggle wishlist');
       const data = res.json();
-      // Wishlist returns message on toggle, not 'added' field
       assert(data.message && data.message.includes('wishlist'), 'Wishlist toggle message');
+      if (data.added !== undefined) assert(typeof data.added === 'boolean', 'Wishlist toggle added flag');
     }
   });
 
@@ -842,6 +842,41 @@ async function runCommunityTests(authToken) {
     assertStatus(res, 201, 'Create post');
     const data = res.json();
     assertField(data, 'id', 'Post id');
+  });
+
+  await test('POST /community/posts unfurls a public URL', async () => {
+    if (!authToken) throw new Error('No auth token available');
+    const res = await request(`${API_BASE}/community/posts`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ content: 'Look at https://example.com/pack for this kit' }),
+    });
+    assertStatus(res, 201, 'Create post with URL');
+    const data = res.json();
+    assert(String(data.link_url || '').indexOf('example.com') >= 0, `link_url=${data.link_url}`);
+  });
+
+  await test('POST /community/posts accepts a photo without text', async () => {
+    if (!authToken) throw new Error('No auth token available');
+    const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const res = await request(`${API_BASE}/community/posts`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ content: '', image_url: png }),
+    });
+    assertStatus(res, 201, 'Create photo post');
+    const data = res.json();
+    assert(String(data.image_url || '').indexOf('data:image/png') === 0, 'image_url is a png data URL');
+  });
+
+  await test('POST /community/posts rejects empty body without photo', async () => {
+    if (!authToken) throw new Error('No auth token available');
+    const res = await request(`${API_BASE}/community/posts`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ content: '' }),
+    });
+    assertStatus(res, 400, 'Empty post');
   });
 
   await test('POST /community/posts rejects content over 500 chars', async () => {
@@ -1815,7 +1850,7 @@ async function runEventsTests() {
 
 async function main() {
   console.log('╔══════════════════════════════════════════════════════════╗');
-  console.log('║  Pawradise E2E Test Suite (TDD)                        ║');
+  console.log('║  Store4bots E2E Test Suite (TDD)                        ║');
   console.log('║  Tests define EXPECTED behavior per PRODUCT-SPEC.md    ║');
   console.log('╚══════════════════════════════════════════════════════════╝');
   console.log(`\nAPI: ${API_BASE}`);

@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: registry.local/pawradise-frontend:react
+        image: registry.local/store4bots-frontend:react
         ports:
         - containerPort: 80
         volumeMounts:

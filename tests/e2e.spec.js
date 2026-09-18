@@ -6,13 +6,13 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'admin_secret_staging_2026';
 let counter = 0;
 function uniqueEmail() {
   counter++;
-  return `e2e-${Date.now()}-${counter}@pawradise.ir`;
+  return `e2e-${Date.now()}-${counter}@store4bots.xyz`;
 }
 
 test.describe('Staging shop', () => {
   test('homepage loads the catalog chrome', async ({ page }) => {
     await page.goto(`${STAGING}/`);
-    await expect(page.locator('.brand')).toContainText('PAWRADISE');
+    await expect(page.locator('.brand')).toContainText('STORE4BOTS');
     await expect(page.locator('#grid, .hero')).toBeVisible();
   });
 

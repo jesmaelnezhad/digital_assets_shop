@@ -1,0 +1,13 @@
+---
+description: How to test Store4bots (Playwright vs curl)
+globs: tests/**
+alwaysApply: false
+---
+
+# Testing
+
+- Frontend: Playwright against `https://$STAGING_HOST`. HTTP 200 is not a UI pass.
+- Check computed styles and rendered DOM, not only that a `<style>` tag exists.
+- API: `tests/e2e-suite.js` may use curl-style HTTP; assert JSON shape, not status alone.
+- Pass counts live only in `tests/REPORT.md`.
+- Work `docs/SPEC-GAPS.md` lowest FIX-ID: failing test first.

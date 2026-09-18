@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	adminmodels "github.com/pawradise/admin-service/models"
+	adminmodels "github.com/store4bots/admin-service/models"
 )
 
 func couponNum(v interface{}) string {

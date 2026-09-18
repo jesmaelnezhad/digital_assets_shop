@@ -9,15 +9,15 @@
   }
 
   async function mount() {
-    if (global.PawUI && PawUI.bootTheme) PawUI.bootTheme(global.Pawradise && Pawradise.api);
+    if (global.PawUI && PawUI.bootTheme) PawUI.bootTheme(global.Store4bots && Store4bots.api);
     const header = document.getElementById("site-header");
     const footer = document.getElementById("site-footer");
     let count = 0;
     let user = null;
-    if (global.Pawradise && Pawradise.api) {
-      try { user = await Pawradise.api.auth.getProfile(); } catch (e) { user = null; }
+    if (global.Store4bots && Store4bots.api) {
+      try { user = await Store4bots.api.auth.getProfile(); } catch (e) { user = null; }
       try {
-        const cart = await Pawradise.api.cart.get();
+        const cart = await Store4bots.api.cart.get();
         count = (cart.items || []).reduce((n, i) => n + (i.quantity || 0), 0);
       } catch (e) { count = 0; }
     }
@@ -27,7 +27,7 @@
       header.className = "site-header";
       header.innerHTML = `
         <a class="brand" href="/">
-          <span class="brand-mark">P</span> PAWRADISE
+          <span class="brand-mark">S</span> STORE4BOTS
         </a>
         <form class="header-search" action="/">
           ${(global.PawUI && PawUI.icon) ? PawUI.icon("search") : ""}
@@ -58,14 +58,14 @@
       }
       const out = header.querySelector("[data-logout]");
       if (out) out.onclick = async () => {
-        try { await Pawradise.api.auth.logout(); } catch (e) { /* still leave */ }
+        try { await Store4bots.api.auth.logout(); } catch (e) { /* still leave */ }
         location.href = "/";
       };
     }
     if (footer) {
       footer.className = "site-footer";
       footer.innerHTML = `
-        <span>© Pawradise · buy once, download forever</span>
+        <span>© Store4bots · buy once, download forever</span>
         <span class="footer-links">
           <a href="/">Shop</a>
           <a href="/category">Categories</a>
@@ -84,16 +84,16 @@
     let bar = document.getElementById("compare-bar");
     let compared = [];
     try {
-      const c = await Pawradise.api.compare.list();
-      await PawUI.catalog.load();
-      compared = (c.products || []).map((x) => PawUI.catalog.byId[x.product_id]).filter(Boolean);
+      if (global.PawUI && PawUI.lists) await PawUI.lists.refresh();
+      const ids = (global.PawUI && PawUI.lists) ? [...PawUI.lists.compare] : [];
+      compared = ids.length ? await PawUI.catalog.byIdsAsync(ids) : [];
     } catch (e) { compared = []; }
     if (compared.length) {
       if (!bar) { bar = document.createElement("div"); bar.id = "compare-bar"; document.body.appendChild(bar); }
       bar.className = "compare-bar";
-      bar.innerHTML = `<span>Compare ${compared.length}/4</span>` +
-        compared.map((p) => `<a href="/product/${p.slug}">${PawUI.esc(p.title)}</a>`).join("") +
-        `<a class="btn btn-accent" href="/compare">Open</a>`;
+      bar.innerHTML = `<span class="compare-bar-count">Compare ${compared.length}/4</span>` +
+        compared.map((p) => `<a class="compare-bar-item" href="/product/${p.slug}">${PawUI.esc(p.title)}</a>`).join("") +
+        `<a class="btn btn-accent compare-bar-open" href="/compare">Open</a>`;
     } else if (bar) bar.remove();
     if (!document.querySelector(".grain")) {
       const g = document.createElement("div");
@@ -102,7 +102,7 @@
     }
     try {
       if (!document.querySelector('meta[name="description"]')) {
-        const d = await Pawradise.api.settings.get("site_description");
+        const d = await Store4bots.api.settings.get("site_description");
         if (d && d.value) {
           const m = document.createElement("meta");
           m.name = "description";

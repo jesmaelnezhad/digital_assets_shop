@@ -1,5 +1,5 @@
 <!-- Every prototype page: -->
-<script>window.PROTOTYPE_ROOT = "../"; window.PROTOTYPE_PAGE = "PAGE"; window.__PAWRADISE_ENV__ = { apiBase: "/api/v1", envName: "prototype" };</script>
+<script>window.PROTOTYPE_ROOT = "../"; window.PROTOTYPE_PAGE = "PAGE"; window.__STORE4BOTS_ENV__ = { apiBase: "/api/v1", envName: "prototype" };</script>
 <script src="../shared/store.js"></script>
 <script src="../shared/mock-api.js"></script>
 <script src="../shared/api-client.js"></script>

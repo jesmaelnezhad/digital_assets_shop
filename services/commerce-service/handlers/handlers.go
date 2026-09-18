@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pawradise/shared/middleware"
-	"github.com/pawradise/commerce-service/models"
+	"github.com/store4bots/shared/middleware"
+	"github.com/store4bots/commerce-service/models"
 )
 
 type CommerceHandler struct{ db *sql.DB }
@@ -237,7 +237,7 @@ func (h *CommerceHandler) CreateOrder(c *gin.Context) {
 		tx.Exec("UPDATE coupons SET current_uses = COALESCE(current_uses,0) + 1 WHERE id = $1", couponID)
 	}
 	tx.Exec("DELETE FROM cart_items WHERE user_id = $1", userID)
-	walletAddress := "0xPAWRADISE_WALLET_BSC"
+	walletAddress := "0xSTORE4BOTS_WALLET_BSC"
 	if status == "paid" {
 		tx.Exec("UPDATE orders SET payment_address = $1, memo = $2, paid_at = NOW() WHERE id = $3", walletAddress, orderID, orderID)
 	} else {
@@ -327,7 +327,7 @@ func (h *CommerceHandler) GetOrderPayment(c *gin.Context) {
 		cryptoAddr = payAddr.String
 	}
 	if cryptoAddr == "" {
-		cryptoAddr = "0xPAWRADISE_WALLET_BSC"
+		cryptoAddr = "0xSTORE4BOTS_WALLET_BSC"
 	}
 	cryptoChain := chain.String
 	if cryptoChain == "" {
@@ -378,7 +378,11 @@ func (h *CommerceHandler) GetCart(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	rows, _ := h.db.Query("SELECT id, product_id, quantity FROM cart_items WHERE user_id = $1", userID)
+	rows, err := h.db.Query("SELECT id, product_id, quantity FROM cart_items WHERE user_id = $1", userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
+		return
+	}
 	defer rows.Close()
 	type cartItem struct {
 		ID        int `json:"id"`
@@ -392,7 +396,6 @@ func (h *CommerceHandler) GetCart(c *gin.Context) {
 			items = append(items, ci)
 		}
 	}
-	if items == nil { items = []cartItem{} }
 	c.JSON(http.StatusOK, gin.H{"items": items})
 }
 
@@ -436,20 +439,11 @@ func (h *CommerceHandler) GetWishlist(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	rows, _ := h.db.Query("SELECT id, product_id FROM wishlist_items WHERE user_id = $1", userID)
-	defer rows.Close()
-	type wishItem struct {
-		ID        int `json:"id"`
-		ProductID int `json:"product_id"`
+	items, err := listIDPairs(h.db, "SELECT id, product_id FROM wishlist_items WHERE user_id = $1", userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
+		return
 	}
-	items := []wishItem{}
-	for rows.Next() {
-		var wi wishItem
-		if rows.Scan(&wi.ID, &wi.ProductID) == nil {
-			items = append(items, wi)
-		}
-	}
-	if items == nil { items = []wishItem{} }
 	c.JSON(http.StatusOK, gin.H{"products": items})
 }
 
@@ -464,15 +458,16 @@ func (h *CommerceHandler) ToggleWishlist(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "product_id required"})
 		return
 	}
-	var existing int
-	h.db.QueryRow("SELECT 1 FROM wishlist_items WHERE user_id = $1 AND product_id = $2", userID, productID).Scan(&existing)
-	if existing == 1 {
-		h.db.Exec("DELETE FROM wishlist_items WHERE user_id = $1 AND product_id = $2", userID, productID)
-		c.JSON(http.StatusOK, gin.H{"message": "removed from wishlist", "added": false})
-	} else {
-		h.db.Exec("INSERT INTO wishlist_items (user_id, product_id) VALUES ($1, $2)", userID, productID)
-		c.JSON(http.StatusOK, gin.H{"message": "added to wishlist", "added": true})
+	added, err := toggleOwnedProduct(h.db, "wishlist_items", userID, productID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
+		return
 	}
+	if added {
+		c.JSON(http.StatusOK, gin.H{"message": "added to wishlist", "added": true})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "removed from wishlist", "added": false})
 }
 
 func (h *CommerceHandler) RecordView(c *gin.Context) {
@@ -486,6 +481,7 @@ func (h *CommerceHandler) RecordView(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "product_id required"})
 		return
 	}
+	h.db.Exec("DELETE FROM recently_viewed WHERE user_id = $1 AND product_id = $2", userID, productID)
 	h.db.Exec("INSERT INTO recently_viewed (user_id, product_id) VALUES ($1, $2)", userID, productID)
 	c.JSON(http.StatusOK, gin.H{"message": "view recorded"})
 }
@@ -496,7 +492,11 @@ func (h *CommerceHandler) GetRecentlyViewed(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	rows, _ := h.db.Query("SELECT id, product_id, viewed_at FROM recently_viewed WHERE user_id = $1 ORDER BY viewed_at DESC LIMIT 20", userID)
+	rows, err := h.db.Query("SELECT id, product_id, viewed_at FROM recently_viewed WHERE user_id = $1 ORDER BY viewed_at DESC LIMIT 20", userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
+		return
+	}
 	defer rows.Close()
 	type rv struct {
 		ID        int    `json:"id"`
@@ -512,7 +512,6 @@ func (h *CommerceHandler) GetRecentlyViewed(c *gin.Context) {
 			items = append(items, r)
 		}
 	}
-	if items == nil { items = []rv{} }
 	c.JSON(http.StatusOK, gin.H{"products": items})
 }
 
@@ -528,14 +527,33 @@ func (h *CommerceHandler) ToggleCompare(c *gin.Context) {
 		return
 	}
 	var existing int
-	h.db.QueryRow("SELECT 1 FROM product_comparisons WHERE user_id = $1 AND product_id = $2", userID, productID).Scan(&existing)
-	if existing == 1 {
-		h.db.Exec("DELETE FROM product_comparisons WHERE user_id = $1 AND product_id = $2", userID, productID)
-		c.JSON(http.StatusOK, gin.H{"message": "removed from compare"})
-	} else {
-		h.db.Exec("INSERT INTO product_comparisons (user_id, product_id) VALUES ($1, $2)", userID, productID)
-		c.JSON(http.StatusOK, gin.H{"message": "added to compare"})
+	err := h.db.QueryRow("SELECT 1 FROM product_comparisons WHERE user_id = $1 AND product_id = $2", userID, productID).Scan(&existing)
+	if err == sql.ErrNoRows {
+		var n int
+		if qerr := h.db.QueryRow("SELECT COUNT(*) FROM product_comparisons WHERE user_id = $1", userID).Scan(&n); qerr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
+			return
+		}
+		if n >= 4 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "compare up to 4 assets"})
+			return
+		}
+		if _, err = h.db.Exec("INSERT INTO product_comparisons (user_id, product_id) VALUES ($1, $2) ON CONFLICT (user_id, product_id) DO NOTHING", userID, productID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "added to compare", "added": true})
+		return
 	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
+		return
+	}
+	if _, err = h.db.Exec("DELETE FROM product_comparisons WHERE user_id = $1 AND product_id = $2", userID, productID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "removed from compare", "added": false})
 }
 
 func (h *CommerceHandler) GetCompare(c *gin.Context) {
@@ -544,20 +562,11 @@ func (h *CommerceHandler) GetCompare(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	rows, _ := h.db.Query("SELECT id, product_id FROM product_comparisons WHERE user_id = $1", userID)
-	defer rows.Close()
-	type pc struct {
-		ID        int `json:"id"`
-		ProductID int `json:"product_id"`
+	items, err := listIDPairs(h.db, "SELECT id, product_id FROM product_comparisons WHERE user_id = $1", userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed"})
+		return
 	}
-	items := []pc{}
-	for rows.Next() {
-		var p pc
-		if rows.Scan(&p.ID, &p.ProductID) == nil {
-			items = append(items, p)
-		}
-	}
-	if items == nil { items = []pc{} }
 	c.JSON(http.StatusOK, gin.H{"products": items})
 }
 

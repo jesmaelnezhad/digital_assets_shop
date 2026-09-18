@@ -1,0 +1,14 @@
+---
+description: Canonical Kubernetes manifests for Store4bots
+globs: k8s/**
+alwaysApply: false
+---
+
+# Kubernetes
+
+- Edit files listed in `k8s/README.md` only. Leftovers live in `k8s/archive/`.
+- Apply `k8s/generated/` after `scripts/render-k8s.sh` (placeholders from `config/site.env`).
+- MFE `API_BASE` is `/api/v1` in staging and production.
+- Service `selector` is `app: <name>` only.
+- Built images: `{{REGISTRY_HOST}}/{{IMAGE_REPO}}/<name>:<tag>`. Stock images stay on Docker Hub / registry.k8s.io.
+- Databases are host Docker on RED.

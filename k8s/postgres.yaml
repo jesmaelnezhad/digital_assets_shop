@@ -13,8 +13,8 @@ metadata:
 type: Opaque
 stringData:
   POSTGRES_USER: app
-  POSTGRES_PASSWORD: pawradise_db_password_2026
-  POSTGRES_DB: pawradise
+  POSTGRES_PASSWORD: store4bots_db_password_2026
+  POSTGRES_DB: store4bots
 ---
 apiVersion: v1
 kind: ConfigMap

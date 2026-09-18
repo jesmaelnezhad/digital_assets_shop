@@ -4,7 +4,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Check auth state via cookie (httpOnly, so we can't read it directly)
     // Instead, we make a lightweight call to /me to check auth
-    fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/me`, {
+    fetch(`${window.__STORE4BOTS_ENV__?.apiBase || '/api/v1'}/me`, {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
     })
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
             authBtn.href = '#';
             authBtn.onclick = (e) => {
                 e.preventDefault();
-                fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/logout`, {
+                fetch(`${window.__STORE4BOTS_ENV__?.apiBase || '/api/v1'}/logout`, {
                     method: 'POST',
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' }
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Load cart badge count
-    fetch(`${window.__PAWRADISE_ENV__?.apiBase || '/api/v1'}/cart`, {
+    fetch(`${window.__STORE4BOTS_ENV__?.apiBase || '/api/v1'}/cart`, {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
     })

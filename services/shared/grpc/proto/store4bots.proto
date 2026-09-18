@@ -1,0 +1,932 @@
+syntax = "proto3";
+
+package store4bots;
+
+option go_package = "github.com/store4bots/shared/grpc/generated";
+
+// =============================================================================
+// Common Messages
+// =============================================================================
+
+message Empty {}
+
+message HealthResponse {
+  string status = 1;
+  string service = 2;
+  string version = 3;
+}
+
+message ErrorResponse {
+  int32 code = 1;
+  string message = 2;
+  string details = 3;
+}
+
+// =============================================================================
+// Identity Service Proto
+// =============================================================================
+
+service IdentityService {
+  rpc Register(RegisterRequest) returns (AuthResponse);
+  rpc Login(LoginRequest) returns (AuthResponse);
+  rpc Logout(LogoutRequest) returns (Empty);
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc GetProfile(GetProfileRequest) returns (ProfileResponse);
+  rpc UpdateProfile(UpdateProfileRequest) returns (ProfileResponse);
+  rpc DeleteUser(DeleteUserRequest) returns (Empty);
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
+  rpc GetReferralStats(GetReferralStatsRequest) returns (ReferralStatsResponse);
+  rpc RecordReferral(RecordReferralRequest) returns (Empty);
+  rpc RecordCommission(RecordCommissionRequest) returns (Empty);
+}
+
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  string name = 3;
+  string referral_code = 4;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message LogoutRequest {
+  string token = 1;
+}
+
+message AuthResponse {
+  string token = 1;
+  User user = 2;
+}
+
+message User {
+  int32 id = 1;
+  string email = 2;
+  string name = 3;
+  string created_at = 4;
+  string updated_at = 5;
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  int32 user_id = 2;
+  string email = 3;
+}
+
+message GetProfileRequest {
+  int32 user_id = 1;
+}
+
+message ProfileResponse {
+  int32 id = 1;
+  string email = 2;
+  string name = 3;
+  string bio = 4;
+  string avatar_url = 5;
+  string wallet_address = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message UpdateProfileRequest {
+  int32 user_id = 1;
+  string name = 2;
+  string bio = 3;
+  string avatar_url = 4;
+  string wallet_address = 5;
+}
+
+message DeleteUserRequest {
+  int32 user_id = 1;
+}
+
+message ResetPasswordRequest {
+  int32 user_id = 1;
+}
+
+message ResetPasswordResponse {
+  string new_password = 1;
+}
+
+message GetReferralStatsRequest {
+  int32 user_id = 1;
+}
+
+message ReferralStatsResponse {
+  string referral_link = 1;
+  double total_earnings = 2;
+  int32 referred_count = 3;
+}
+
+message RecordReferralRequest {
+  int32 referrer_id = 1;
+  int32 referred_id = 2;
+}
+
+message RecordCommissionRequest {
+  int32 order_id = 1;
+  int32 referrer_id = 2;
+  double commission_percent = 3;
+  double commission_usd = 4;
+}
+
+// =============================================================================
+// Product Service Proto
+// =============================================================================
+
+service ProductService {
+  rpc GetProducts(GetProductsRequest) returns (ProductListResponse);
+  rpc GetProduct(GetProductRequest) returns (ProductResponse);
+  rpc CreateProduct(CreateProductRequest) returns (ProductResponse);
+  rpc UpdateProduct(UpdateProductRequest) returns (ProductResponse);
+  rpc DeleteProduct(DeleteProductRequest) returns (Empty);
+  rpc GetCategories(Empty) returns (CategoryListResponse);
+  rpc GetBundles(Empty) returns (BundleListResponse);
+  rpc GetBundle(GetBundleRequest) returns (BundleResponse);
+  rpc CreateBundle(CreateBundleRequest) returns (BundleResponse);
+  rpc AddProductTier(AddProductTierRequest) returns (ProductTierResponse);
+  rpc AddProductImage(AddProductImageRequest) returns (ProductImageResponse);
+  rpc GeneratePreviews(GeneratePreviewsRequest) returns (Empty);
+  rpc PinProduct(PinProductRequest) returns (Empty);
+  rpc GetRecommendations(GetRecommendationsRequest) returns (ProductListResponse);
+}
+
+message GetProductsRequest {
+  int32 page = 1;
+  int32 per_page = 2;
+  string query = 3;
+  int32 category_id = 4;
+  double price_min = 5;
+  double price_max = 6;
+  string file_type = 7;
+  int32 rating = 8;
+  string sort = 9;
+}
+
+message ProductListResponse {
+  repeated Product products = 1;
+  int32 total = 2;
+}
+
+message Product {
+  int32 id = 1;
+  string title = 2;
+  string slug = 3;
+  string description = 4;
+  int32 category_id = 5;
+  string category_name = 6;
+  double price_usd = 7;
+  string asset_path = 8;
+  string asset_hash = 9;
+  string status = 10;
+  int32 file_size_bytes = 11;
+  string file_mime_type = 12;
+  bool pwyw_enabled = 13;
+  double pwyw_min_price = 14;
+  bool pinned = 15;
+  int32 sort_order = 16;
+  string created_at = 17;
+  string updated_at = 18;
+  repeated ProductImage images = 19;
+  repeated ProductTier tiers = 20;
+}
+
+message ProductImage {
+  int32 id = 1;
+  int32 product_id = 2;
+  string url = 3;
+  string image_type = 4;
+  bool is_primary = 5;
+  int32 width = 6;
+  int32 height = 7;
+}
+
+message ProductTier {
+  int32 id = 1;
+  int32 product_id = 2;
+  string tier_name = 3;
+  string file_path = 4;
+  string file_hash = 5;
+  double price_usd = 6;
+}
+
+message GetProductRequest {
+  string slug = 1;
+}
+
+message ProductResponse {
+  Product product = 1;
+}
+
+message CreateProductRequest {
+  string title = 1;
+  string slug = 2;
+  string description = 3;
+  int32 category_id = 4;
+  double price_usd = 5;
+  string asset_path = 6;
+  string asset_hash = 7;
+  string status = 8;
+  int32 file_size_bytes = 9;
+  string file_mime_type = 10;
+  bool pwyw_enabled = 11;
+  double pwyw_min_price = 12;
+}
+
+message UpdateProductRequest {
+  int32 product_id = 1;
+  string title = 2;
+  string description = 3;
+  double price_usd = 4;
+  string status = 5;
+}
+
+message DeleteProductRequest {
+  int32 product_id = 1;
+}
+
+message Category {
+  int32 id = 1;
+  string name = 2;
+  string slug = 3;
+  string description = 4;
+  int32 parent_id = 5;
+}
+
+message CategoryListResponse {
+  repeated Category categories = 1;
+}
+
+message Bundle {
+  int32 id = 1;
+  string title = 2;
+  string slug = 3;
+  string description = 4;
+  double price_usd = 5;
+  string status = 6;
+  repeated Product products = 7;
+}
+
+message BundleListResponse {
+  repeated Bundle bundles = 1;
+}
+
+message GetBundleRequest {
+  int32 bundle_id = 1;
+}
+
+message BundleResponse {
+  Bundle bundle = 1;
+}
+
+message CreateBundleRequest {
+  string title = 1;
+  string slug = 2;
+  string description = 3;
+  double price_usd = 4;
+  repeated int32 product_ids = 5;
+}
+
+message AddProductTierRequest {
+  int32 product_id = 1;
+  string tier_name = 2;
+  string file_path = 3;
+  string file_hash = 4;
+  double price_usd = 5;
+}
+
+message ProductTierResponse {
+  ProductTier tier = 1;
+}
+
+message AddProductImageRequest {
+  int32 product_id = 1;
+  string url = 2;
+  bool is_primary = 3;
+}
+
+message ProductImageResponse {
+  ProductImage image = 1;
+}
+
+message GeneratePreviewsRequest {
+  int32 product_id = 1;
+}
+
+message PinProductRequest {
+  int32 product_id = 1;
+  bool pinned = 2;
+}
+
+message GetRecommendationsRequest {
+  int32 product_id = 1;
+  int32 limit = 2;
+}
+
+// =============================================================================
+// Commerce Service Proto
+// =============================================================================
+
+service CommerceService {
+  rpc CreateOrder(CreateOrderRequest) returns (OrderResponse);
+  rpc GetOrders(GetOrdersRequest) returns (OrderListResponse);
+  rpc GetOrder(GetOrderRequest) returns (OrderResponse);
+  rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (OrderResponse);
+  rpc CreateGuestOrder(CreateGuestOrderRequest) returns (GuestOrderResponse);
+  rpc GetGuestOrder(GetGuestOrderRequest) returns (GuestOrderResponse);
+  rpc GetCart(GetCartRequest) returns (CartResponse);
+  rpc AddItemToCart(AddItemToCartRequest) returns (CartResponse);
+  rpc RemoveItemFromCart(RemoveItemFromCartRequest) returns (CartResponse);
+  rpc GetWishlist(GetWishlistRequest) returns (WishlistResponse);
+  rpc ToggleWishlist(ToggleWishlistRequest) returns (WishlistResponse);
+  rpc ValidateCoupon(ValidateCouponRequest) returns (ValidateCouponResponse);
+  rpc CreateCoupon(CreateCouponRequest) returns (CouponResponse);
+  rpc RecordView(RecordViewRequest) returns (Empty);
+  rpc GetRecentlyViewed(GetRecentlyViewedRequest) returns (RecentlyViewedResponse);
+  rpc ToggleCompare(ToggleCompareRequest) returns (CompareResponse);
+  rpc GetCompare(GetCompareRequest) returns (CompareResponse);
+}
+
+message CreateOrderRequest {
+  int32 user_id = 1;
+  string coupon_code = 2;
+}
+
+message OrderResponse {
+  Order order = 1;
+}
+
+message Order {
+  int32 id = 1;
+  int32 user_id = 2;
+  double total_usd = 3;
+  string status = 4;
+  int32 coupon_id = 5;
+  double coupon_discount_usd = 6;
+  string payment_tx_hash = 7;
+  string payment_chain = 8;
+  int32 payment_confirmations = 9;
+  string paid_at = 10;
+  string created_at = 11;
+  string updated_at = 12;
+  repeated OrderItem items = 13;
+}
+
+message OrderItem {
+  int32 id = 1;
+  int32 order_id = 2;
+  int32 product_id = 3;
+  int32 product_tier_id = 4;
+  string product_title = 5;
+  string product_slug = 6;
+  int32 quantity = 7;
+  double unit_price_usd = 8;
+  int32 download_count = 9;
+}
+
+message GetOrdersRequest {
+  int32 user_id = 1;
+  int32 page = 2;
+  int32 per_page = 3;
+}
+
+message OrderListResponse {
+  repeated Order orders = 1;
+  int32 total = 2;
+}
+
+message GetOrderRequest {
+  int32 order_id = 1;
+  int32 user_id = 2;
+}
+
+message UpdateOrderStatusRequest {
+  int32 order_id = 1;
+  string status = 2;
+}
+
+message CreateGuestOrderRequest {
+  string email = 1;
+  double total_usd = 2;
+  string crypto_chain = 3;
+  string crypto_amount = 4;
+  string crypto_address = 5;
+  string status = 6;
+}
+
+message GuestOrderResponse {
+  int32 order_id = 1;
+  string email = 2;
+  string status = 3;
+}
+
+message GetGuestOrderRequest {
+  int32 order_id = 1;
+  string email = 2;
+}
+
+message GetCartRequest {
+  int32 user_id = 1;
+}
+
+message CartResponse {
+  repeated CartItem items = 1;
+  double total = 2;
+}
+
+message CartItem {
+  int32 id = 1;
+  int32 user_id = 2;
+  int32 product_id = 3;
+  int32 product_tier_id = 4;
+  int32 quantity = 5;
+  double unit_price = 6;
+}
+
+message AddItemToCartRequest {
+  int32 user_id = 1;
+  int32 product_id = 2;
+  int32 product_tier_id = 3;
+  int32 quantity = 4;
+}
+
+message RemoveItemFromCartRequest {
+  int32 cart_item_id = 1;
+  int32 user_id = 2;
+}
+
+message GetWishlistRequest {
+  int32 user_id = 1;
+}
+
+message WishlistResponse {
+  repeated Product products = 1;
+}
+
+message ToggleWishlistRequest {
+  int32 user_id = 1;
+  int32 product_id = 2;
+}
+
+message ValidateCouponRequest {
+  string code = 1;
+  double cart_total = 2;
+}
+
+message ValidateCouponResponse {
+  bool valid = 1;
+  string discount_type = 2;
+  double discount_value = 3;
+  double discount_usd = 4;
+}
+
+message CreateCouponRequest {
+  string code = 1;
+  string discount_type = 2;
+  double discount_value = 3;
+  string expires_at = 4;
+  int32 usage_limit = 5;
+  double min_purchase_usd = 6;
+  int32 product_id = 7;
+}
+
+message CouponResponse {
+  int32 id = 1;
+  string code = 2;
+  string discount_type = 3;
+  double discount_value = 4;
+  bool is_active = 5;
+}
+
+message RecordViewRequest {
+  int32 user_id = 1;
+  int32 product_id = 2;
+}
+
+message GetRecentlyViewedRequest {
+  int32 user_id = 1;
+  int32 limit = 2;
+}
+
+message RecentlyViewedResponse {
+  repeated Product products = 1;
+}
+
+message ToggleCompareRequest {
+  int32 user_id = 1;
+  int32 product_id = 2;
+}
+
+message CompareResponse {
+  repeated Product products = 1;
+}
+
+message GetCompareRequest {
+  int32 user_id = 1;
+}
+
+// =============================================================================
+// Community Service Proto
+// =============================================================================
+
+service CommunityService {
+  rpc GetPosts(GetPostsRequest) returns (PostListResponse);
+  rpc CreatePost(CreatePostRequest) returns (PostResponse);
+  rpc GetPost(GetPostRequest) returns (PostResponse);
+  rpc DeletePost(DeletePostRequest) returns (Empty);
+  rpc LikePost(LikePostRequest) returns (LikeResponse);
+  rpc AddComment(AddCommentRequest) returns (CommentResponse);
+  rpc DeleteComment(DeleteCommentRequest) returns (Empty);
+  rpc FollowUser(FollowUserRequest) returns (FollowResponse);
+  rpc UnfollowUser(UnfollowUserRequest) returns (Empty);
+  rpc GetPublicProfile(GetPublicProfileRequest) returns (PublicProfileResponse);
+}
+
+message GetPostsRequest {
+  int32 page = 1;
+  int32 per_page = 2;
+  int32 user_id = 3;
+}
+
+message PostListResponse {
+  repeated Post posts = 1;
+  int32 total = 2;
+}
+
+message Post {
+  int32 id = 1;
+  int32 user_id = 2;
+  string content = 3;
+  string created_at = 4;
+  string updated_at = 5;
+  string author_name = 6;
+  string author_avatar = 7;
+  int32 like_count = 8;
+  int32 comment_count = 9;
+  bool liked_by_me = 10;
+}
+
+message CreatePostRequest {
+  int32 user_id = 1;
+  string content = 2;
+}
+
+message PostResponse {
+  Post post = 1;
+}
+
+message GetPostRequest {
+  int32 post_id = 1;
+}
+
+message DeletePostRequest {
+  int32 post_id = 1;
+  int32 user_id = 2;
+}
+
+message LikePostRequest {
+  int32 user_id = 1;
+  int32 post_id = 2;
+}
+
+message LikeResponse {
+  bool liked = 1;
+  int32 like_count = 2;
+}
+
+message AddCommentRequest {
+  int32 user_id = 1;
+  int32 post_id = 2;
+  string content = 3;
+}
+
+message CommentResponse {
+  int32 id = 1;
+  int32 user_id = 2;
+  int32 post_id = 3;
+  string content = 4;
+  string created_at = 5;
+  string author_name = 6;
+}
+
+message DeleteCommentRequest {
+  int32 comment_id = 1;
+  int32 user_id = 2;
+}
+
+message FollowUserRequest {
+  int32 follower_id = 1;
+  int32 following_id = 2;
+}
+
+message FollowResponse {
+  bool following = 1;
+  int32 follower_count = 2;
+}
+
+message UnfollowUserRequest {
+  int32 follower_id = 1;
+  int32 following_id = 2;
+}
+
+message GetPublicProfileRequest {
+  int32 user_id = 1;
+}
+
+message PublicProfileResponse {
+  int32 user_id = 1;
+  string name = 2;
+  string bio = 3;
+  string avatar_url = 4;
+  int32 post_count = 5;
+  int32 follower_count = 6;
+  int32 following_count = 7;
+}
+
+// =============================================================================
+// Review Service Proto
+// =============================================================================
+
+service ReviewService {
+  rpc CreateRating(CreateRatingRequest) returns (RatingResponse);
+  rpc GetProductRatings(GetProductRatingsRequest) returns (ProductRatingsResponse);
+  rpc GetAverageRating(GetAverageRatingRequest) returns (AverageRatingResponse);
+  rpc CheckVerifiedPurchase(CheckVerifiedPurchaseRequest) returns (CheckVerifiedPurchaseResponse);
+}
+
+message CreateRatingRequest {
+  int32 user_id = 1;
+  int32 product_id = 2;
+  int32 rating = 3;
+}
+
+message RatingResponse {
+  int32 id = 1;
+  int32 user_id = 2;
+  int32 product_id = 3;
+  int32 rating = 4;
+  string created_at = 5;
+}
+
+message GetProductRatingsRequest {
+  int32 product_id = 1;
+}
+
+message ProductRatingsResponse {
+  repeated Rating ratings = 1;
+  int32 total = 2;
+}
+
+message GetAverageRatingRequest {
+  int32 product_id = 1;
+}
+
+message AverageRatingResponse {
+  double average = 1;
+  int32 count = 2;
+  map<int32, int32> distribution = 3;
+}
+
+message CheckVerifiedPurchaseRequest {
+  int32 user_id = 1;
+  int32 product_id = 2;
+}
+
+message CheckVerifiedPurchaseResponse {
+  bool verified = 1;
+}
+
+// =============================================================================
+// Payment Service Proto
+// =============================================================================
+
+service PaymentService {
+  rpc GetPaymentDetails(GetPaymentDetailsRequest) returns (PaymentDetailsResponse);
+  rpc CheckPaymentStatus(CheckPaymentStatusRequest) returns (PaymentStatusResponse);
+  rpc ConfirmPayment(ConfirmPaymentRequest) returns (PaymentStatusResponse);
+  rpc GetExchangeRates(Empty) returns (ExchangeRatesResponse);
+  rpc GetExchangeRate(GetExchangeRateRequest) returns (ExchangeRateResponse);
+  rpc SetExchangeRate(SetExchangeRateRequest) returns (ExchangeRateResponse);
+  rpc DeleteExchangeRate(DeleteExchangeRateRequest) returns (Empty);
+  rpc CalculateCryptoAmount(CalculateCryptoAmountRequest) returns (CalculateCryptoAmountResponse);
+}
+
+message GetPaymentDetailsRequest {
+  int32 order_id = 1;
+}
+
+message PaymentDetailsResponse {
+  string crypto_address = 1;
+  string crypto_amount = 2;
+  string crypto_chain = 3;
+  string crypto_memo = 4;
+  double amount_usd = 5;
+}
+
+message CheckPaymentStatusRequest {
+  int32 order_id = 1;
+}
+
+message PaymentStatusResponse {
+  string status = 1;
+  int32 confirmations = 2;
+  string tx_hash = 3;
+}
+
+message ConfirmPaymentRequest {
+  int32 order_id = 1;
+  string tx_hash = 2;
+  int32 confirmations = 3;
+}
+
+message ExchangeRate {
+  int32 id = 1;
+  string chain = 2;
+  string symbol = 3;
+  double rate_to_usd = 4;
+  string updated_at = 5;
+}
+
+message ExchangeRatesResponse {
+  repeated ExchangeRate rates = 1;
+}
+
+message GetExchangeRateRequest {
+  string chain = 1;
+}
+
+message ExchangeRateResponse {
+  ExchangeRate rate = 1;
+}
+
+message SetExchangeRateRequest {
+  string chain = 1;
+  string symbol = 2;
+  double rate_to_usd = 3;
+}
+
+message DeleteExchangeRateRequest {
+  string chain = 1;
+}
+
+message CalculateCryptoAmountRequest {
+  double amount_usd = 1;
+  string chain = 2;
+}
+
+message CalculateCryptoAmountResponse {
+  string crypto_amount = 1;
+  string chain = 2;
+  double rate_used = 3;
+}
+
+// =============================================================================
+// Admin Service Proto
+// =============================================================================
+
+service AdminService {
+  rpc GetStats(Empty) returns (StatsResponse);
+  rpc ListUsers(ListUsersRequest) returns (UserListResponse);
+  rpc DeleteUser(DeleteUserRequest) returns (Empty);
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
+  rpc BulkUpdateProducts(BulkUpdateProductsRequest) returns (Empty);
+  rpc ListAllOrders(ListAllOrdersRequest) returns (OrderListResponse);
+  rpc ListCommunityPosts(ListCommunityPostsRequest) returns (PostListResponse);
+  rpc DeleteCommunityPost(DeletePostRequest) returns (Empty);
+  rpc ListReferrals(Empty) returns (ReferralListResponse);
+  rpc ExportEmails(ExportEmailsRequest) returns (ExportEmailsResponse);
+  rpc GetSettings(Empty) returns (SettingsResponse);
+  rpc SetSetting(SetSettingRequest) returns (Empty);
+}
+
+message StatsResponse {
+  int32 total_users = 1;
+  int32 total_orders = 2;
+  double total_revenue = 3;
+  int32 total_products = 4;
+  int32 total_categories = 5;
+  int32 total_downloads = 6;
+}
+
+message ListUsersRequest {
+  int32 page = 1;
+  int32 per_page = 2;
+}
+
+message UserListResponse {
+  repeated User users = 1;
+  int32 total = 2;
+}
+
+message BulkUpdateProductsRequest {
+  repeated int32 product_ids = 1;
+  string status = 2;
+  int32 category_id = 3;
+}
+
+message ListAllOrdersRequest {
+  int32 page = 1;
+  int32 per_page = 2;
+  string status = 3;
+}
+
+message ListCommunityPostsRequest {
+  int32 page = 1;
+  int32 per_page = 2;
+}
+
+message ReferralListResponse {
+  repeated ReferralInfo referrals = 1;
+}
+
+message ReferralInfo {
+  int32 referrer_id = 1;
+  int32 referred_id = 2;
+  double commission_usd = 3;
+  string created_at = 4;
+}
+
+message ExportEmailsRequest {
+  string format = 1;
+  string date_from = 2;
+  string date_to = 3;
+}
+
+message ExportEmailsResponse {
+  repeated string emails = 1;
+  int32 count = 2;
+}
+
+message SettingsResponse {
+  map<string, string> settings = 1;
+}
+
+message SetSettingRequest {
+  string key = 1;
+  string value = 2;
+}
+
+// =============================================================================
+// Media Service Proto
+// =============================================================================
+
+service MediaService {
+  rpc UploadFile(UploadFileRequest) returns (UploadFileResponse);
+  rpc GetFile(GetFileRequest) returns (GetFileResponse);
+  rpc GeneratePreview(GeneratePreviewRequest) returns (GeneratePreviewResponse);
+  rpc DeleteFile(DeleteFileRequest) returns (Empty);
+  rpc VerifyAccess(VerifyAccessRequest) returns (VerifyAccessResponse);
+}
+
+message UploadFileRequest {
+  string filename = 1;
+  bytes content = 2;
+  string content_type = 3;
+  int32 product_id = 4;
+}
+
+message UploadFileResponse {
+  string file_path = 1;
+  string file_hash = 2;
+  int32 file_size = 3;
+}
+
+message GetFileRequest {
+  string file_path = 1;
+  int32 user_id = 2;
+  int32 order_id = 3;
+}
+
+message GetFileResponse {
+  bytes content = 1;
+  string content_type = 2;
+}
+
+message GeneratePreviewRequest {
+  int32 product_id = 1;
+  string source_path = 2;
+}
+
+message GeneratePreviewResponse {
+  string preview_path = 1;
+  string thumbnail_path = 2;
+}
+
+message DeleteFileRequest {
+  string file_path = 1;
+}
+
+message VerifyAccessRequest {
+  int32 user_id = 1;
+  int32 product_id = 2;
+}
+
+message VerifyAccessResponse {
+  bool has_access = 1;
+}

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Community — Pawradise</title>
-  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="community"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <title>Community — Store4bots</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="community"; window.__STORE4BOTS_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
   <link rel="stylesheet" href="../shared/theme.css" />
 </head>
 <body>
@@ -20,8 +20,15 @@
           <button data-f="following">Following</button>
         </div>
         <form class="post" id="composer" hidden>
-          <textarea name="content" maxlength="500" placeholder="Short update (max 500)"></textarea>
-          <div class="char-count"><span id="cc">0</span>/500</div>
+          <textarea name="content" maxlength="500" placeholder="Short update — paste a link for a preview (max 500)"></textarea>
+          <div class="composer-row">
+            <label class="btn">Photo<input type="file" name="photo" accept="image/*" hidden /></label>
+            <span class="char-count"><span id="cc">0</span>/500</span>
+          </div>
+          <div class="composer-thumb" hidden>
+            <img alt="" />
+            <button type="button" class="btn" data-drop-photo>Remove</button>
+          </div>
           <button class="btn btn-accent" style="margin-top:10px">Post</button>
           <p class="form-error"></p>
         </form>
@@ -43,7 +50,7 @@
   <script src="../shared/events.js"></script>
   <script src="../shared/chrome.js"></script>
   <script>
-    const api = Pawradise.api;
+    const api = Store4bots.api;
     let filter = "recent";
     let me = null;
     let feedPage = 1;
@@ -117,13 +124,7 @@
       render();
     };
     PawUI.bindFollow(document.querySelector(".community-layout"), render);
-    const ta = document.querySelector("#composer textarea");
-    if (ta) ta.oninput = () => { document.getElementById("cc").textContent = ta.value.length; };
-    document.getElementById("composer").onsubmit = async (e) => {
-      e.preventDefault();
-      try { await api.community.createPost(new FormData(e.target).get("content")); e.target.reset(); document.getElementById("cc").textContent = "0"; render(); }
-      catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
-    };
+    PawUI.bindComposer(document.getElementById("composer"), render);
     render();
   </script>
 </body>

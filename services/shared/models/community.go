@@ -7,11 +7,16 @@ type CommunityPost struct {
 	ID           int    `json:"id"`
 	UserID       int    `json:"user_id"`
 	Content      string `json:"content"`
-	Type         string `json:"type"`
-	IsPublic     bool   `json:"is_public"`
-	IsPinned     bool   `json:"is_pinned"`
-	LikeCount    int    `json:"like_count"`
-	CommentCount int    `json:"comment_count"`
+	Type             string `json:"type"`
+	IsPublic         bool   `json:"is_public"`
+	IsPinned         bool   `json:"is_pinned"`
+	ImageURL         string `json:"image_url"`
+	LinkURL          string `json:"link_url"`
+	LinkTitle        string `json:"link_title"`
+	LinkDescription  string `json:"link_description"`
+	LinkImage        string `json:"link_image"`
+	LikeCount        int    `json:"like_count"`
+	CommentCount     int    `json:"comment_count"`
 	CreatedAt    string `json:"created_at"`
 	UpdatedAt    string `json:"updated_at"`
 }

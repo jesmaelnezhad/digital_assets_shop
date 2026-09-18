@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pawradise/shared/middleware"
+	"github.com/store4bots/shared/middleware"
 )
 
 type memberJSON struct {

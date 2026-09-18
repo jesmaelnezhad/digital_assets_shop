@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Profile — Pawradise</title>
+  <title>Profile — Store4bots</title>
     <script>window.SITE_PAGE="community";</script>
   <link rel="icon" href="/assets/favicon.svg" sizes="any" />
-  <link rel="stylesheet" href="/assets/theme.css?v=9" />
+  <link rel="stylesheet" href="/assets/theme.css?v=11" />
   <script src="/env.js"></script>
 </head>
 <body>
@@ -21,7 +21,7 @@
     const params = new URLSearchParams(location.search);
     if (!params.get('id')) { const m = location.pathname.match(/\/profile\/(\d+)/); if (m) params.set('id', m[1]); }
     let tab = params.get("tab") || "posts";
-    const api = Pawradise.api;
+    const api = Store4bots.api;
     const PER = 10;
     let page = 1;
     let items = [];
@@ -72,7 +72,7 @@
       }
       try { u = await api.community.getProfile(id); }
       catch (e) { root.innerHTML = PawUI.communityNav("people", me && me.id) + '<p class="note">Profile not found. <a href="/people">People</a></p>'; return; }
-      document.title = u.name + " — Pawradise";
+      document.title = u.name + " — Store4bots";
       const self = !!(me && me.id === u.id);
       const followBtn = self || !me
         ? (me ? `<a class="btn" href="/account">Account settings</a>` : `<a class="btn btn-accent" href="${PawUI.loginHref()}">Log in to follow</a>`)

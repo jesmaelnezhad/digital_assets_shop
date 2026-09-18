@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Referrals — Pawradise</title>
+  <title>Referrals — Store4bots</title>
     <script>window.SITE_PAGE="account";</script>
   <link rel="icon" href="/assets/favicon.svg" sizes="any" />
-  <link rel="stylesheet" href="/assets/theme.css?v=9" />
+  <link rel="stylesheet" href="/assets/theme.css?v=11" />
   <script src="/env.js"></script>
 </head>
 <body>
@@ -21,8 +21,8 @@
     async function render() {
       const root = document.getElementById("root");
       try {
-        const r = await Pawradise.api.referrals.get();
-        const earn = await Pawradise.api.referrals.getEarnings();
+        const r = await Store4bots.api.referrals.get();
+        const earn = await Store4bots.api.referrals.getEarnings();
         const code = r.referral_link || r.code || "";
         const link = location.origin + location.pathname.replace(/[^/]+$/, "") + "..//register?ref=" + encodeURIComponent(code);
         const people = r.referrals || r.referred_users || [];

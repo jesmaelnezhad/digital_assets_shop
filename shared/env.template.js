@@ -4,7 +4,7 @@
     var apiBase = '${API_BASE}';
     var envName = '${ENV_NAME}';
     
-    window.__PAWRADISE_ENV__ = {
+    window.__STORE4BOTS_ENV__ = {
         apiBase: apiBase || '/api/v1',
         envName: envName
     };

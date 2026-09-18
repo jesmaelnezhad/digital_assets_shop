@@ -6,7 +6,7 @@
  */
 (function (global) {
   const realFetch = global.fetch ? global.fetch.bind(global) : null;
-  const TOKEN_KEY = "pawradise_proto_token";
+  const TOKEN_KEY = "store4bots_proto_token";
   const ADMIN_TOKENS = ["admin_secret_staging_2026", "studio-admin"];
   let currentMethod = "GET";
   let currentPath = "";
@@ -318,6 +318,11 @@
       liked: !!p.liked,
       created_at: iso(p.created),
       updated_at: iso(p.created),
+      image_url: p.image_url || (p.image ? Paw.media(p.image) : ""),
+      link_url: p.link_url || "",
+      link_title: p.link_title || "",
+      link_description: p.link_description || "",
+      link_image: p.link_image || "",
       author: authorJSON(u, following)
     };
   }
@@ -333,7 +338,12 @@
       like_count: p.likes,
       comment_count: (p.comments || []).length,
       created_at: iso(p.created),
-      updated_at: iso(p.created)
+      updated_at: iso(p.created),
+      image_url: p.image_url || (p.image ? Paw.media(p.image) : ""),
+      link_url: p.link_url || "",
+      link_title: p.link_title || "",
+      link_description: p.link_description || "",
+      link_image: p.link_image || ""
     };
   }
 
@@ -660,8 +670,9 @@
       needUser(init, input);
       const id = Number(bodyOf(init).product_id);
       const before = Paw.db().compare.includes(id);
+      if (!before && Paw.db().compare.length >= 4) return json(400, { error: "compare up to 4 assets" });
       Paw.toggleCompare(id);
-      return json(200, { message: before ? "removed from compare" : "added to compare" });
+      return json(200, { message: before ? "removed from compare" : "added to compare", added: !before });
     }
 
     if (M === "POST" && path === "/api/v1/events") {
@@ -867,8 +878,13 @@
       if (M === "POST" && (path === "/api/v1/community/posts" || path === "/api/v1/posts")) {
         const u = needUser(init, input);
         const b = bodyOf(init);
-        const post = Paw.addPost(b.content);
-        return json(201, { id: post.id, user_id: u.id, content: b.content, type: b.type || "post" });
+        const post = Paw.addPost(b.content, { image_url: b.image_url || "" });
+        return json(201, {
+          id: post.id, user_id: u.id, content: b.content, type: b.type || "post",
+          image_url: post.image_url || post.image || "",
+          link_url: post.link_url || "", link_title: post.link_title || "",
+          link_description: post.link_description || "", link_image: post.link_image || ""
+        });
       }
       if (rest[0] === "posts" && rest[2] === "like") {
         const u = needUser(init, input);

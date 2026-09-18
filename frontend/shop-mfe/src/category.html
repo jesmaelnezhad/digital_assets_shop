@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Categories — Pawradise</title>
+  <title>Categories — Store4bots</title>
     <script>window.SITE_PAGE="shop";</script>
   <link rel="icon" href="/assets/favicon.svg" sizes="any" />
-  <link rel="stylesheet" href="/assets/theme.css?v=9" />
+  <link rel="stylesheet" href="/assets/theme.css?v=11" />
   <script src="/env.js"></script>
 </head>
 <body>
@@ -18,17 +18,17 @@
   <script src="/assets/events.js"></script>
   <script src="/assets/chrome.js"></script>
   <script>
-    Pawradise.api.products.getCategories().then((res) => {
+    Store4bots.api.products.getCategories().then((res) => {
       document.getElementById("root").innerHTML = `<div class="kicker">Shop</div><h1 class="page-title">Categories</h1>
         <div class="cat-grid">${(res.categories || []).map((c) => `
           <a class="cat-card" href="/?category=${encodeURIComponent(c.slug)}">
             <h3>${PawUI.esc(c.name)}</h3>
             <p>${PawUI.esc(c.description)}</p>
           </a>`).join("")}</div>`;
-      document.title = "Categories — Pawradise";
+      document.title = "Categories — Store4bots";
       let m = document.querySelector('meta[name="description"]');
       if (!m) { m = document.createElement("meta"); m.name = "description"; document.head.appendChild(m); }
-      m.content = "Browse Pawradise categories: 3D, UI kits, textures, audio, environments, icons, VFX.";
+      m.content = "Browse Store4bots categories: 3D, UI kits, textures, audio, environments, icons, VFX.";
     });
   </script>
 </body>

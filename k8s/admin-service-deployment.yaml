@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: admin-service
-  namespace: pawradise
+  namespace: store4bots
   labels:
     app: admin-service
 spec:
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: admin-service
-        image: registry.local/pawradise-admin-service:latest
+        image: registry.local/store4bots-admin-service:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8087
@@ -25,59 +25,59 @@ spec:
         - name: DB_HOST
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: DB_HOST
         - name: DB_PORT
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: DB_PORT
         - name: DB_USER
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: DB_USER
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: pawradise-secrets
+              name: store4bots-secrets
               key: DB_PASSWORD
         - name: DB_NAME
           value: "admin_db"
         - name: REDIS_HOST
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: REDIS_HOST
         - name: ADMIN_TOKEN
           valueFrom:
             secretKeyRef:
-              name: pawradise-secrets
+              name: store4bots-secrets
               key: ADMIN_TOKEN
         - name: IDENTITY_SERVICE_URL
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: IDENTITY_SERVICE_URL
         - name: PRODUCT_SERVICE_URL
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: PRODUCT_SERVICE_URL
         - name: COMMERCE_SERVICE_URL
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: COMMERCE_SERVICE_URL
         - name: COMMUNITY_SERVICE_URL
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: COMMUNITY_SERVICE_URL
         - name: LOG_LEVEL
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: LOG_LEVEL
         resources:
           requests:
@@ -103,7 +103,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: admin-service
-  namespace: pawradise
+  namespace: store4bots
 spec:
   ports:
   - port: 8087
@@ -116,7 +116,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: admin-service-hpa
-  namespace: pawradise
+  namespace: store4bots
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

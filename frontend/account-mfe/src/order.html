@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Order — Pawradise</title>
+  <title>Order — Store4bots</title>
     <script>window.SITE_PAGE="account";</script>
   <link rel="icon" href="/assets/favicon.svg" sizes="any" />
-  <link rel="stylesheet" href="/assets/theme.css?v=9" />
+  <link rel="stylesheet" href="/assets/theme.css?v=11" />
   <script src="/env.js"></script>
 </head>
 <body>
@@ -21,10 +21,10 @@
     const id = new URLSearchParams(location.search).get("id");
     async function render() {
       const root = document.getElementById("root");
-      try { await Pawradise.api.auth.getProfile(); }
+      try { await Store4bots.api.auth.getProfile(); }
       catch (e) { root.innerHTML = PawUI.authGate("Log in to see this order."); return; }
       let data;
-      try { data = await Pawradise.api.orders.get(id); }
+      try { data = await Store4bots.api.orders.get(id); }
       catch (e) { root.innerHTML = `<p class="note">${PawUI.esc(e.message)}</p>`; return; }
       const o = data.order || data;
       const items = data.items || [];
@@ -43,7 +43,7 @@
         <p class="note" style="margin-top:16px">Paid orders can be re-downloaded any time. Live download returns a placeholder message.</p>`;
       root.querySelectorAll("[data-dl]").forEach((b) => b.onclick = async () => {
         try {
-          const r = await Pawradise.api.orders.download(id, b.dataset.dl);
+          const r = await Store4bots.api.orders.download(id, b.dataset.dl);
           PawUI.toast((r && r.message) || "Download started");
         } catch (e) { PawUI.toast(e.message); }
       });

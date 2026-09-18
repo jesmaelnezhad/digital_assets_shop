@@ -1,0 +1,15 @@
+---
+description: Keep Store4bots docs, skills, and scripts matching live staging
+alwaysApply: true
+---
+
+# Docs maintenance
+
+When you change how the system works (routing, registry, DB, build, tests, product behavior):
+
+1. Update the skill for that area under `.agent/skills/`.
+2. Update the matching file in `docs/` (current tense only).
+3. Put hosts only in `config/site.env`. Scripts `source scripts/lib/site-env.sh`.
+4. Pass/fail numbers belong only in `tests/REPORT.md`.
+5. Do not append “we used to…” history. If a procedure is reusable (e.g. move RED to a new VM), keep the procedure, drop the old IPs.
+6. If a k8s YAML is unused, do not leave it beside canonical files — move it to `k8s/archive/` or delete it.

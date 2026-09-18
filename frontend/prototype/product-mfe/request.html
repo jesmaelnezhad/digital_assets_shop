@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Request custom — Pawradise</title>
-  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="shop"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <title>Request custom — Store4bots</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="shop"; window.__STORE4BOTS_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
   <link rel="stylesheet" href="../shared/theme.css" />
 </head>
 <body>
@@ -34,7 +34,7 @@
   <script src="../shared/events.js"></script>
   <script src="../shared/chrome.js"></script>
   <script>
-    Pawradise.api.products.getCategories().then((res) => {
+    Store4bots.api.products.getCategories().then((res) => {
       const sel = document.getElementById("req-cat");
       sel.innerHTML = (res.categories || []).map((c) =>
         `<option value="${PawUI.esc(c.slug)}">${PawUI.esc(c.name)}</option>`).join("")
@@ -44,7 +44,7 @@
       e.preventDefault();
       const f = new FormData(e.target);
       try {
-        await Pawradise.api.requests.create({
+        await Store4bots.api.requests.create({
           title: f.get("title"),
           description: f.get("description"),
           category: f.get("category"),

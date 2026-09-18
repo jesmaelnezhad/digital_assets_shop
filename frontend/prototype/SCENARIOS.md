@@ -1,6 +1,6 @@
 # Product scenarios — think about and check
 
-This is not an automated test suite. It is the list of **people, jobs, edges, and cross-page promises** to hold in mind while using Pawradise. Walk it as a person would: click, type, go back, open another tab, log out, come back.
+This is not an automated test suite. It is the list of **people, jobs, edges, and cross-page promises** to hold in mind while using Store4bots. Walk it as a person would: click, type, go back, open another tab, log out, come back.
 
 A scenario fails if the user cannot finish the job, sees an internal error, loses state, or finds a surface that the spec promised but the page never offers.
 
@@ -223,13 +223,13 @@ The public profile is a **directory page for a person**, not a second copy of Ac
 ## 11. Community feed and posting
 
 11.1 Guest sees the recent feed, read-only composer replaced by a login hint.
-11.2 Logged-in user sees a composer, 0–500 counter, and can publish.
-11.3 Empty post and 501-character post are rejected.
+11.2 Logged-in user sees a composer, 0–500 counter, Photo upload, and can publish (text, photo, or both).
+11.3 Empty post (no text and no photo) and 501-character post are rejected. Photo-only is allowed.
 11.4 New post appears at the top of Recent and on the author’s profile Posts.
 11.5 Recent vs Following tabs: Following is posts from accounts the user follows (not the user’s own unless the product says so).
 11.6 Following while logged out is an empty-state with login, **not** 401 JSON.
 11.7 Following while following nobody explains how to follow someone.
-11.8 Post card: author name, avatar, date, like count, comment count, follow control for others.
+11.8 Post card: author name, avatar, date, like count, comment count, follow control for others. A URL in the body shows a link card (title + thumbnail). An attached photo shows on the card.
 11.8a Recent feed paginates with **Show more**; the volume seed has more posts than one page.
 11.9 Like and unlike toggle; count changes; liked state is visible after refresh.
 11.10 Guest like → login.
@@ -243,7 +243,7 @@ The public profile is a **directory page for a person**, not a second copy of Ac
 
 ## 12. Post thread
 
-12.1 Valid post: body, author, likes, comments with author avatars.
+12.1 Valid post: body, author, likes, comments with author avatars, photo and link card when present.
 12.2 Missing post id → not found.
 12.3 Guest can read; reply form is login.
 12.4 Logged-in user comments; comment appears; can delete **own** comment only.

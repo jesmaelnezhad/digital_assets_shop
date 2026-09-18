@@ -4,13 +4,13 @@ const { BASE, ADMIN_TOKEN, loginAs, unlockAccess } = require('./frontend/helpers
 let counter = 0;
 function uniqueEmail() {
   counter++;
-  return `e2e-${Date.now()}-${counter}@pawradise.ir`;
+  return `e2e-${Date.now()}-${counter}@store4bots.xyz`;
 }
 
 test.describe('Staging shop', () => {
   test('homepage loads the catalog chrome', async ({ page }) => {
     await page.goto(`${BASE}/`);
-    await expect(page.locator('.brand')).toContainText('PAWRADISE');
+    await expect(page.locator('.brand')).toContainText('STORE4BOTS');
     await expect(page.locator('.hero')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('#grid .card').first()).toBeVisible();
   });

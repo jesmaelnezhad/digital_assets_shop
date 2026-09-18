@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pawradise/shared/auth"
-	"github.com/pawradise/shared/middleware"
+	"github.com/store4bots/shared/auth"
+	"github.com/store4bots/shared/middleware"
 )
 
 func TestMain(m *testing.M) {

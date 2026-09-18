@@ -1,11 +1,11 @@
-module github.com/pawradise/admin-service
+module github.com/store4bots/admin-service
 
 go 1.22
 
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/lib/pq v1.10.9
-	github.com/pawradise/shared v0.1.0
+	github.com/store4bots/shared v0.1.0
 	golang.org/x/crypto v0.23.0
 )
 
@@ -40,4 +40,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/pawradise/shared => ../shared
+replace github.com/store4bots/shared => ../shared

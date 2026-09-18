@@ -1,5 +1,5 @@
 // Package events defines the event publisher interface and implementations
-// for inter-service communication in the Pawradise microservice architecture.
+// for inter-service communication in the Store4bots microservice architecture.
 package events
 
 import (

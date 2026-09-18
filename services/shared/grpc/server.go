@@ -1,4 +1,4 @@
-// Package grpc provides shared gRPC client/server infrastructure for Pawradise microservices.
+// Package grpc provides shared gRPC client/server infrastructure for Store4bots microservices.
 package grpc
 
 import (

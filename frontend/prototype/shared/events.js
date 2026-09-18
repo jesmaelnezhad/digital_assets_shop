@@ -1,7 +1,7 @@
-// Pawradise frontend event SDK. Allowed names: product_view, checkout_click.
+// Store4bots frontend event SDK. Allowed names: product_view, checkout_click.
 (function (global) {
-  const KEY = "pawradise_sid";
-  const ENV = global.__PAWRADISE_ENV__ || { apiBase: "/api/v1" };
+  const KEY = "store4bots_sid";
+  const ENV = global.__STORE4BOTS_ENV__ || { apiBase: "/api/v1" };
   const ALLOWED = { product_view: true, checkout_click: true };
 
   function sid() {

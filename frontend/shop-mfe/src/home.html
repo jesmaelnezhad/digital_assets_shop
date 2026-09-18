@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pawradise — Shop</title>
+  <title>Store4bots — Shop</title>
     <script>window.SITE_PAGE="shop";</script>
   <link rel="icon" href="/assets/favicon.svg" sizes="any" />
-  <link rel="stylesheet" href="/assets/theme.css?v=9" />
+  <link rel="stylesheet" href="/assets/theme.css?v=11" />
   <script src="/env.js"></script>
 </head>
 <body>
@@ -61,7 +61,7 @@
     document.getElementById("rating").value = state.rating;
     document.getElementById("price_min").value = state.price_min;
     document.getElementById("price_max").value = state.price_max;
-    const api = Pawradise.api;
+    const api = Store4bots.api;
 
     async function renderHero() {
       await PawUI.catalog.load();
@@ -77,6 +77,7 @@
 
     async function render() {
       await PawUI.catalog.load();
+      await PawUI.lists.refresh();
       const categories = PawUI.catalog.cats;
       document.getElementById("rail").innerHTML = `<h2>Library</h2>
         <button class="cat ${state.category ? "" : "is-on"}" data-cat="">All assets</button>` +

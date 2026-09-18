@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Log in — Pawradise</title>
-  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="auth"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <title>Log in — Store4bots</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="auth"; window.__STORE4BOTS_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
   <link rel="stylesheet" href="../shared/theme.css" />
 </head>
 <body>
@@ -33,7 +33,7 @@
       e.preventDefault();
       const f = new FormData(e.target);
       try {
-        await Pawradise.api.auth.login(f.get("email"), f.get("password"));
+        await Store4bots.api.auth.login(f.get("email"), f.get("password"));
         location.href = PawUI.safeNext(next);
       } catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
     };

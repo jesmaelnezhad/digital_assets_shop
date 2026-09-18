@@ -10,8 +10,8 @@ test.describe('Shop Products Loading', () => {
         await page.goto(BASE + '/', { waitUntil: 'networkidle' });
 
         // API client must be available
-        const hasApi = await page.evaluate(() => !!window.Pawradise?.api);
-        expect(hasApi, 'window.Pawradise.api should exist').toBe(true);
+        const hasApi = await page.evaluate(() => !!window.Store4bots?.api);
+        expect(hasApi, 'window.Store4bots.api should exist').toBe(true);
 
         await page.waitForSelector('.card, .hero', { timeout: 10000 });
 

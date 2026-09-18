@@ -9,7 +9,7 @@ import (
 	"unicode"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pawradise/product-service/models"
+	"github.com/store4bots/product-service/models"
 )
 
 func (h *Handlers) ensureExtras() {

@@ -1,15 +1,15 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: pawradise-ingress
-  namespace: pawradise
+  name: store4bots-ingress
+  namespace: store4bots
   annotations:
     kubernetes.io/ingress.class: "traefik"
     traefik.ingress.kubernetes.io/router.entrypoints: web
     traefik.ingress.kubernetes.io/rate-limit: "100"
 spec:
   rules:
-  - host: pawradise.local
+  - host: store4bots.local
     http:
       paths:
       - path: /
@@ -23,14 +23,14 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: pawradise-ingress-api
-  namespace: pawradise
+  name: store4bots-ingress-api
+  namespace: store4bots
   annotations:
     kubernetes.io/ingress.class: "traefik"
     traefik.ingress.kubernetes.io/router.entrypoints: web
 spec:
   rules:
-  - host: api.pawradise.local
+  - host: api.store4bots.local
     http:
       paths:
       - path: /identity

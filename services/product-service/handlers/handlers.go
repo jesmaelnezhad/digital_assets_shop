@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pawradise/product-service/models"
+	"github.com/store4bots/product-service/models"
 )
 
 type Handlers struct{ db *sql.DB }
@@ -34,7 +34,7 @@ func (h *Handlers) GetProduct(c *gin.Context) {
 	var catID sql.NullInt64
 	var pinnedAt sql.NullTime
 	err := h.db.QueryRow(
-		"SELECT id,title,slug,description,price_usd,status,created_at,updated_at,category_id,image_url,stock_count,pinned,sort_order,digital_formats,tags,is_pwyw,pwyw_min_price,pinned_at FROM products WHERE slug=$1",
+		"SELECT id,title,slug,description,price_usd,status,created_at,updated_at,category_id,image_url,stock_count,pinned,sort_order,digital_formats,tags,is_pwyw,pwyw_min_price,pinned_at FROM products WHERE slug=$1 OR id::text=$1 ORDER BY CASE WHEN slug=$1 THEN 0 ELSE 1 END LIMIT 1",
 		slug).Scan(&p.ID, &p.Title, &p.Slug, &p.Description, &p.PriceUSD, &p.Status,
 		&p.CreatedAt, &p.UpdatedAt, &catID, &p.ImageURL, &p.StockCount, &p.Pinned, &p.SortOrder,
 		&p.DigitalFormats, &p.Tags, &p.IsPwyw, &p.PwywMinPrice, &pinnedAt)

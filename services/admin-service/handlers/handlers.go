@@ -15,8 +15,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
-	"github.com/pawradise/shared/middleware"
-	"github.com/pawradise/shared/models"
+	"github.com/store4bots/shared/middleware"
+	"github.com/store4bots/shared/models"
 	"golang.org/x/crypto/bcrypt"
 )
 

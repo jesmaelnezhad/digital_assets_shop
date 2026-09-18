@@ -1,4 +1,4 @@
-# Pawradise frontend prototype
+# Store4bots frontend prototype
 
 Portable mock of the shop MFEs. No Go services required. Open in a browser.
 
@@ -8,7 +8,7 @@ python3 -m http.server 4173
 # http://127.0.0.1:4173/
 ```
 
-`fetch` for `/api/v1` is intercepted in `shared/mock-api.js`. JSON **keys and nesting** match the live Go handlers. Differences: `API-DIVERGENCE.md`. Demo data lives in `localStorage` (`pawradise-proto-v6`). The seed includes ~48 products, 10 categories, 5 bundles, 80 people, and 60+ posts so shop pagers and community **Show more** fire.
+`fetch` for `/api/v1` is intercepted in `shared/mock-api.js`. JSON **keys and nesting** match the live Go handlers. Differences: `API-DIVERGENCE.md`. Demo data lives in `localStorage` (`store4bots-proto-v6`). The seed includes ~48 products, 10 categories, 5 bundles, 80 people, and 60+ posts so shop pagers and community **Show more** fire.
 
 Walk the product as a person with `SCENARIOS.md` (jobs, edges, and cross-page state — not automated tests).
 

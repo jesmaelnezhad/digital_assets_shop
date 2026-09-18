@@ -40,8 +40,9 @@ Per-product SEO fields `seo_title`, `seo_description`, `og_image` are extra on `
 |---|---|---|
 | `GET /products` | Ignores `search`, `category`, `sort`, `rating`, `file_type`, `price_*`. `digital_formats` / `is_pwyw` are usually empty because the list SELECT omits them. | Honors those query params (spec). Fills `digital_formats`, `is_pwyw`, `pwyw_min_price` from seed. **No extra keys** (`file_type`, `rating`, `category_name` are omitted on list). |
 | `GET /recommendations/:id` | Always `{ "products": [] }` | Same key; fills same-category products so related cards work. |
-| `GET /community/posts` | `total` is the current page length; `filter` ignored; `user_id` ignored | `total` is the full count. `filter=following` returns posts from followed users (empty list if logged out, not 401). `user_id` filters a profile's posts. Extra post key `liked`. |
-| Feed `author.id` | Scan never sets it (serializes as `0`) | Set to `user_id` so profile links work. Extra author key `follows_you`. |
+| `GET /community/posts` | `total` is the full count. `filter=following` is posts from followed users (empty list if logged out, not 401). `user_id` filters a profile's posts. Each post includes `liked`, `image_url`, `link_url`, `link_title`, `link_description`, `link_image`. | Same keys. Mock link cards use the hostname plus a stock image instead of fetching Open Graph tags. |
+| Feed `author.id` | Set to `user_id` | Same. Extra author key `follows_you`. |
+| `POST /community/posts` | `{ content, type, is_public, image_url }`. Text max 500. Photo-only is allowed (`image_url` data URL, ≤~900KB). First public `http(s)` URL is unfurled server-side (OG title/description/image); loopback/private hosts are skipped. | Same request/response keys. Mock fills `link_*` from the hostname without a network fetch. |
 | `GET /community/users/:id` | `id, email, name, avatar_url, post_count, follower_count, following_count, created_at, updated_at` | Same keys **plus** spec fields `bio`, `wallet_address` and relationship flags `following`, `follows_you`, `is_self` (live profile UI already reads `following`). |
 | `POST /community/follow/:id` | 400 `cannot follow yourself`, 409 `already following` | Same errors; mock no longer toggles on POST. |
 | `DELETE /community/follow/:id` | 404 `not following` | Same. |
@@ -64,7 +65,7 @@ Live `RecordView` / `ToggleCompare` / `ToggleWishlist` read `c.Param("id")`, but
 | Endpoint | Live | Prototype |
 |---|---|---|
 | Cart, wishlist, compare, recently-viewed, orders | JWT / session cookie | Same: 401 `{ "error": "unauthorized" }` if not logged in. Token `mock.{userId}.user` or `Paw` session after login. |
-| Admin | `AdminAuthMiddleware` | Bearer `admin_secret_staging_2026` or `studio-admin`. Admin UI stores it in `sessionStorage.admin_token` (spec) and `localStorage.pawradise_admin_token`. |
+| Admin | `AdminAuthMiddleware` | Bearer `admin_secret_staging_2026` or `studio-admin`. Admin UI stores it in `sessionStorage.admin_token` (spec) and `localStorage.store4bots_admin_token`. |
 
 Register accepts `referral_code` in the prototype even though live `Register` does not bind it (identity still creates a referral **link** for the new user).
 

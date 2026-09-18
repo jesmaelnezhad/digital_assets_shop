@@ -166,9 +166,9 @@ func errString(err error) string {
 func isExemptMethod(fullMethod string) bool {
 	exempt := []string{
 		"/grpc.health.v1.Health/Check",
-		"/pawradise.IdentityService/Login",
-		"/pawradise.IdentityService/Register",
-		"/pawradise.IdentityService/ValidateToken",
+		"/store4bots.IdentityService/Login",
+		"/store4bots.IdentityService/Register",
+		"/store4bots.IdentityService/ValidateToken",
 	}
 	for _, m := range exempt {
 		if fullMethod == m {

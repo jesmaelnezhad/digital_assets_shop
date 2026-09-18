@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Product — Pawradise</title>
-  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="shop"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <title>Product — Store4bots</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="shop"; window.__STORE4BOTS_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
   <link rel="stylesheet" href="../shared/theme.css" />
 </head>
 <body>
@@ -20,7 +20,7 @@
   <script src="../shared/chrome.js"></script>
   <script>
     const slug = new URLSearchParams(location.search).get("slug") || "lunar-clay-characters";
-    const api = Pawradise.api;
+    const api = Store4bots.api;
     let data, tiers = [], related = [], active = 0, tierIdx = 0, pwyw;
 
     async function load() {
@@ -28,6 +28,7 @@
       catch (e) { document.getElementById("root").innerHTML = '<p class="note">Asset not found.</p>'; return; }
       const p = data.product;
       await PawUI.catalog.load();
+      await PawUI.lists.refresh();
       data.product = PawUI.catalog.decorate(p);
       try { tiers = (await api.products.getTiers(p.id)).tiers || []; } catch (e) { tiers = []; }
       try { related = (await api.products.getRecommendations(p.id)).products || []; } catch (e) { related = []; }
@@ -36,7 +37,7 @@
         if (window.PawEvents) PawEvents.track("product_view", { product_id: p.id, slug: p.slug, title: p.title });
       } catch (e) { /* collector is best-effort */ }
       pwyw = p.pwyw_min_price || p.price_usd;
-      document.title = p.title + " — Pawradise";
+      document.title = p.title + " — Store4bots";
       paint();
     }
 
@@ -46,7 +47,7 @@
       const tier = tiers[tierIdx] || { price_usd: p.price_usd, tier_name: "Standard" };
       const share = encodeURIComponent(location.href);
       const title = encodeURIComponent(p.title);
-      document.title = (p.seo_title || p.title) + " — Pawradise";
+      document.title = (p.seo_title || p.title) + " — Store4bots";
       let desc = document.querySelector('meta[name="description"]');
       if (!desc) { desc = document.createElement("meta"); desc.name = "description"; document.head.appendChild(desc); }
       desc.content = p.seo_description || p.description || "";
@@ -109,19 +110,11 @@
       document.querySelectorAll("[data-i]").forEach((b) => { if (b.closest(".tiers")) b.onclick = () => { tierIdx = Number(b.dataset.i); paint(); }; });
       const pw = document.getElementById("pwyw");
       if (pw) pw.onchange = () => { pwyw = Number(pw.value); paint(); };
-      document.getElementById("add").onclick = async () => {
-        try {
-          await api.cart.add(p.id, 1, (tiers[tierIdx] || {}).id, p.is_pwyw ? { pwyw_price: pwyw } : {});
-          PawUI.toast("Added to cart");
-          PawChrome.mount();
-        } catch (e) {
-          if (e.status === 401) location.href = PawUI.loginHref();
-          else PawUI.toast(e.message);
-        }
-      };
-      document.getElementById("wish").onclick = async () => { try { await api.wishlist.toggle(p.id); PawUI.toast("Wishlist updated"); } catch (e) { if (e.status === 401) location.href = PawUI.loginHref(); else PawUI.toast(e.message); } };
-      document.getElementById("cmp").onclick = async () => { try { await api.compare.toggle(p.id); PawUI.toast("Compare updated"); PawChrome.mount(); } catch (e) { if (e.status === 401) location.href = PawUI.loginHref(); else PawUI.toast(e.message); } };
       document.getElementById("copy-link").onclick = () => { navigator.clipboard.writeText(location.href); PawUI.toast("Copied"); };
+      PawUI.bindBuy(p, {
+        tierId: () => (tiers[tierIdx] || {}).id,
+        extra: () => p.is_pwyw ? { pwyw_price: pwyw } : {}
+      });
       if (related.length) PawUI.bindCards(document.querySelector(".grid"));
       loadReviews(p.id);
     }

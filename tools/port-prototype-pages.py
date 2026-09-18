@@ -54,7 +54,7 @@ PATHS = [
 
 def transform(html: str, page: str) -> str:
     html = re.sub(
-        r'<script>window\.PROTOTYPE_ROOT="[^"]*"; window\.PROTOTYPE_PAGE="([^"]+)"; window\.__PAWRADISE_ENV__=\{[^}]*\};</script>\s*',
+        r'<script>window\.PROTOTYPE_ROOT="[^"]*"; window\.PROTOTYPE_PAGE="([^"]+)"; window\.__STORE4BOTS_ENV__=\{[^}]*\};</script>\s*',
         r'  <script>window.SITE_PAGE="\1";</script>\n',
         html,
     )

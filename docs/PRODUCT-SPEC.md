@@ -1,6 +1,6 @@
-# Pawradise E-Commerce — Product Specification
+# Store4bots E-Commerce — Product Specification
 
-> This document describes what Pawradise IS and what it SHOULD HAVE, independent
+> This document describes what Store4bots IS and what it SHOULD HAVE, independent
 > of what is currently working or passing tests. It defines product specs, user
 > flows, pages, routes, modules, architecture, and services.
 >
@@ -11,15 +11,15 @@
 
 ## 1. Product Vision & Scope
 
-### 1.1 What Is Pawradise
+### 1.1 What Is Store4bots
 
-Pawradise is a single-seller digital asset marketplace — an online shop where one
-vendor ("Pawradise") sells digital download products (files, packs, templates,
+Store4bots is a single-seller digital asset marketplace — an online shop where one
+vendor ("Store4bots") sells digital download products (files, packs, templates,
 code, 3D models, audio, graphics, etc.) to visitors who can optionally become
 buyers. Alongside the shop, there is a community center where users can post
 short text updates, like and comment on posts, and follow other users.
 
-- **Vendor:** Single seller ("Pawradise"). No multi-vendor marketplace.
+- **Vendor:** Single seller ("Store4bots"). No multi-vendor marketplace.
 - **Customer:** Visitors who browse, some of whom purchase and download.
 - **Platform operator:** The admin — manages products, orders, community
   moderation, exchange rates, settings.
@@ -53,11 +53,13 @@ price points).
 
 ### 1.5 Environments
 
-- **Production:** Served at pawradise.ir (root path /)
-- **Staging:** Served at server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir (subdomain, identical paths to production)
-- Both environments use identical `/api/v1` paths — environments are separated by hostname (domain-based routing), not path prefix
-- Staging is for verification; production is the live customer-facing site
-- Host nginx on RED (port 443) terminates SSL and proxies by Host header to k3s ingress-nginx (NodePort 30758)
+Hostnames for **this install** are only in `config/site.env` (`STAGING_HOST`, `PRODUCTION_HOST`).
+
+- **Production:** `$PRODUCTION_HOST` (root path `/`)
+- **Staging:** `$STAGING_HOST` (identical paths to production)
+- Both use `/api/v1`. The environment is the hostname (`$STAGING_HOST` vs `$PRODUCTION_HOST`).
+- Staging is for verification; production is the customer-facing site
+- Host nginx on RED (`:443`) terminates TLS and proxies by Host to k3s ingress-nginx (`$INGRESS_HTTP_NODEPORT`)
 
 ---
 
@@ -95,7 +97,7 @@ price points).
 4. Has a unique referral link to share; earns commission on purchases made by
    referred users
 5. Can view referral dashboard (link, earnings, referred users)
-6. Can create community posts (short text, ~500 char limit)
+6. Can create community posts (short text, ~500 char limit, optional photo, URL preview)
 7. Can like/unlike posts
 8. Can comment on posts
 9. Can follow/unfollow users
@@ -108,7 +110,7 @@ price points).
 16. Can manage wishlist (add/remove products)
 17. Can manage cart (add/remove items, quantities)
 18. Can view recently viewed products
-19. Can compare products
+19. Can compare up to four products at a time
 
 ### 2.3 Checkout / Payment Flow
 
@@ -221,7 +223,7 @@ price points).
 
 ### 3.4 Shared UI Elements
 
-- **Header (all pages):** Logo "PAWRADISE", nav links (Shop, Community,
+- **Header (all pages):** Logo "STORE4BOTS", nav links (Shop, Community,
   Account), wallet status indicator, **Log in** when logged out and **Log out** in the header when logged in (logout is not buried only in profile). Admin link only when the signed-in user is `staff` or `admin`
 - **Long lists:** Shop, community feed, people directory, profile posts, followers, and following use **Show more** / pagination. Seed data is large enough that pagers actually appear.
 - **Responsive layout:** Below 980px the header uses a hamburger, shop rail scrolls, two-column splits (checkout, account, product buy box) stack, and tables scroll inside `.table-wrap`. Access cards and the People directory are one column on phones, two from 860px, three from 1240px. Community feed stays a single readable column.
@@ -289,7 +291,7 @@ All API routes under /api/v1/. Both staging and production use identical paths �
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | /api/v1/community/posts | List posts — feed with pagination |
-| POST | /api/v1/community/posts | Create a community post (content, max ~500 chars) |
+| POST | /api/v1/community/posts | Create a post (content max ~500 chars, optional `image_url`, first public URL unfurled) |
 | GET | /api/v1/community/posts/:id | Get single post with comments |
 | POST | /api/v1/community/posts/:id/like | Like/unlike toggle for a post |
 | DELETE | /api/v1/community/posts/:id/like | Remove like from a post |
@@ -308,12 +310,12 @@ All API routes under /api/v1/. Both staging and production use identical paths �
 | POST | /api/v1/cart/items | Add item to cart (product_id, tier_id, quantity) |
 | DELETE | /api/v1/cart/items/:id | Remove item from cart |
 | GET | /api/v1/wishlist | List user's wishlist products |
-| POST | /api/v1/wishlist/toggle | Add/remove product from wishlist |
+| POST | /api/v1/wishlist/toggle | Add/remove product from wishlist. Body `{product_id}`. Response `{added, message}`. Unique per user. |
 | POST | /api/v1/reviews | Rate a product (1-5 stars). Verified purchase required |
 | GET | /api/v1/reviews/:productId | List ratings for a product (average, count, distribution) |
 | POST | /api/v1/recently-viewed | Record a product as recently viewed |
 | GET | /api/v1/recently-viewed | List recently viewed products |
-| POST | /api/v1/compare/toggle | Add/remove product from comparison list |
+| POST | /api/v1/compare/toggle | Add/remove product from comparison. Body `{product_id}`. Response `{added, message}`. Max 4. |
 | GET | /api/v1/compare | List products in comparison |
 | GET | /api/v1/recommendations/:productId | Get recommended products based on category |
 
@@ -404,14 +406,14 @@ Desk routes accept a session JWT with `role=staff|admin` (cookie or Bearer) or t
 
 ### 5.1 Infrastructure
 
-Details and IPs: `docs/DEPLOYMENT-ARCHITECTURE.md`. Summary:
+Current topology: `docs/ARCHITECTURE.md` and `docs/DEPLOYMENT.md`. Hosts: `config/site.env`.
 
-- **RED** — k3s serving node (ingress-nginx NodePort 30758). Host nginx on 80/443 terminates TLS and routes by Host header.
-  - `pawradise.ir` → production namespace
-  - `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir` → staging namespace
-- **BLUE** — build box (Go, Docker). Images push to RED’s registry.
-- PostgreSQL 16 in `database` namespace: **one logical database per service per environment** (`appdb_<service>_staging` / `_production`), not a single `appdb_staging`.
-- MongoDB 7 in the same `database` namespace: **one instance for both staging and production for now** (same sharing pattern as Postgres). Events live in DB `events` with a TTL index.
+- **RED** — k3s serving node. Host nginx on 80/443 terminates TLS and routes by Host header to ingress-nginx (`$INGRESS_HTTP_NODEPORT`).
+  - `$PRODUCTION_HOST` → production namespace
+  - `$STAGING_HOST` → staging namespace
+- **BLUE** — build box (Go, Docker). Images push to RED’s in-cluster registry.
+- PostgreSQL 16 as **host Docker** on RED: **one logical database per service per environment** (`appdb_<service>_staging` / `_production`).
+- MongoDB 7 as **host Docker** on RED: **one instance** for both environments. Events live in DB `$MONGO_DB` with a TTL index.
 - One Deployment per backend service and per MFE, per namespace.
 
 ### 5.2 Backend services
@@ -470,7 +472,7 @@ API client: `shared/lib/api.js`. Theme: `shared/theme/`. Event SDK: `shared/lib/
 | order_steps | id, slug, label, sort_order, is_system, is_terminal, created_at | Admin-defined order pipeline. System slugs: `created`, `awaiting_payment`, `paid`, `cancelled`, `refunded`, `failed`. Seeded custom: `preparation`, `delivered` |
 | order_items | id, order_id, product_id, product_tier_id, product_title, product_slug, quantity, unit_price_usd, download_count, created_at | Items in an order |
 | downloads | id, order_item_id, user_id, downloaded_at, ip_address | Download tracking (unlimited — for analytics only) |
-| community_posts | id, user_id, content, type, created_at, updated_at | Community posts |
+| community_posts | id, user_id, content, type, image_url, link_url, link_title, link_description, link_image, created_at, updated_at | Community posts |
 | post_likes | id, user_id, post_id, type, created_at | Likes on posts or comments |
 | post_comments | id, user_id, post_id, content, type, created_at | Comments on posts |
 | follows | id, follower_id, following_id, created_at | User follow relationships |
@@ -493,9 +495,8 @@ MongoDB `events` database (shared instance, not Postgres):
 
 ### 5.5 External Dependencies
 
-- **PostgreSQL:** On RED, in k3s database namespace. Access via connection
-  string from backend.
-- **MongoDB:** On RED, in k3s `database` namespace (`mongodb.database.svc.cluster.local:27017`, NodePort 30017). One instance for staging and production for now. Used by events-service.
+- **PostgreSQL:** Host Docker on RED (`postgres:16-alpine`). Pods use `DB_HOST=$RED_HOST`.
+- **MongoDB:** Host Docker on RED (`mongo:7`). Used by events-service. `MONGO_URI` from secrets.
 - **No external APIs required for v1** — exchange rates are manual, no price
   feed API, no blockchain node needed.
 - **Wallet integration (future):** MetaMask or similar browser extension for
@@ -503,7 +504,7 @@ MongoDB `events` database (shared instance, not Postgres):
   verification.
 - **Image processing:** Go-native image manipulation (imaging, gift, or similar
   library) — no external service needed for preview generation.
-- **Hosting:** k3s on RED, single node, low-resource (~2GB RAM).
+- **Hosting:** k3s on RED, single node. BLUE is the build box.
 
 ### 5.6 Asset Storage
 
@@ -521,7 +522,7 @@ When a product is created or its images are updated:
   - A **thumbnail** (small crop, ~200px wide)
   - A **preview image** (watermarked or downscaled version, ~800px wide) —
     shown on the product detail page instead of the full-resolution file
-- Watermark: subtle overlay of the shop logo or "PAWRADISE" text
+- Watermark: subtle overlay of the shop logo or "STORE4BOTS" text
 - Preview images are stored separately from the full product file
 - Buyers see previews; only after purchase do they access the full file
 - If the product is not an image/GIF (e.g., ZIP, PDF, audio), no preview is

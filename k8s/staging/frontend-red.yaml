@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: registry.local/pawradise-frontend:latest
+        image: registry.local/store4bots-frontend:latest
         imagePullPolicy: Never
         ports:
         - containerPort: 80

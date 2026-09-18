@@ -1,0 +1,14 @@
+---
+description: Alpine MFE conventions for Store4bots frontends
+globs: frontend/**,shared/**
+alwaysApply: false
+---
+
+# Frontend
+
+- Live UI is the Alpine MFEs under `frontend/<mfe>/src`, built by `shared/build-mfe.sh` (copies `shared/theme`, `shared/lib`, `shared/chrome`).
+- `frontend/prototype/` is the design mock (python http.server + mock-api). Port behavior into MFEs; do not deploy the prototype as the site.
+- Use `Store4bots.api.<ns>.<method>()` from `shared/lib/api.js`, not raw `api.get('/categories')`.
+- Header/search/nav belong in `shared/chrome/chrome.js`. Theme in `shared/theme/theme.css`.
+- Cache-bust `theme.css` (`?v=`) when CSS changes; `/assets/` can be cached.
+- `API_BASE` is `/api/v1` in staging and production.

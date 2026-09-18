@@ -9,9 +9,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
-	"github.com/pawradise/shared/middleware"
-	"github.com/pawradise/shared/auth"
-	"github.com/pawradise/identity-service/handlers"
+	"github.com/store4bots/shared/middleware"
+	"github.com/store4bots/shared/auth"
+	"github.com/store4bots/identity-service/handlers"
 )
 
 func main() {

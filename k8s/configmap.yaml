@@ -1,21 +1,21 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: pawradise-config
-  namespace: pawradise
+  name: store4bots-config
+  namespace: store4bots
 data:
-  DB_HOST: "postgres.pawradise.svc.cluster.local"
+  DB_HOST: "postgres.store4bots.svc.cluster.local"
   DB_PORT: "5432"
   DB_USER: "app"
-  REDIS_HOST: "redis.pawradise.svc.cluster.local"
+  REDIS_HOST: "redis.store4bots.svc.cluster.local"
   REDIS_PORT: "6379"
-  IDENTITY_SERVICE_URL: "http://identity-service.pawradise.svc.cluster.local:8081"
-  PRODUCT_SERVICE_URL: "http://product-service.pawradise.svc.cluster.local:8082"
-  COMMERCE_SERVICE_URL: "http://commerce-service.pawradise.svc.cluster.local:8083"
-  COMMUNITY_SERVICE_URL: "http://community-service.pawradise.svc.cluster.local:8084"
-  REVIEW_SERVICE_URL: "http://review-service.pawradise.svc.cluster.local:8085"
-  PAYMENT_SERVICE_URL: "http://payment-service.pawradise.svc.cluster.local:8086"
-  ADMIN_SERVICE_URL: "http://admin-service.pawradise.svc.cluster.local:8087"
-  MEDIA_SERVICE_URL: "http://media-service.pawradise.svc.cluster.local:8088"
+  IDENTITY_SERVICE_URL: "http://identity-service.store4bots.svc.cluster.local:8081"
+  PRODUCT_SERVICE_URL: "http://product-service.store4bots.svc.cluster.local:8082"
+  COMMERCE_SERVICE_URL: "http://commerce-service.store4bots.svc.cluster.local:8083"
+  COMMUNITY_SERVICE_URL: "http://community-service.store4bots.svc.cluster.local:8084"
+  REVIEW_SERVICE_URL: "http://review-service.store4bots.svc.cluster.local:8085"
+  PAYMENT_SERVICE_URL: "http://payment-service.store4bots.svc.cluster.local:8086"
+  ADMIN_SERVICE_URL: "http://admin-service.store4bots.svc.cluster.local:8087"
+  MEDIA_SERVICE_URL: "http://media-service.store4bots.svc.cluster.local:8088"
   LOG_LEVEL: "info"
   ENVIRONMENT: "production"

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin — Pawradise</title>
-  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="admin"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <title>Admin — Store4bots</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="admin"; window.__STORE4BOTS_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
   <link rel="stylesheet" href="../shared/theme.css" />
 </head>
 <body>
@@ -27,7 +27,7 @@
   <script src="../shared/events.js"></script>
   <script src="../shared/chrome.js"></script>
   <script>
-    const api = Pawradise.api;
+    const api = Store4bots.api;
     const SEO_KEYS = ["site_title", "site_description", "site_keywords", "og_image", "canonical_host", "robots_index"];
     const SETTING_KEYS = ["referral_commission_percent", "payment_address", "site_name", "download_policy", "default_currency"];
     const ALL_TABS = ["Stats", "Users", "Products", "Banner", "Categories", "Bundles", "Coupons", "Orders", "Steps", "Guest", "Community", "Referrals", "Rates", "Settings", "SEO", "Export", "Requests", "Appearance"];
@@ -39,15 +39,15 @@
     let orderQ = "";
 
     function token() {
-      return sessionStorage.getItem("admin_token") || localStorage.getItem("pawradise_admin_token") || "";
+      return sessionStorage.getItem("admin_token") || localStorage.getItem("store4bots_admin_token") || "";
     }
     function setToken(t) {
       sessionStorage.setItem("admin_token", t);
-      localStorage.setItem("pawradise_admin_token", t);
+      localStorage.setItem("store4bots_admin_token", t);
     }
     function clearToken() {
       sessionStorage.removeItem("admin_token");
-      localStorage.removeItem("pawradise_admin_token");
+      localStorage.removeItem("store4bots_admin_token");
     }
     function staffTabsOf(u) {
       const raw = u && (u.staff_tabs || u.staffTabs);
@@ -942,7 +942,7 @@
           cur[b.dataset.themeKind] = b.dataset.themeId;
           const saved = await api.appearance.set(cur);
           PawUI.applyTheme(saved);
-          try { localStorage.setItem("pawradise_theme", JSON.stringify(saved)); } catch (e) { /* ignore */ }
+          try { localStorage.setItem("store4bots_theme", JSON.stringify(saved)); } catch (e) { /* ignore */ }
           PawUI.toast("Look saved");
           render();
         };

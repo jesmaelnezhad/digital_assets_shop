@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pawradise/shared/auth"
+	"github.com/store4bots/shared/auth"
 	"golang.org/x/crypto/bcrypt"
 )
 

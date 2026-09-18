@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cart — Pawradise</title>
-  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="cart"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <title>Cart — Store4bots</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="cart"; window.__STORE4BOTS_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
   <link rel="stylesheet" href="../shared/theme.css" />
 </head>
 <body>
@@ -22,7 +22,7 @@
       const root = document.getElementById("root");
       try {
         await PawUI.catalog.load();
-        const cart = await Pawradise.api.cart.get();
+        const cart = await Store4bots.api.cart.get();
         const items = (cart.items || []).map((i) => {
           const p = PawUI.catalog.byId[i.product_id];
           return Object.assign({}, i, { product: p, unit: p ? p.price_usd : 0 });
@@ -46,9 +46,9 @@
         if (go) go.addEventListener("click", () => {
           if (window.PawEvents) PawEvents.track("checkout_click", { item_count: items.length, subtotal: sub });
         });
-        root.querySelectorAll("[data-rm]").forEach((b) => b.onclick = async () => { await Pawradise.api.cart.remove(b.dataset.rm); PawChrome.mount(); render(); });
+        root.querySelectorAll("[data-rm]").forEach((b) => b.onclick = async () => { await Store4bots.api.cart.remove(b.dataset.rm); PawChrome.mount(); render(); });
         root.querySelectorAll("[data-qty]").forEach((inp) => inp.onchange = async () => {
-          try { await Pawradise.api.cart.setQty(inp.dataset.qty, Number(inp.value)); PawChrome.mount(); render(); }
+          try { await Store4bots.api.cart.setQty(inp.dataset.qty, Number(inp.value)); PawChrome.mount(); render(); }
           catch (e) { PawUI.toast(e.message); }
         });
       } catch (e) {

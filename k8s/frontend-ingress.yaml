@@ -8,7 +8,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: pawradise.ir
+  - host: store4bots.xyz
     http:
       paths:
       - backend:

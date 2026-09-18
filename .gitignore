@@ -18,3 +18,11 @@ playwright-report/
 
 # Docker
 .docker/
+
+# Cursor
+.cursor/
+.hermes/
+
+# Install secrets (passwords, tokens). Public hosts live in config/site.env.
+config/site.secrets.env
+k8s/generated/

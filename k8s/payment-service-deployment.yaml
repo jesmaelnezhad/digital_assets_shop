@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: payment-service
-  namespace: pawradise
+  namespace: store4bots
   labels:
     app: payment-service
 spec:
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: payment-service
-        image: registry.local/pawradise-payment-service:latest
+        image: registry.local/store4bots-payment-service:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8086
@@ -25,39 +25,39 @@ spec:
         - name: DB_HOST
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: DB_HOST
         - name: DB_PORT
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: DB_PORT
         - name: DB_USER
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: DB_USER
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: pawradise-secrets
+              name: store4bots-secrets
               key: DB_PASSWORD
         - name: DB_NAME
           value: "payment_db"
         - name: REDIS_HOST
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: REDIS_HOST
         - name: COMMERCE_SERVICE_URL
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: COMMERCE_SERVICE_URL
         - name: LOG_LEVEL
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: LOG_LEVEL
         resources:
           requests:
@@ -83,7 +83,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: payment-service
-  namespace: pawradise
+  namespace: store4bots
 spec:
   ports:
   - port: 8086
@@ -96,7 +96,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: payment-service-hpa
-  namespace: pawradise
+  namespace: store4bots
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

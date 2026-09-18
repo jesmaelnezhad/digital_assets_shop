@@ -12,8 +12,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
-	"github.com/pawradise/shared/middleware"
-	adminhandlers "github.com/pawradise/admin-service/handlers"
+	"github.com/store4bots/shared/middleware"
+	adminhandlers "github.com/store4bots/admin-service/handlers"
 )
 
 func main() {

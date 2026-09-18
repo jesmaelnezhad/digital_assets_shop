@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Register — Pawradise</title>
+  <title>Register — Store4bots</title>
     <script>window.SITE_PAGE="auth";</script>
   <link rel="icon" href="/assets/favicon.svg" sizes="any" />
-  <link rel="stylesheet" href="/assets/theme.css?v=9" />
+  <link rel="stylesheet" href="/assets/theme.css?v=11" />
   <script src="/env.js"></script>
 </head>
 <body>
@@ -36,7 +36,7 @@
       e.preventDefault();
       const f = new FormData(e.target);
       try {
-        await Pawradise.api.auth.register(f.get("email"), f.get("password"), f.get("name"), f.get("referral_code"));
+        await Store4bots.api.auth.register(f.get("email"), f.get("password"), f.get("name"), f.get("referral_code"));
         location.href = PawUI.safeNext(next);
       } catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }
     };

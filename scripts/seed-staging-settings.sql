@@ -1,9 +1,9 @@
 -- Apply to appdb_payment_staging and/or appdb_admin_staging settings.
 
 INSERT INTO settings (key, value, updated_at) VALUES
-('payment_address', '0xPAWRADISE_WALLET_BSC', NOW()),
-('site_name', 'Pawradise', NOW()),
-('site_title', 'Pawradise — digital assets', NOW()),
+('payment_address', '0xSTORE4BOTS_WALLET_BSC', NOW()),
+('site_name', 'Store4bots', NOW()),
+('site_title', 'Store4bots — digital assets', NOW()),
 ('site_description', 'Buy once, download forever. Clay characters, UI kits, textures, and scenes.', NOW()),
 ('download_policy', 'Buy once, download forever. Unlimited re-downloads on paid orders.', NOW()),
 ('default_currency', 'USD', NOW()),

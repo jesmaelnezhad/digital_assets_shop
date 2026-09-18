@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pawradise/shared/auth"
+	"github.com/store4bots/shared/auth"
 )
 
 // StaffAssignableTabs are admin desk sections that may be granted to staff.

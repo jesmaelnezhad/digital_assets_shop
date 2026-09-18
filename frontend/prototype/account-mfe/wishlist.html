@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Wishlist — Pawradise</title>
-  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="account"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <title>Wishlist — Store4bots</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="account"; window.__STORE4BOTS_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
   <link rel="stylesheet" href="../shared/theme.css" />
 </head>
 <body>
@@ -21,9 +21,9 @@
     async function render() {
       const root = document.getElementById("root");
       try {
+        await PawUI.lists.refresh();
         await PawUI.catalog.load();
-        const res = await Pawradise.api.wishlist.get();
-        const products = PawUI.catalog.byIds((res.products || []).map((x) => x.product_id));
+        const products = await PawUI.catalog.byIdsAsync([...PawUI.lists.wish]);
         root.innerHTML = PawUI.accountNav("wishlist") + `<div class="kicker">Account</div><h1 class="page-title">Wishlist</h1>` +
           (products.length ? `<div class="grid">${products.map(PawUI.card).join("")}</div>` : '<p class="note">Nothing saved yet.</p>');
         if (products.length) {

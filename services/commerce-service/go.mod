@@ -1,4 +1,4 @@
-module github.com/pawradise/commerce-service
+module github.com/store4bots/commerce-service
 
 go 1.22
 
@@ -6,7 +6,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/lib/pq v1.10.9
-	github.com/pawradise/shared v0.1.0
+	github.com/store4bots/shared v0.1.0
 )
 
 require (
@@ -40,4 +40,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/pawradise/shared => ../shared
+replace github.com/store4bots/shared => ../shared

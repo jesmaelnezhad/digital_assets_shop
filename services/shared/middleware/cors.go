@@ -59,15 +59,21 @@ func getAllowedOrigins(envName string) []string {
 		return origins
 	}
 
-	// Auto-detect based on environment
-	stagingHost := "server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir"
-	productionHost := "pawradise.ir" // placeholder - replace with real domain
+	stagingHost := os.Getenv("STAGING_HOST")
+	productionHost := os.Getenv("PRODUCTION_HOST")
+
+	hostOrigins := func(host string) []string {
+		if host == "" {
+			return nil
+		}
+		return []string{"https://" + host, "http://" + host}
+	}
 
 	switch envName {
 	case "staging":
-		return []string{"https://" + stagingHost, "http://" + stagingHost}
+		return hostOrigins(stagingHost)
 	case "production":
-		return []string{"https://" + productionHost, "http://" + productionHost}
+		return hostOrigins(productionHost)
 	default:
 		// Default permissive origins for development
 		return []string{"http://localhost:3000", "http://localhost:5173", "http://localhost:8080"}

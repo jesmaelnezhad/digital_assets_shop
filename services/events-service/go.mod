@@ -1,10 +1,10 @@
-module github.com/pawradise/events-service
+module github.com/store4bots/events-service
 
 go 1.22
 
 require (
 	github.com/gin-gonic/gin v1.10.0
-	github.com/pawradise/shared v0.1.0
+	github.com/store4bots/shared v0.1.0
 	go.mongodb.org/mongo-driver v1.17.1
 )
 
@@ -46,4 +46,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/pawradise/shared => ../shared
+replace github.com/store4bots/shared => ../shared

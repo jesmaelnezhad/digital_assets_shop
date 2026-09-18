@@ -1,0 +1,14 @@
+---
+description: Go microservice conventions for Store4bots backends
+globs: services/**
+alwaysApply: false
+---
+
+# Backend
+
+- One service, one Postgres database `appdb_<service>_<staging|production>`.
+- Public HTTP is `/api/v1/...` on that service’s port. Ingress maps those paths.
+- Static Linux binaries: `CGO_ENABLED=0 GOOS=linux GOARCH=amd64`.
+- Handler tests live next to code (`services/<svc>/handlers/*_test.go`). Spec/catalog tests live under `tests/unit/<svc>/`.
+- Protected routes return 401 without a valid JWT/cookie. Do not skip auth to make a test pass.
+- Do not copy another service’s tables into this database to unblock a test.

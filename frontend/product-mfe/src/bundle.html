@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bundle — Pawradise</title>
+  <title>Bundle — Store4bots</title>
     <script>window.SITE_PAGE="bundles";</script>
   <link rel="icon" href="/assets/favicon.svg" sizes="any" />
-  <link rel="stylesheet" href="/assets/theme.css?v=9" />
+  <link rel="stylesheet" href="/assets/theme.css?v=11" />
   <script src="/env.js"></script>
 </head>
 <body>
@@ -23,14 +23,14 @@
       const root = document.getElementById("root");
       await PawUI.catalog.load();
       let wrap;
-      try { wrap = await Pawradise.api.products.getBundle(id); }
+      try { wrap = await Store4bots.api.products.getBundle(id); }
       catch (e) { root.innerHTML = '<p class="note">Bundle not found. <a href="/product/bundles.html">All bundles</a></p>'; return; }
       const b = wrap.bundle || wrap;
       const ids = String(b.items || "").split(",").map(Number).filter(Boolean);
       const products = PawUI.catalog.byIds(ids);
       const separate = products.reduce((n, p) => n + p.price_usd, 0);
       const save = Math.max(0, separate - b.price_usd);
-      document.title = (b.title || "Bundle") + " — Pawradise";
+      document.title = (b.title || "Bundle") + " — Store4bots";
       root.innerHTML = `<div class="kicker">Shop · Bundle</div>
         <h1 class="page-title">${PawUI.esc(b.title)}</h1>
         <p class="desc">${PawUI.esc(b.description)}</p>
@@ -47,7 +47,7 @@
           </a>`).join("")}</div>`;
       document.getElementById("buy").onclick = async () => {
         try {
-          for (const p of products) await Pawradise.api.cart.add(p.id, 1);
+          for (const p of products) await Store4bots.api.cart.add(p.id, 1);
           PawUI.toast("Bundle in cart");
           PawChrome.mount();
         } catch (e) {

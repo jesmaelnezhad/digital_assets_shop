@@ -1,7 +1,7 @@
 // Staging link rewriter — included in every page after env.js
 // When isStaging is true, prepends /staging to all relative links so they stay in staging scope
 (function() {
-    var env = window.__PAWRADISE_ENV__ || {};
+    var env = window.__STORE4BOTS_ENV__ || {};
     if (!env.isStaging) return;
     
     var PREFIX = '/staging';

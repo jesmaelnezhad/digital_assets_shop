@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pawradise/shared/middleware"
-	"github.com/pawradise/shared/auth"
-	"github.com/pawradise/identity-service/models"
+	"github.com/store4bots/shared/middleware"
+	"github.com/store4bots/shared/auth"
+	"github.com/store4bots/identity-service/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -113,7 +113,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	}
 	
 	// Clear session cookie
-	c.SetCookie("pawradise_session", "", -1, "/", "", true, true)
+	c.SetCookie("store4bots_session", "", -1, "/", "", true, true)
 	
 	c.JSON(http.StatusOK, gin.H{"message": "logged out"})
 }
@@ -123,7 +123,7 @@ func extractToken(c *gin.Context) string {
 	if auth := c.GetHeader("Authorization"); strings.HasPrefix(auth, "Bearer ") {
 		return strings.TrimPrefix(auth, "Bearer ")
 	}
-	if cookie, err := c.Cookie("pawradise_session"); err == nil {
+	if cookie, err := c.Cookie("store4bots_session"); err == nil {
 		return cookie
 	}
 	return ""
@@ -133,7 +133,7 @@ func extractToken(c *gin.Context) string {
 func setSessionCookie(c *gin.Context, token string) {
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie(
-		"pawradise_session",
+		"store4bots_session",
 		token,
 		30*24*3600, // 30 days
 		"/",        // path
@@ -290,7 +290,7 @@ func (h *AuthHandler) ListUsers(c *gin.Context) {
 }
 
 // getUserIDFromToken reads the session the same way /me does: middleware
-// context first, then Bearer or the pawradise_session cookie.
+// context first, then Bearer or the store4bots_session cookie.
 func getUserIDFromToken(c *gin.Context) (int, bool) {
 	if id, ok := middleware.GetUserIDFromContext(c); ok && id > 0 {
 		return id, true

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pawradise/shared/auth"
+	"github.com/store4bots/shared/auth"
 )
 
 // JwtAuthMiddleware validates JWT tokens from the Authorization header or cookie.
@@ -44,7 +44,7 @@ func extractToken(c *gin.Context) string {
 	if auth := c.GetHeader("Authorization"); strings.HasPrefix(auth, "Bearer ") {
 		return strings.TrimPrefix(auth, "Bearer ")
 	}
-	if cookie, err := c.Cookie("pawradise_session"); err == nil {
+	if cookie, err := c.Cookie("store4bots_session"); err == nil {
 		return cookie
 	}
 	return ""

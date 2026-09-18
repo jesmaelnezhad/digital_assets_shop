@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pawradise/shared/auth"
-	"github.com/pawradise/shared/middleware"
+	"github.com/store4bots/shared/auth"
+	"github.com/store4bots/shared/middleware"
 )
 
 func (h *AdminHandler) ensureExtras() {

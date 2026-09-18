@@ -2,7 +2,7 @@
 // Keep method names and paths identical to the live client.
 
 (function() {
-    const ENV = window.__PAWRADISE_ENV__ || { apiBase: '/api/v1', envName: 'prototype' };
+    const ENV = window.__STORE4BOTS_ENV__ || { apiBase: '/api/v1', envName: 'prototype' };
 
     class ApiError extends Error {
         constructor(status, message) {
@@ -22,7 +22,7 @@
             if (res.status === 401 && path.indexOf('/admin/') === 0) {
                 try {
                     sessionStorage.removeItem('admin_token');
-                    localStorage.removeItem('pawradise_admin_token');
+                    localStorage.removeItem('store4bots_admin_token');
                 } catch (e) { /* ignore */ }
             }
             throw new ApiError(res.status, body.error || res.statusText);
@@ -35,7 +35,7 @@
 
     function adminHeaders() {
         const t = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('admin_token'))
-            || localStorage.getItem('pawradise_admin_token')
+            || localStorage.getItem('store4bots_admin_token')
             || '';
         return { Authorization: 'Bearer ' + t };
     }
@@ -85,6 +85,16 @@
             add: (productId, quantity = 1, tierId = null, extra = {}) => apiFetch('/cart/items', { method: 'POST', body: JSON.stringify({ product_id: productId, quantity, tier_id: tierId, ...extra }) }),
             remove: (itemId) => apiFetch(`/cart/items/${itemId}`, { method: 'DELETE' }),
             setQty: (itemId, quantity) => apiFetch(`/cart/items/${itemId}`, { method: 'PUT', body: JSON.stringify({ quantity }) }),
+            toggle: async (productId, quantity = 1, tierId = null, extra = {}) => {
+                const cart = await apiFetch('/cart');
+                const item = (cart.items || []).find((i) => Number(i.product_id) === Number(productId));
+                if (item) {
+                    await apiFetch(`/cart/items/${item.id}`, { method: 'DELETE' });
+                    return { added: false, item_id: item.id };
+                }
+                await apiFetch('/cart/items', { method: 'POST', body: JSON.stringify({ product_id: productId, quantity, tier_id: tierId, ...extra }) });
+                return { added: true };
+            }
         },
 
         wishlist: {
@@ -102,7 +112,7 @@
                 return apiFetch('/community/posts?' + new URLSearchParams(params).toString());
             },
             getPost: (id) => apiFetch(`/community/posts/${id}`),
-            createPost: (content, type = 'post') => apiFetch('/community/posts', { method: 'POST', body: JSON.stringify({ content, type, is_public: true }) }),
+            createPost: (content, type = 'post', extra = {}) => apiFetch('/community/posts', { method: 'POST', body: JSON.stringify({ content, type, is_public: true, ...extra }) }),
             likePost: (id) => apiFetch(`/community/posts/${id}/like`, { method: 'POST' }),
             unlikePost: (id) => apiFetch(`/community/posts/${id}/like`, { method: 'DELETE' }),
             addComment: (postId, content) => apiFetch(`/community/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify({ content }) }),
@@ -209,8 +219,8 @@
         }
     };
 
-    window.Pawradise = window.Pawradise || {};
-    window.Pawradise.api = api;
-    window.Pawradise.ENV = ENV;
-    window.Pawradise.ApiError = ApiError;
+    window.Store4bots = window.Store4bots || {};
+    window.Store4bots.api = api;
+    window.Store4bots.ENV = ENV;
+    window.Store4bots.ApiError = ApiError;
 })();

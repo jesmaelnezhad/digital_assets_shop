@@ -1,0 +1,17 @@
+---
+description: Store4bots project invariants — current architecture, site.env, no historical drift
+alwaysApply: true
+---
+
+# Store4bots
+
+- Read `config/site.env` for hosts. Do not scatter IPs or domain names into new files.
+- Staging and production share URL paths. They differ by hostname only.
+- Built images: `$REGISTRY_HOST/$IMAGE_REPO/<name>:<tag>` (authenticated in-cluster registry). Hub/Rancher images are allowed for stock software.
+- Databases are **host Docker on RED** (`postgres:16-alpine`, `mongo:7`), not k8s StatefulSets. Pods use `DB_HOST=$RED_HOST`.
+- Seven MFEs. Shared chrome/theme/api.js.
+- Nine backends: identity 8081, product 8082, commerce 8083, community 8084, review 8085, payment 8086, admin 8087, media 8088, events 8089.
+- `CGO_ENABLED=0` for Alpine containers.
+- Frontend tests: Playwright on `https://$STAGING_HOST`. Do not treat curl 200 as a UI pass.
+- After changing behavior, update the matching skill and `docs/` (`store4bots-maintain-docs`).
+- Do not commit `config/site.secrets.env`. Do not commit unless asked.

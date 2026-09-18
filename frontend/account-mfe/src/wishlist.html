@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Wishlist — Pawradise</title>
+  <title>Wishlist — Store4bots</title>
     <script>window.SITE_PAGE="account";</script>
   <link rel="icon" href="/assets/favicon.svg" sizes="any" />
-  <link rel="stylesheet" href="/assets/theme.css?v=9" />
+  <link rel="stylesheet" href="/assets/theme.css?v=11" />
   <script src="/env.js"></script>
 </head>
 <body>
@@ -21,9 +21,9 @@
     async function render() {
       const root = document.getElementById("root");
       try {
+        await PawUI.lists.refresh();
         await PawUI.catalog.load();
-        const res = await Pawradise.api.wishlist.get();
-        const products = PawUI.catalog.byIds((res.products || []).map((x) => x.product_id));
+        const products = await PawUI.catalog.byIdsAsync([...PawUI.lists.wish]);
         root.innerHTML = PawUI.accountNav("wishlist") + `<div class="kicker">Account</div><h1 class="page-title">Wishlist</h1>` +
           (products.length ? `<div class="grid">${products.map(PawUI.card).join("")}</div>` : '<p class="note">Nothing saved yet.</p>');
         if (products.length) {

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pawradise/shared/auth"
+	"github.com/store4bots/shared/auth"
 )
 
 func TestMain(m *testing.M) {
@@ -94,7 +94,7 @@ func TestAdminAuthCookieStaff(t *testing.T) {
 		t.Fatal(err)
 	}
 	w := do(rbacRouter(), "GET", "/api/v1/admin/products", nil, &http.Cookie{
-		Name:  "pawradise_session",
+		Name:  "store4bots_session",
 		Value: tok,
 	})
 	if w.Code != 200 {

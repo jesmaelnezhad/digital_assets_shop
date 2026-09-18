@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Guest order — Pawradise</title>
+  <title>Guest order — Store4bots</title>
     <script>window.SITE_PAGE="account";</script>
   <link rel="icon" href="/assets/favicon.svg" sizes="any" />
-  <link rel="stylesheet" href="/assets/theme.css?v=9" />
+  <link rel="stylesheet" href="/assets/theme.css?v=11" />
   <script src="/env.js"></script>
 </head>
 <body>
@@ -32,7 +32,7 @@
       e.preventDefault();
       const f = new FormData(e.target);
       try {
-        const o = await Pawradise.api.orders.getGuestOrder(f.get("id"), f.get("email"));
+        const o = await Store4bots.api.orders.getGuestOrder(f.get("id"), f.get("email"));
         document.getElementById("out").innerHTML = `<div class="note" style="margin-top:20px">
           Order #${o.id} · ${PawUI.esc(o.status)} · ${PawUI.money(o.total_usd)} · ${PawUI.esc(o.email)}</div>`;
       } catch (ex) { e.target.querySelector(".form-error").textContent = ex.message; }

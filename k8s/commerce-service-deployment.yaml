@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: commerce-service
-  namespace: pawradise
+  namespace: store4bots
   labels:
     app: commerce-service
 spec:
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: commerce-service
-        image: registry.local/pawradise-commerce-service:latest
+        image: registry.local/store4bots-commerce-service:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8083
@@ -25,44 +25,44 @@ spec:
         - name: DB_HOST
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: DB_HOST
         - name: DB_PORT
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: DB_PORT
         - name: DB_USER
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: DB_USER
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: pawradise-secrets
+              name: store4bots-secrets
               key: DB_PASSWORD
         - name: DB_NAME
           value: "commerce_db"
         - name: REDIS_HOST
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: REDIS_HOST
         - name: IDENTITY_SERVICE_URL
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: IDENTITY_SERVICE_URL
         - name: PAYMENT_SERVICE_URL
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: PAYMENT_SERVICE_URL
         - name: LOG_LEVEL
           valueFrom:
             configMapKeyRef:
-              name: pawradise-config
+              name: store4bots-config
               key: LOG_LEVEL
         resources:
           requests:
@@ -88,7 +88,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: commerce-service
-  namespace: pawradise
+  namespace: store4bots
 spec:
   ports:
   - port: 8083
@@ -101,7 +101,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: commerce-service-hpa
-  namespace: pawradise
+  namespace: store4bots
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

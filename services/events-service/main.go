@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pawradise/events-service/handlers"
-	"github.com/pawradise/shared/middleware"
+	"github.com/store4bots/events-service/handlers"
+	"github.com/store4bots/shared/middleware"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )

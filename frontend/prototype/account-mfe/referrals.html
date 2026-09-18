@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Referrals — Pawradise</title>
-  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="account"; window.__PAWRADISE_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
+  <title>Referrals — Store4bots</title>
+  <script>window.PROTOTYPE_ROOT="../"; window.PROTOTYPE_PAGE="account"; window.__STORE4BOTS_ENV__={apiBase:"/api/v1",envName:"prototype"};</script>
   <link rel="stylesheet" href="../shared/theme.css" />
 </head>
 <body>
@@ -21,8 +21,8 @@
     async function render() {
       const root = document.getElementById("root");
       try {
-        const r = await Pawradise.api.referrals.get();
-        const earn = await Pawradise.api.referrals.getEarnings();
+        const r = await Store4bots.api.referrals.get();
+        const earn = await Store4bots.api.referrals.getEarnings();
         const code = r.referral_link || r.code || "";
         const link = location.origin + location.pathname.replace(/[^/]+$/, "") + "../auth-mfe/register.html?ref=" + encodeURIComponent(code);
         const people = r.referrals || r.referred_users || [];

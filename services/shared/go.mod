@@ -1,4 +1,4 @@
-module github.com/pawradise/shared
+module github.com/store4bots/shared
 
 go 1.22
 
