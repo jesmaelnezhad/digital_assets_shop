@@ -1,8 +1,9 @@
 # Dependencies
 node_modules/
 
-# Build artifacts
+# Build artifacts (any MFE or nested dist/)
 dist/
+**/dist/
 
 # IDE
 .vscode/
