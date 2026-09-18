@@ -12,4 +12,4 @@ When you change how the system works (routing, registry, DB, build, tests, produ
 3. Put hosts only in `config/site.env`. Scripts `source scripts/lib/site-env.sh`.
 4. Pass/fail numbers belong only in `tests/REPORT.md`.
 5. Do not append “we used to…” history. If a procedure is reusable (e.g. move RED to a new VM), keep the procedure, drop the old IPs.
-6. If a k8s YAML is unused, do not leave it beside canonical files — move it to `k8s/archive/` or delete it.
+6. If a k8s YAML is unused, list it in `k8s/README.md` and do not apply it.

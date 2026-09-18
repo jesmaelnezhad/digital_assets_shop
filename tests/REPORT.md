@@ -1,7 +1,7 @@
 # Test report
 
 **Date:** 2026-09-18  
-**Target:** staging `https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/`  
+**Target:** staging (`$STAGING_HOST` in `config/site.env`)  
 **Runner:** BLUE (`ssh -p 2222`), Playwright `workers=1`  
 **Images:** `events-service:proto-v8`, `identity-service:proto-v8`, `admin-service:proto-v8`, `community-service:proto-v8`, `product-service:proto-v8`, `commerce-service:proto-v8.2`, `shop-mfe:proto-v8` (`/assets` includes `events.js`), `account-mfe:proto-v8`, `checkout-mfe:proto-v8`, `admin-app:proto-v8`, `product-mfe:proto-v8`, `community-mfe:proto-v8`
 

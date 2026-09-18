@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
-const BASE = process.env.BASE_URL || 'https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir';
+const BASE = process.env.BASE_URL;
+if (!BASE) throw new Error('Set BASE_URL to https://$STAGING_HOST');
 
 test.describe('Shop Products Loading', () => {
     test('shop page renders products from API', async ({ page }) => {

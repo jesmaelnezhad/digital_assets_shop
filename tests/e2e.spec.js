@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
-const STAGING = process.env.BASE_URL || 'https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir';
+const STAGING = process.env.BASE_URL;
+if (!STAGING) throw new Error('Set BASE_URL to https://$STAGING_HOST');
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'admin_secret_staging_2026';
 
 let counter = 0;

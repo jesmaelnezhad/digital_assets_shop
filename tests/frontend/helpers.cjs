@@ -1,4 +1,5 @@
-const BASE = process.env.BASE_URL || 'https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir';
+const BASE = process.env.BASE_URL;
+if (!BASE) throw new Error('Set BASE_URL to https://$STAGING_HOST');
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'admin_secret_staging_2026';
 
 async function loginAs(page, email, password, waitFor) {

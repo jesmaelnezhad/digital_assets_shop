@@ -64,7 +64,7 @@ HTTP 200 on `/` is not enough. Playwright must see rendered shop cards, not the 
 
 ## 5. Move RED later
 
-Same as a new RED: `scripts/migrate-red.sh` dumps Postgres/Mongo, copies or re-pushes images, installs the new VM, restores, retargets DNS, confirms `https://$STAGING_HOST`, then retires the old VM. Do not keep old IPs in docs.
+Same as a new RED: `scripts/migrate-red.sh dump` on the old host, provision the new VM, point `RED_HOST` at it, `scripts/migrate-red.sh restore`, re-push images, confirm `https://$STAGING_HOST`, then switch DNS A records and retire the old VM. Do not keep old IPs in docs.
 
 ## Skills map
 

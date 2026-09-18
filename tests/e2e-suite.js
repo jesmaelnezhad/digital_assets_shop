@@ -8,12 +8,12 @@ import http from 'http';
 // ============================================================
 
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'admin_secret_staging_2026';
-const STAGING_DOMAIN = 'server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir';
-const PRODUCTION_DOMAIN = 'store4bots.xyz'; // placeholder
-const ENV_NAME = process.env.ENV_NAME || 'staging';
-const API_HOST = ENV_NAME === 'production' ? PRODUCTION_DOMAIN : STAGING_DOMAIN;
-const API_BASE = `https://${API_HOST}/api/v1`;
-const API_ROOT = `https://${API_HOST}`;
+const API_ROOT = (process.env.BASE_URL || '').replace(/\/$/, '');
+if (!API_ROOT) {
+  console.error('Set BASE_URL to https://$STAGING_HOST');
+  process.exit(1);
+}
+const API_BASE = `${API_ROOT}/api/v1`;
 
 // ---- Test infrastructure ----
 let passed = 0;

@@ -4,7 +4,7 @@ Skill: `store4bots-databases`. Hosts and users: `config/site.env`. Passwords: `c
 
 ## Where they run
 
-**Host Docker on RED**, not k8s StatefulSets. Namespace `database` is empty. Canonical DB YAML (if you ever move in-cluster) is archived and is **not** the current install.
+**Host Docker on RED**, not k8s StatefulSets. Namespace `database` is empty. YAML under `k8s/database/` is unused on this install.
 
 | Engine | Image | Publish | Auth |
 |--------|--------|---------|------|

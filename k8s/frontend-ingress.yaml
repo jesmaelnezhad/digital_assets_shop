@@ -8,7 +8,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: store4bots.xyz
+  - host: {{PRODUCTION_HOST}}
     http:
       paths:
       - backend:

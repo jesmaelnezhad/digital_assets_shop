@@ -9,7 +9,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: 130.185.123.156
+  - host: {{RED_HOST}}
     http:
       paths:
       # Identity routes (8081)

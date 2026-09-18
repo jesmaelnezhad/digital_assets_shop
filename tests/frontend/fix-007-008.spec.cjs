@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
-const BASE = process.env.BASE_URL || 'https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir';
+const BASE = process.env.BASE_URL;
+if (!BASE) throw new Error('Set BASE_URL to https://$STAGING_HOST');
 
 test.describe('FIX-007 & FIX-008: File type and rating filters', () => {
     test('FIX-007: file_type filter returns matching products', async ({ request }) => {

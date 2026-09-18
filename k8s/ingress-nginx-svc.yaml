@@ -8,7 +8,7 @@ spec:
   ports:
   - port: 80
     targetPort: http
-    nodePort: 30080
+    nodePort: {{INGRESS_HTTP_NODEPORT}}
     protocol: TCP
     name: http
   - port: 443

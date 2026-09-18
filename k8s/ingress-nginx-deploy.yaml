@@ -16,7 +16,7 @@ spec:
       serviceAccountName: ingress-nginx
       containers:
       - name: controller
-        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/store4bots-ingress-nginx:v1.11.2
+        image: {{INGRESS_NGINX_IMAGE}}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80

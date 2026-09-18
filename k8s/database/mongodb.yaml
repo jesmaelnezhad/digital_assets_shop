@@ -14,7 +14,7 @@ metadata:
 type: Opaque
 stringData:
   MONGO_INITDB_ROOT_USERNAME: paw
-  MONGO_INITDB_ROOT_PASSWORD: events_mongo_staging_2026
+  MONGO_INITDB_ROOT_PASSWORD: CHANGE_ME
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

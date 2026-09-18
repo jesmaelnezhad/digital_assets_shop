@@ -15,20 +15,20 @@ spec:
     spec:
       containers:
       - name: identity-service
-        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/store4bots/identity-service:latest
+        image: {{REGISTRY_HOST}}/{{IMAGE_REPO}}/identity-service:latest
         ports:
         - containerPort: 8081
         env:
         - name: PORT
           value: "8081"
         - name: DB_HOST
-          value: "130.185.123.156"
+          value: "{{DB_HOST}}"
         - name: DB_PORT
           value: "5432"
         - name: DB_USER
           value: "app"
         - name: DB_PASSWORD
-          value: "CHANGE_ME_IN_PRODUCTION"
+          value: "{{POSTGRES_PASSWORD}}"
         - name: DB_NAME
           value: "appdb_identity_production"
         - name: JWT_SECRET
@@ -74,20 +74,20 @@ spec:
     spec:
       containers:
       - name: product-service
-        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/store4bots/product-service:latest
+        image: {{REGISTRY_HOST}}/{{IMAGE_REPO}}/product-service:latest
         ports:
         - containerPort: 8082
         env:
         - name: PORT
           value: "8082"
         - name: DB_HOST
-          value: "130.185.123.156"
+          value: "{{DB_HOST}}"
         - name: DB_PORT
           value: "5432"
         - name: DB_USER
           value: "app"
         - name: DB_PASSWORD
-          value: "CHANGE_ME_IN_PRODUCTION"
+          value: "{{POSTGRES_PASSWORD}}"
         - name: DB_NAME
           value: "appdb_product_production"
         - name: JWT_SECRET
@@ -133,20 +133,20 @@ spec:
     spec:
       containers:
       - name: commerce-service
-        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/store4bots/commerce-service:latest
+        image: {{REGISTRY_HOST}}/{{IMAGE_REPO}}/commerce-service:latest
         ports:
         - containerPort: 8083
         env:
         - name: PORT
           value: "8083"
         - name: DB_HOST
-          value: "130.185.123.156"
+          value: "{{DB_HOST}}"
         - name: DB_PORT
           value: "5432"
         - name: DB_USER
           value: "app"
         - name: DB_PASSWORD
-          value: "CHANGE_ME_IN_PRODUCTION"
+          value: "{{POSTGRES_PASSWORD}}"
         - name: DB_NAME
           value: "appdb_commerce_production"
         - name: JWT_SECRET
@@ -192,20 +192,20 @@ spec:
     spec:
       containers:
       - name: community-service
-        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/store4bots/community-service:latest
+        image: {{REGISTRY_HOST}}/{{IMAGE_REPO}}/community-service:latest
         ports:
         - containerPort: 8084
         env:
         - name: PORT
           value: "8084"
         - name: DB_HOST
-          value: "130.185.123.156"
+          value: "{{DB_HOST}}"
         - name: DB_PORT
           value: "5432"
         - name: DB_USER
           value: "app"
         - name: DB_PASSWORD
-          value: "CHANGE_ME_IN_PRODUCTION"
+          value: "{{POSTGRES_PASSWORD}}"
         - name: DB_NAME
           value: "appdb_community_production"
         - name: JWT_SECRET
@@ -251,20 +251,20 @@ spec:
     spec:
       containers:
       - name: review-service
-        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/store4bots/review-service:latest
+        image: {{REGISTRY_HOST}}/{{IMAGE_REPO}}/review-service:latest
         ports:
         - containerPort: 8085
         env:
         - name: PORT
           value: "8085"
         - name: DB_HOST
-          value: "130.185.123.156"
+          value: "{{DB_HOST}}"
         - name: DB_PORT
           value: "5432"
         - name: DB_USER
           value: "app"
         - name: DB_PASSWORD
-          value: "CHANGE_ME_IN_PRODUCTION"
+          value: "{{POSTGRES_PASSWORD}}"
         - name: DB_NAME
           value: "appdb_review_production"
         - name: JWT_SECRET
@@ -310,20 +310,20 @@ spec:
     spec:
       containers:
       - name: payment-service
-        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/store4bots/payment-service:latest
+        image: {{REGISTRY_HOST}}/{{IMAGE_REPO}}/payment-service:latest
         ports:
         - containerPort: 8086
         env:
         - name: PORT
           value: "8086"
         - name: DB_HOST
-          value: "130.185.123.156"
+          value: "{{DB_HOST}}"
         - name: DB_PORT
           value: "5432"
         - name: DB_USER
           value: "app"
         - name: DB_PASSWORD
-          value: "CHANGE_ME_IN_PRODUCTION"
+          value: "{{POSTGRES_PASSWORD}}"
         - name: DB_NAME
           value: "appdb_payment_production"
         - name: JWT_SECRET
@@ -369,20 +369,20 @@ spec:
     spec:
       containers:
       - name: admin-service
-        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/store4bots/admin-service:latest
+        image: {{REGISTRY_HOST}}/{{IMAGE_REPO}}/admin-service:latest
         ports:
         - containerPort: 8087
         env:
         - name: PORT
           value: "8087"
         - name: DB_HOST
-          value: "130.185.123.156"
+          value: "{{DB_HOST}}"
         - name: DB_PORT
           value: "5432"
         - name: DB_USER
           value: "app"
         - name: DB_PASSWORD
-          value: "CHANGE_ME_IN_PRODUCTION"
+          value: "{{POSTGRES_PASSWORD}}"
         - name: DB_NAME
           value: "appdb_admin_production"
         - name: JWT_SECRET
@@ -433,20 +433,20 @@ spec:
     spec:
       containers:
       - name: media-service
-        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/store4bots/media-service:latest
+        image: {{REGISTRY_HOST}}/{{IMAGE_REPO}}/media-service:latest
         ports:
         - containerPort: 8088
         env:
         - name: PORT
           value: "8088"
         - name: DB_HOST
-          value: "130.185.123.156"
+          value: "{{DB_HOST}}"
         - name: DB_PORT
           value: "5432"
         - name: DB_USER
           value: "app"
         - name: DB_PASSWORD
-          value: "CHANGE_ME_IN_PRODUCTION"
+          value: "{{POSTGRES_PASSWORD}}"
         - name: DB_NAME
           value: "appdb_media_production"
         - name: JWT_SECRET

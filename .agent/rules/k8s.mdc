@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Kubernetes
 
-- Edit files listed in `k8s/README.md` only. Leftovers live in `k8s/archive/`.
+- Edit files listed in `k8s/README.md` only. Do not apply leftovers listed there.
 - Apply `k8s/generated/` after `scripts/render-k8s.sh` (placeholders from `config/site.env`).
 - MFE `API_BASE` is `/api/v1` in staging and production.
 - Service `selector` is `app: <name>` only.

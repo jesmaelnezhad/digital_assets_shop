@@ -27,3 +27,4 @@ playwright-report/
 # Install secrets (passwords, tokens). Public hosts live in config/site.env.
 config/site.secrets.env
 k8s/generated/
+migrate-red-data/

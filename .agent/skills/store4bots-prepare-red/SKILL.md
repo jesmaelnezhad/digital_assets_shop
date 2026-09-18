@@ -37,4 +37,4 @@ After the registry exists, `/etc/rancher/k3s/registries.yaml` mirrors `$STAGING_
 
 ## Migrate RED to a new server
 
-Use `scripts/migrate-red.sh` (dump Postgres, dump Mongo volume, copy registry PVC or re-push images, install k3s, restore, retarget DNS, confirm TLS). Keep the old server until the new host returns 200 on `https://$STAGING_HOST/`.
+Use `scripts/migrate-red.sh dump` while DNS still points at the old RED. Provision the new VM (`scripts/prepare-red.sh`), set `RED_HOST` in `config/site.env`, then `scripts/migrate-red.sh restore`. Re-push images (or copy the registry PVC). Confirm `https://$STAGING_HOST/` before switching the DNS A records. Keep the old server until that check passes.

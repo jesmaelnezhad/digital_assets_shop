@@ -76,7 +76,7 @@ scripts/render-k8s.sh
 # then kubectl apply -f k8s/generated/...  (see k8s/README.md)
 ```
 
-Never apply leftovers in `k8s/archive/`.
+Never apply leftovers listed in `k8s/README.md`.
 
 ## Secrets
 

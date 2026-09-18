@@ -2,7 +2,10 @@
 # External browser-facing test — validates what a real browser sees from outside
 # Tests: domain, all pages, all assets, all navigation links, MIME types, cookie auth
 
-DOMAIN="https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../scripts/lib/site-env.sh
+. "$SCRIPT_DIR/../scripts/lib/site-env.sh"
+DOMAIN="${BASE_URL:-https://${STAGING_HOST}}"
 ASSETS=("/assets/theme.css" "/assets/alpine.min.js" "/assets/api.js" "/assets/app.js" "/assets/favicon.svg")
 FAILED=0
 PASSED=0

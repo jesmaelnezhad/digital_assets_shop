@@ -1,5 +1,9 @@
 const { defineConfig } = require('@playwright/test');
 
+if (!process.env.BASE_URL) {
+  throw new Error('Set BASE_URL to https://$STAGING_HOST');
+}
+
 module.exports = defineConfig({
   testDir: '.',
   testIgnore: ['**/e2e-root.spec.cjs'],
@@ -8,7 +12,7 @@ module.exports = defineConfig({
   workers: 1,
   reporter: [['list']],
   use: {
-    baseURL: process.env.BASE_URL || 'https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir',
+    baseURL: process.env.BASE_URL,
     headless: true,
     ignoreHTTPSErrors: true,
     screenshot: 'only-on-failure',

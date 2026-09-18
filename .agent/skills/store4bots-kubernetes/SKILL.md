@@ -5,9 +5,9 @@ description: Store4bots k3s namespaces, Deployments, Services, and Ingress. Use 
 
 # Kubernetes
 
-k3s on RED. Traefik disabled. Canonical YAML is under `k8s/` after `scripts/render-k8s.sh` (replaces `{{STAGING_HOST}}`, `{{PRODUCTION_HOST}}`, `{{RED_HOST}}`, `{{REGISTRY_HOST}}`, `{{INGRESS_HTTP_NODEPORT}}`).
+k3s on RED. Traefik disabled. Canonical YAML is under `k8s/`. `scripts/render-k8s.sh` writes `k8s/generated/` replacing `{{STAGING_HOST}}`, `{{PRODUCTION_HOST}}`, `{{RED_HOST}}`, `{{REGISTRY_HOST}}`, `{{INGRESS_HTTP_NODEPORT}}`, `{{IMAGE_REPO}}`, `{{INGRESS_NGINX_IMAGE}}`, `{{DB_HOST}}`, `{{POSTGRES_PASSWORD}}`, `{{MONGO_URI}}`.
 
-Apply the **generated** files in `k8s/generated/`, not leftovers in `k8s/archive/`.
+Apply the **generated** files in `k8s/generated/`. Leftover YAML is listed in `k8s/README.md` — do not apply it.
 
 ## Namespaces
 
@@ -15,7 +15,7 @@ Apply the **generated** files in `k8s/generated/`, not leftovers in `k8s/archive
 |----|------|
 | `ingress-nginx` | ingress-nginx-controller, Service NodePort `$INGRESS_HTTP_NODEPORT` |
 | `staging` | 9 backends + 7 MFEs + API/frontend Ingress (Host=`$STAGING_HOST`) |
-| `production` | backends + 7 MFEs + Ingress (Host=`$PRODUCTION_HOST` or `*`) |
+| `production` | backends + 7 MFEs + Ingress (Host=`$PRODUCTION_HOST`) |
 | `registry` | registry:2 + nginx auth proxy, ClusterIP, Ingress `/registry` and `/v2` |
 | `database` | unused on the current install (DBs are host Docker) |
 
