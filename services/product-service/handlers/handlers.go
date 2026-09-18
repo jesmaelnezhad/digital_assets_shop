@@ -49,17 +49,32 @@ func (h *Handlers) GetProduct(c *gin.Context) {
 	if catID.Valid { p.CategoryID = int(catID.Int64) }
 	if pinnedAt.Valid { t := pinnedAt.Time; p.PinnedAt = &t }
 
-	imgRows, _ := h.db.Query("SELECT id,url,alt_text,is_primary,image_type,width,height,file_size_bytes,mime_type,storage_path,created_at FROM product_images WHERE product_id=$1 ORDER BY is_primary DESC, id ASC", p.ID)
+	imgRows, _ := h.db.Query("SELECT id,product_id,url,alt_text,is_primary,image_type,width,height,file_size_bytes,mime_type,storage_path,created_at FROM product_images WHERE product_id=$1 ORDER BY is_primary DESC, id ASC", p.ID)
 	defer imgRows.Close()
 	images := []models.ProductImage{}
 	for imgRows.Next() {
 		var img models.ProductImage
-		if imgRows.Scan(&img.ID, &img.URL, &img.AltText, &img.IsPrimary, &img.ImageType,
+		if imgRows.Scan(&img.ID, &img.ProductID, &img.URL, &img.AltText, &img.IsPrimary, &img.ImageType,
 			&img.Width, &img.Height, &img.FileSizeBytes, &img.MimeType, &img.StoragePath, &img.CreatedAt) == nil {
 			images = append(images, img)
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{"product": p, "images": images})
+
+	// Fetch tiers
+	tierRows, _ := h.db.Query("SELECT id,product_id,tier_name,price_usd,file_path,download_count,download_limit,is_active,created_at,updated_at FROM product_tiers WHERE product_id=$1 AND is_active=true ORDER BY price_usd ASC", p.ID)
+	defer tierRows.Close()
+	tiers := []models.ProductTier{}
+	for tierRows.Next() {
+		var t models.ProductTier
+		if tierRows.Scan(&t.ID, &t.ProductID, &t.TierName, &t.PriceUSD, &t.FilePath, &t.DownloadCount, &t.DownloadLimit, &t.IsActive, &t.CreatedAt, &t.UpdatedAt) == nil {
+			tiers = append(tiers, t)
+		}
+	}
+	if tiers == nil {
+		tiers = []models.ProductTier{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"product": p, "images": images, "tiers": tiers})
 }
 
 func (h *Handlers) SearchProducts(c *gin.Context) {

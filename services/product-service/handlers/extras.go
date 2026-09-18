@@ -114,6 +114,13 @@ func (h *Handlers) listProductsFiltered(c *gin.Context) {
 			args = append(args, v)
 		}
 	}
+	if rt := c.Query("rating"); rt != "" {
+		if v, err := strconv.ParseFloat(rt, 64); err == nil && v > 0 {
+			n++
+			where += fmt.Sprintf(" AND COALESCE(p.average_rating, 0) >= $%d", n)
+			args = append(args, v)
+		}
+	}
 
 	order := "p.pinned DESC, p.sort_order ASC, p.created_at DESC"
 	switch c.Query("sort") {

@@ -28,6 +28,7 @@ type Product struct {
 	IsPwyw             bool      `json:"is_pwyw"`
 	PwywMinPrice       float64   `json:"pwyw_min_price"`
 	PinnedAt           *time.Time `json:"pinned_at,omitempty"`
+	AverageRating      float64   `json:"average_rating"`
 	CreatedAt          time.Time `json:"created_at"`
 	UpdatedAt          time.Time `json:"updated_at"`
 	CategoryName       string    `json:"category_name,omitempty"`
@@ -101,13 +102,14 @@ type CreateProductRequest struct {
 }
 
 type ProductTier struct {
-	ID              int     `json:"id"`
-	ProductID       int     `json:"product_id"`
-	TierName        string  `json:"tier_name"`
-	PriceUSD        float64 `json:"price_usd"`
-	DownloadCount   int     `json:"download_count"`
-	DownloadLimit   int     `json:"download_limit"`
-	IsActive        bool    `json:"is_active"`
+	ID              int       `json:"id"`
+	ProductID       int       `json:"product_id"`
+	TierName        string    `json:"tier_name"`
+	PriceUSD        float64   `json:"price_usd"`
+	FilePath        string    `json:"file_path"`
+	DownloadCount   int       `json:"download_count"`
+	DownloadLimit   int       `json:"download_limit"`
+	IsActive        bool      `json:"is_active"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
