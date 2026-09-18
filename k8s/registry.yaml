@@ -1,9 +1,14 @@
+# In-cluster Docker registry (namespace registry).
+# The registry and auth-proxy images are pulled from Docker Hub once; after that
+# this is the only registry for Pawradise app images.
+# External access: HTTPS on the staging host via ingress-nginx
+#   /registry  (rewrite → registry /)  and  /v2  (Docker Registry HTTP API).
+# Auth: nginx sidecar. GET/HEAD = pull or push user. Writes = push user only.
+# Do not store live passwords in git. Create secret registry-auth on the cluster.
 apiVersion: v1
 kind: Namespace
 metadata:
   name: registry
-  labels:
-    name: registry
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -17,13 +22,67 @@ spec:
     requests:
       storage: 10Gi
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: registry-nginx
+  namespace: registry
+data:
+  nginx.conf: |
+    worker_processes 1;
+    error_log /dev/stderr warn;
+    pid /tmp/nginx.pid;
+    events { worker_connections 1024; }
+    http {
+      access_log /dev/stdout;
+      client_max_body_size 0;
+      client_body_buffer_size 128k;
+      proxy_buffering off;
+      server {
+        listen 80;
+        server_tokens off;
+        location = /healthz {
+          auth_basic off;
+          return 200 "ok\n";
+          add_header Content-Type text/plain;
+        }
+        location /v2/ {
+          auth_basic "Pawradise Registry";
+          auth_basic_user_file /etc/nginx/htpasswd/all;
+          limit_except GET HEAD {
+            auth_basic "Pawradise Registry Push";
+            auth_basic_user_file /etc/nginx/htpasswd/push;
+          }
+          proxy_pass http://127.0.0.1:5000;
+          proxy_set_header Host $http_host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto https;
+          proxy_set_header Authorization "";
+          proxy_read_timeout 900s;
+          proxy_send_timeout 900s;
+          proxy_request_buffering off;
+          add_header Docker-Distribution-Api-Version registry/2.0 always;
+        }
+        location / {
+          auth_basic "Pawradise Registry";
+          auth_basic_user_file /etc/nginx/htpasswd/all;
+          limit_except GET HEAD {
+            auth_basic "Pawradise Registry Push";
+            auth_basic_user_file /etc/nginx/htpasswd/push;
+          }
+          proxy_pass http://127.0.0.1:5000;
+          proxy_set_header Host $http_host;
+          proxy_read_timeout 900s;
+        }
+      }
+    }
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: registry
   namespace: registry
-  labels:
-    app: registry
 spec:
   replicas: 1
   selector:
@@ -35,41 +94,68 @@ spec:
         app: registry
     spec:
       containers:
-      - name: registry
-        image: docker.io/library/registry:2
-        ports:
-        - containerPort: 5000
-        env:
-        - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
-          value: "/var/lib/registry"
-        - name: REGISTRY_HTTP_ADDR
-          value: ":5000"
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
-            memory: "128Mi"
-            cpu: "200m"
-        volumeMounts:
-        - name: registry-storage
-          mountPath: /var/lib/registry
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 5000
-          initialDelaySeconds: 10
-          periodSeconds: 30
-        readinessProbe:
-          httpGet:
-            path: /
-            port: 5000
-          initialDelaySeconds: 5
-          periodSeconds: 10
+        - name: registry
+          image: docker.io/library/registry:2
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: REGISTRY_HTTP_ADDR
+              value: "127.0.0.1:5000"
+            - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
+              value: /var/lib/registry
+            - name: REGISTRY_STORAGE_DELETE_ENABLED
+              value: "true"
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/registry
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+        - name: auth-proxy
+          image: docker.io/library/nginx:1.27-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: htpasswd
+              mountPath: /etc/nginx/htpasswd
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
       volumes:
-      - name: registry-storage
-        persistentVolumeClaim:
-          claimName: registry-pvc
+        - name: data
+          persistentVolumeClaim:
+            claimName: registry-pvc
+        - name: nginx-conf
+          configMap:
+            name: registry-nginx
+        - name: htpasswd
+          secret:
+            secretName: registry-auth
 ---
 apiVersion: v1
 kind: Service
@@ -77,10 +163,62 @@ metadata:
   name: registry
   namespace: registry
 spec:
-  ports:
-  - port: 5000
-    targetPort: 5000
-    nodePort: 30099
   selector:
     app: registry
-  type: NodePort
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+  type: ClusterIP
+---
+# Path prefix the rest of the cluster uses (k3s mirror endpoint …/registry).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: registry-prefix
+  namespace: registry
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "900"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir
+      http:
+        paths:
+          - path: /registry(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: registry
+                port:
+                  number: 80
+---
+# Docker Registry HTTP API (docker login/push/pull against the staging host).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: registry-v2
+  namespace: registry
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "900"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir
+      http:
+        paths:
+          - path: /v2
+            pathType: Prefix
+            backend:
+              service:
+                name: registry
+                port:
+                  number: 80

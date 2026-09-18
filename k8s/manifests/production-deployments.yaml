@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: identity-service
-        image: 130.185.123.156:30099/pawradise/identity-service:latest
+        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/identity-service:latest
         ports:
         - containerPort: 8081
         env:
@@ -74,7 +74,7 @@ spec:
     spec:
       containers:
       - name: product-service
-        image: 130.185.123.156:30099/pawradise/product-service:latest
+        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/product-service:latest
         ports:
         - containerPort: 8082
         env:
@@ -133,7 +133,7 @@ spec:
     spec:
       containers:
       - name: commerce-service
-        image: 130.185.123.156:30099/pawradise/commerce-service:latest
+        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/commerce-service:latest
         ports:
         - containerPort: 8083
         env:
@@ -192,7 +192,7 @@ spec:
     spec:
       containers:
       - name: community-service
-        image: 130.185.123.156:30099/pawradise/community-service:latest
+        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/community-service:latest
         ports:
         - containerPort: 8084
         env:
@@ -251,7 +251,7 @@ spec:
     spec:
       containers:
       - name: review-service
-        image: 130.185.123.156:30099/pawradise/review-service:latest
+        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/review-service:latest
         ports:
         - containerPort: 8085
         env:
@@ -310,7 +310,7 @@ spec:
     spec:
       containers:
       - name: payment-service
-        image: 130.185.123.156:30099/pawradise/payment-service:latest
+        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/payment-service:latest
         ports:
         - containerPort: 8086
         env:
@@ -369,7 +369,7 @@ spec:
     spec:
       containers:
       - name: admin-service
-        image: 130.185.123.156:30099/pawradise/admin-service:latest
+        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/admin-service:latest
         ports:
         - containerPort: 8087
         env:
@@ -433,7 +433,7 @@ spec:
     spec:
       containers:
       - name: media-service
-        image: 130.185.123.156:30099/pawradise/media-service:latest
+        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/media-service:latest
         ports:
         - containerPort: 8088
         env:

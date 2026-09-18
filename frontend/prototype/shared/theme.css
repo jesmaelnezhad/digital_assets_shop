@@ -92,11 +92,16 @@ button { cursor: pointer; background: none; border: 0; }
   border: 1px solid var(--line);
   border-radius: 999px;
 }
-.header-search svg {
+.header-search > svg,
+.header-search > .ico {
   position: absolute;
   left: 12px;
-  top: 11px;
+  top: 0;
+  bottom: 0;
+  margin: auto 0;
+  height: 16px;
   opacity: 0.45;
+  pointer-events: none;
 }
 .header-nav {
   display: flex;

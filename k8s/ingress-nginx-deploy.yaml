@@ -16,7 +16,7 @@ spec:
       serviceAccountName: ingress-nginx
       containers:
       - name: controller
-        image: 130.185.123.156:30099/pawradise-ingress-nginx:v1.8.6
+        image: server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise-ingress-nginx:v1.11.2
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80

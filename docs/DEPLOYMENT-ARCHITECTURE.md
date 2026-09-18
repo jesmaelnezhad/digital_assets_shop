@@ -31,7 +31,7 @@
 #### Ingress Controller (API Gateway)
 
 - **Deployment**: `ingress-nginx-controller` in `ingress-nginx` namespace
-- **Image**: `130.185.123.156:30099/pawradise-ingress-nginx:v1.11.2`
+- **Image**: `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise-ingress-nginx:v1.11.2`
 - **Service**: `ingress-nginx-controller` (NodePort `:30758`)
 - **IngressClass**: `nginx` (controller: `k8s.io/ingress-nginx`)
 - **RBAC**: ClusterRole with permissions for ingresses, services, endpoints, endpointslices, leases, events, configmaps, secrets, nodes, pods
@@ -39,7 +39,7 @@
 #### Backend Pods (Separate Pod Architecture)
 
 - **Deployments**: One Deployment per service per namespace (16 total)
-- **Image**: `130.185.123.156:30099/pawradise/<service>:latest`
+- **Image**: `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/<service>:<tag>`
 - **Label selector**: `app: <service-name>` (per-service labels)
 - **Containers per pod**: 1 (each service runs in its own pod)
 
@@ -93,10 +93,14 @@ Live staging/production currently share **one host Docker MongoDB** on RED (`:27
 
 #### Registry
 
-- **Deployment**: `registry-85c4cb8d6d-n58c9` in `registry` namespace
-- **Image**: `docker.io/library/registry:2`
-- **Service**: `registry.registry.svc.cluster.local:5000` (NodePort `:30099`)
-- **Access from BLUE**: `130.185.123.156:30099`
+- **Namespace**: `registry` (k3s). Manifest: `k8s/registry.yaml`
+- **Images (pulled from Docker Hub once)**: `docker.io/library/registry:2` + `docker.io/library/nginx:1.27-alpine` auth proxy
+- **Service**: ClusterIP `registry.registry.svc.cluster.local:80` — no NodePort, no host Docker registry
+- **HTTPS**: staging host, same host-nginx → ingress-nginx path routing as the apps
+  - `/registry` rewrites to the registry root (k3s pull mirror)
+  - `/v2` is the Docker Registry HTTP API (`docker login` / push / pull)
+- **Auth**: nginx sidecar. GET/HEAD accept the **pull** or **push** user. PUT/POST/PATCH/DELETE accept **push** only. Passwords live in Secret `registry-auth` (not in git) and `/root/.registry-auth` on RED/BLUE
+- **k3s**: `/etc/rancher/k3s/registries.yaml` pull user + TLS to the staging host. App images are `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/<name>:<tag>`
 
 ---
 
@@ -129,7 +133,7 @@ RED's host nginx (`/etc/nginx/sites-available/pawradise-ssl`) handles:
 
 1. **Port 80**: Redirects HTTP → HTTPS
 2. **Port 443**: SSL termination (Let's Encrypt cert for staging domain)
-   - Proxies `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir` → k3s NodePort 30758 (staging)
+   - Proxies `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir` → k3s NodePort 30758 (staging), including `/registry` and `/v2` for the in-cluster registry. Staging `client_max_body_size` is unlimited so image blob uploads are not 413'd.
    - Proxies `pawradise.ir` → k3s NodePort 30758 (production)
    - Serves `/assets/` directly from `/var/www/production/assets/`
    - Serves `/.well-known/acme-challenge/` for Let's Encrypt renewal
@@ -242,23 +246,25 @@ EXPOSE <port>
 CMD ["/server"]
 EOF
 
-docker build -t 130.185.123.156:30099/pawradise/<service>:v<N> .
+docker build -t server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/<service>:v<N> .
 ```
 
-### 4.3 Push to RED's Registry
+### 4.3 Push to the in-cluster registry
 
 ```bash
-docker push 130.185.123.156:30099/pawradise/<service>:v<N>
+# once per machine: docker login with the push user from /root/.registry-auth
+docker login server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir
+docker push server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/<service>:v<N>
 ```
 
 ### 4.4 Deploy on RED
 
 ```bash
 ssh root@130.185.123.156 "k3s kubectl set image deployment/<service> \
-  <service>=130.185.123.156:30099/pawradise/<service>:v<N> -n staging"
+  <service>=server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/<service>:v<N> -n staging"
 
 ssh root@130.185.123.156 "k3s kubectl set image deployment/<service> \
-  <service>=130.185.123.156:30099/pawradise/<service>:v<N> -n production"
+  <service>=server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/<service>:v<N> -n production"
 ```
 
 ### 4.5 Copy Binary Directly (alternative — bypasses Docker)
@@ -301,34 +307,34 @@ ssh root@130.185.123.156 "k3s kubectl exec -n database postgres-0 -- psql -U app
 
 ## 6. Registry Configuration
 
+Host: `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir` (HTTPS, same TLS as staging). Path `/registry` and Docker API `/v2`.
+
 ### 6.1 RED's `/etc/rancher/k3s/registries.yaml`
+
+Pull user only (cannot push). Created on the node, not committed.
 
 ```yaml
 mirrors:
-  130.185.123.156:30099:
+  "server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir":
     endpoint:
-      - http://130.185.123.156:30099
-  docker.io:
-    endpoint:
-      - https://registry-1.docker.io
-  registry.k8s.io:
-    endpoint:
-      - https://registry.k8s.io
+      - "https://server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/registry"
 configs:
-  130.185.123.156:30099:
-    tls:
-      insecure_skip_verify: true
+  "server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir":
+    auth:
+      username: k3s-pull
+      password: "(from /root/.registry-auth)"
 ```
 
-### 6.2 BLUE's `/etc/docker/daemon.json`
+Restart k3s after edits: `systemctl restart k3s`.
 
-```json
-{
-  "insecure-registries": ["130.185.123.156:30099", "130.185.123.156:5000"],
-  "log-driver": "json-file",
-  "log-opts": {"max-size": "10m", "max-file": "3"}
-}
+### 6.2 Docker login on RED and BLUE (push)
+
+```bash
+# credentials: /root/.registry-auth  (PUSH_USER / PUSH_PASS)
+docker login server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir
 ```
+
+Do not list this host as an insecure HTTP registry. Traffic is TLS via host nginx.
 
 ---
 
@@ -338,27 +344,29 @@ configs:
 
 | Image | Source | Location |
 |-------|--------|----------|
-| `registry.k8s.io/ingress-nginx/controller:v1.11.2` | Tar file provided by user | `130.185.123.156:30099/pawradise-ingress-nginx:v1.11.2` |
+| `registry.k8s.io/ingress-nginx/controller:v1.11.2` | Tar file provided by user | `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise-ingress-nginx:v1.11.2` |
 
 ### 7.2 Backend Services
 
 | Service | Image | Port |
 |---------|-------|------|
-| identity-service | `130.185.123.156:30099/pawradise/identity-service:latest` | 8081 |
-| product-service | `130.185.123.156:30099/pawradise/product-service:latest` | 8082 |
-| commerce-service | `130.185.123.156:30099/pawradise/commerce-service:latest` | 8083 |
-| community-service | `130.185.123.156:30099/pawradise/community-service:latest` | 8084 |
-| review-service | `130.185.123.156:30099/pawradise/review-service:latest` | 8085 |
-| payment-service | `130.185.123.156:30099/pawradise/payment-service:latest` | 8086 |
-| admin-service | `130.185.123.156:30099/pawradise/admin-service:latest` | 8087 |
-| media-service | `130.185.123.156:30099/pawradise/media-service:latest` | 8088 |
+| identity-service | `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/identity-service:<tag>` | 8081 |
+| product-service | `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/product-service:<tag>` | 8082 |
+| commerce-service | `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/commerce-service:<tag>` | 8083 |
+| community-service | `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/community-service:<tag>` | 8084 |
+| review-service | `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/review-service:<tag>` | 8085 |
+| payment-service | `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/payment-service:<tag>` | 8086 |
+| admin-service | `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/admin-service:<tag>` | 8087 |
+| media-service | `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/media-service:<tag>` | 8088 |
+| events-service | `server-ad5ae8ea-5132-4cd3-b11f-5cb0f43bdc53.eu-west1-a.arvancompute.ir/pawradise/events-service:<tag>` | 8089 |
 
 ### 7.3 Infrastructure
 
 | Component | Image |
 |-----------|-------|
-| PostgreSQL | `docker.io/library/postgres:16-alpine` |
-| Registry | `docker.io/library/registry:2` |
+| PostgreSQL (host Docker) | `docker.io/library/postgres:16-alpine` |
+| MongoDB (host Docker) | `docker.io/library/mongo:7` |
+| Registry + auth proxy (k3s `registry` ns) | `docker.io/library/registry:2`, `docker.io/library/nginx:1.27-alpine` (Docker Hub once) |
 
 ---
 
@@ -445,7 +453,7 @@ ssh root@130.185.123.156 "k3s kubectl logs -n production -l app=<service> --tail
 
 5. **Wrapper Routes for e2e Compatibility**: community-service registers both `/api/v1/community/...` (actual routes) and `/api/v1/posts`, `/api/v1/profile`, etc. (wrapper routes) to maintain compatibility with e2e tests that expect those paths.
 
-6. **Registry on RED**: BLUE pushes images to RED's local registry at `130.185.123.156:30099`, then RED's k3s pulls from there. Avoids external registry dependency.
+6. **Registry on RED**: in-cluster registry in namespace `registry`, HTTPS on the staging host at `/registry` and `/v2`, nginx basic auth. App images are not pulled from Docker Hub after the registry and nginx images themselves are fetched once.
 
 7. **CGO_ENABLED=0 for Alpine**: All Go binaries must be statically linked (CGO_ENABLED=0) to run on Alpine-based containers. Dynamic linking produces glibc binaries that fail with `exec /server: no such file or directory`.
 

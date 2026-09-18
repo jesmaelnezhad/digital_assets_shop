@@ -34,6 +34,24 @@ test.describe('Mobile chrome', () => {
     await page.locator('.nav-toggle').click();
     await expect(page.locator('.site-header.nav-open .header-nav a').first()).toBeVisible();
   });
+
+  test('search icon sits inside the search field', async ({ page }) => {
+    await page.goto(BASE + '/');
+    await page.waitForSelector('.header-search input', { timeout: 15000 });
+    const box = await page.evaluate(() => {
+      const form = document.querySelector('.header-search');
+      const ico = form && form.querySelector('.ico, svg');
+      const input = form && form.querySelector('input');
+      if (!form || !ico || !input) return { missing: true };
+      const a = ico.getBoundingClientRect();
+      const b = input.getBoundingClientRect();
+      return {
+        inside: a.top >= b.top - 1 && a.bottom <= b.bottom + 1 && a.left >= b.left && a.right <= b.right
+      };
+    });
+    expect(box.missing).toBeFalsy();
+    expect(box.inside).toBe(true);
+  });
 });
 
 test.describe('Pagination surfaces', () => {
